@@ -6,6 +6,7 @@ foreach(TEST_SOURCE ${TEST_SOURCES})
     message(STATUS "- ${TEST_NAME}")
     # 创建可执行文件
     add_executable(${TEST_NAME} ${TEST_SOURCE})
+    target_link_libraries(${TEST_NAME} ${CMAKE_PROJECT_NAME})
 
     # 添加测试
     add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
