@@ -1,7 +1,7 @@
 #include <iostream>
 #include "testPointBox.h"
 #include "Logger.h"
-#include "Popen.h"
+#include "utils.h"
 
 
 
@@ -40,8 +40,10 @@ void testPointBox::test(const testPoint * val) {
     // std::cout << val->id_ <<  " " << val ->seq_id << std::endl;
     // 根据信息来执行
     // LOG_INFO("id_ : %s , seq id: %d\n",val->id_,val->seq_id);
-    std::string result = Popen("ls -l");
+    std::string result = judge(1000,2000,12800,"/usr/bin/ls","",std::to_string(val->seq_id) + ".out");
     LOG_INFO("seq id: %d, result = %s\n",val->seq_id,result.c_str());
+    
+    // 得到结果
 }
 
 
