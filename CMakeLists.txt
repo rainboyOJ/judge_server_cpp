@@ -12,7 +12,7 @@ include_directories(include)
 
 # 查找源文件并添加可执行文件
 file(GLOB SOURCES "src/*.cpp")
-# add_executable(${PROJECT_NAME} ${SOURCES})
+add_library(${CMAKE_PROJECT_NAME} STATIC ${SOURCES})
 
 # 如果你有测试代码，可以使用CMake的测试框架（如CTest）进行构建
 enable_testing()

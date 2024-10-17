@@ -1,5 +1,8 @@
-#include "testPointBox.h"
 #include <iostream>
+#include "testPointBox.h"
+#include "Logger.h"
+#include "Popen.h"
+
 
 
 testPointBox::testPointBox(int poolSize) :stop(false)
@@ -34,7 +37,11 @@ void testPointBox::push(valPtr val)
 }
 
 void testPointBox::test(const testPoint * val) {
-    std::cout << val->id_ <<  " " << val ->seq_id << std::endl;
+    // std::cout << val->id_ <<  " " << val ->seq_id << std::endl;
+    // 根据信息来执行
+    // LOG_INFO("id_ : %s , seq id: %d\n",val->id_,val->seq_id);
+    std::string result = Popen("ls -l");
+    LOG_INFO("seq id: %d, result = %s\n",val->seq_id,result.c_str());
 }
 
 
@@ -45,12 +52,10 @@ void testPointBox::work() {
         valPtr val;
         {
             std::unique_lock lck(work_mtx);
-            std::cout << "before wait" << std::endl;
             while( !stop && que_.empty() )
             {
                 cond_.wait(lck);
             }
-            std::cout << "after wait" << std::endl;
 
             //检查是否结束
             // if( stop ) {
@@ -65,7 +70,7 @@ void testPointBox::work() {
 
         //检查是否为nullptr, 这里应该不可能为空!
         if( !val ) {
-            std::cout << "val is nullptr" << std::endl;
+            // std::cout << "val is nullptr" << std::endl;
             continue;
         }
         // todo do some real work;
