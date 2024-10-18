@@ -22,8 +22,8 @@ enum language {
 };
 
 struct testPoint {
-    int judge_id; //唯一主评测id // 对应于testBox 中使用
     char id_[32]; // 唯一评测id
+    int testBoxId; //唯一主评测id // 对应于testBox 中使用
     int seq_id; // 评测的测试点编号
     language lang;
     // std::string msg; //评测信息
@@ -43,15 +43,18 @@ struct testProblem {
 };
 
 struct testPointResult {
-    int signal;
-    std::string msg; //评测结果的信息
-    std::string err; //错误信息
-    // std::string msg; //评测信息
-    // std::string err; //评测错误信息
-    // judge_result result_;
-    int judge_id; //唯一主评测id // 对应于testBox 中使用
-    char id_[32]; // 唯一评测id
+    int testBoxId; // 唯一评测TextBoxId
     int seq_id; // 评测的测试点编号
+
+    int cpu_time; // ms
+    int real_time; // ms
+    unsigned long long  memory; //kb
+    int signal;
+    int exit_code;
+    int error;
+    int result;
+
+    // char msg[128]; //评测结果的信息 或 错误信息
 };
 
 

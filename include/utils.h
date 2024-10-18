@@ -7,6 +7,7 @@
 #include <memory>  // For std::unique_ptr
 #include <stdexcept>
 #include <string>
+#include "judgeInfo.h"
 
 std::string Popen(const char* cmd);
 
@@ -29,3 +30,4 @@ std::vector<std::pair<std::string,std::string>> get_data_list_from_path(char * p
 void get_judge_args_from_path(int&);
 
 
+void parse_test_point_result(const std::string & str,testPointResult * result);

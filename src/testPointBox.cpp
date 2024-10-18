@@ -36,14 +36,44 @@ void testPointBox::push(valPtr val)
     cond_.notify_one();
 }
 
+//核心评测
 void testPointBox::test(const testPoint * val) {
-    // std::cout << val->id_ <<  " " << val ->seq_id << std::endl;
-    // 根据信息来执行
+    // 1. 根据信息来执行
     // LOG_INFO("id_ : %s , seq id: %d\n",val->id_,val->seq_id);
-    std::string result = judge(1000,2000,12800,"/usr/bin/ls","",std::to_string(val->seq_id) + ".out");
-    LOG_INFO("seq id: %d, result = %s\n",val->seq_id,result.c_str());
+    std::string resultStr = judge(1000,2000,12800,"/usr/bin/ls","",std::to_string(val->seq_id) + ".out");
+    LOG_INFO("seq id: %d, result = %s\n",val->seq_id,resultStr.c_str());
     
-    // 得到结果
+    // 2.解析评测结果字符串
+    auto resultPtr = std::make_unique<testPointResult>();
+    resultPtr ->seq_id = val-> seq_id;
+    resultPtr ->testBoxId = val-> testBoxId;
+    parse_test_point_result(resultStr,resultPtr.get());
+    LOG_INFO("--> after parse_test_point_result \n\
+            result %d \n\
+            signal %d \n\
+            exit_code %d \n\
+            error %d \n\
+            cpu_time %d \n\
+            real_time %d \n\
+            memory %lld \n\
+            \n",
+             resultPtr->result,
+             resultPtr->signal,
+             resultPtr->exit_code,
+             resultPtr->error,
+             resultPtr->cpu_time,
+             resultPtr->real_time,
+             resultPtr->memory
+             );
+
+    //解析
+    // real_time 0
+    // memory 1648
+    // signal 0
+    // exit_code 0
+    // error 0
+    // result 0
+
 }
 
 
