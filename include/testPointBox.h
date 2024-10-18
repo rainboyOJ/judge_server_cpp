@@ -1,6 +1,4 @@
 #pragma once
-#include "testPoint.h"
-#include "testQueue.h"
 #include <functional>
 #include <thread>
 #include <vector>
@@ -10,6 +8,10 @@
 #include <condition_variable>
 #include <future>
 #include <atomic>
+
+#include "judgeInfo.h"
+#include "testQueue.h"
+
 
 /**
  * 实现单个点的测试

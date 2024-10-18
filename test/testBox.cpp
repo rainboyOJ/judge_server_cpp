@@ -7,8 +7,14 @@ namespace fs = std::filesystem;
 #include "testBox.h"
 
 char id_[] = "1000";
+int a[1000000+5];
 
 int main (int argc, char *argv[]) {
+    memset(a,0,sizeof(a));
+    for(int i = 1;i <= 1000 ;++i ) // i: 1->1000
+    {
+        a[i] = i;
+    }
     //创建一个testPointBox
     std::string problem_path ;
     try {
@@ -28,10 +34,10 @@ int main (int argc, char *argv[]) {
     std::cout << "problem_path = " << problem_path << "\n";
     testBox TB(3,20, problem_path);
     auto res = TB.add(
-        "1000-rainboy",
-        "1000",
-        "code",
-        language::cpp
+        "1000-rainboy", //uuid
+        "1000", // pid
+        "code", //code src
+        language::cpp // which lang to judge
     );
     if( res != testBox_err::SUCC)
     {
