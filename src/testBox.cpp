@@ -1,10 +1,13 @@
-#include "testBox.h"
 #include <iostream>
 #include <filesystem>
 #include <vector>
 #include <string>
 #include <string_view>
 #include <utility>
+
+#include "testBox.h"
+#include "Logger.h"
+
 
 namespace fs = std::filesystem;
 using namespace std::literals;
@@ -114,4 +117,34 @@ Data_list_t
     }
 
     return filePairs;
+}
+
+
+
+
+void testBox::setSingPointCompleteCallback(singPointCompleteCallback callback)
+{
+    this -> singPointCompleteCallback_ = callback;
+}
+
+void testBox::deal_testPoint_singlePointComplete(testPointResult * resultPtr) {
+    std::lock_guard lck(mtx_);
+    LOG_INFO("--> after parse_test_point_result \n\
+            result %d \n\
+            signal %d \n\
+            exit_code %d \n\
+            error %d \n\
+            cpu_time %d \n\
+            real_time %d \n\
+            memory %lld \n\
+            \n",
+             resultPtr->result,
+             resultPtr->signal,
+             resultPtr->exit_code,
+             resultPtr->error,
+             resultPtr->cpu_time,
+             resultPtr->real_time,
+             resultPtr->memory
+             );
+
 }

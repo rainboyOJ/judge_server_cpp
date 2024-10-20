@@ -2,10 +2,13 @@
 #include "testPointBox.h"
 #include "Logger.h"
 #include "utils.h"
+#include "testBox.h"
 
 
 
-testPointBox::testPointBox(int poolSize) :stop(false)
+testPointBox::testPointBox(int poolSize, testBox * testBoxPtr)
+:stop(false),
+testBox_(testBoxPtr)
 {
     //创建线程工作函数
     for(int i = 0 ;i <poolSize ;++i)
@@ -48,23 +51,6 @@ void testPointBox::test(const testPoint * val) {
     resultPtr ->seq_id = val-> seq_id;
     resultPtr ->testBoxId = val-> testBoxId;
     parse_test_point_result(resultStr,resultPtr.get());
-    LOG_INFO("--> after parse_test_point_result \n\
-            result %d \n\
-            signal %d \n\
-            exit_code %d \n\
-            error %d \n\
-            cpu_time %d \n\
-            real_time %d \n\
-            memory %lld \n\
-            \n",
-             resultPtr->result,
-             resultPtr->signal,
-             resultPtr->exit_code,
-             resultPtr->error,
-             resultPtr->cpu_time,
-             resultPtr->real_time,
-             resultPtr->memory
-             );
 
     //解析
     // real_time 0
@@ -73,6 +59,9 @@ void testPointBox::test(const testPoint * val) {
     // exit_code 0
     // error 0
     // result 0
+    // 调用上一层testBox函数
+    if(testBox_ != nullptr)
+        testBox_ -> deal_testPoint_singlePointComplete(resultPtr.get());
 
 }
 

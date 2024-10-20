@@ -6,7 +6,7 @@ char id_[] = "p1001";
 
 int main (int argc, char *argv[]) {
     //创建一个testPointBox
-    testPointBox tpb(3);
+    testPointBox tpb(3,nullptr);
     // 添加任务
     for(int i =1;i<=5;i++) {
         testPoint * t = new testPoint;

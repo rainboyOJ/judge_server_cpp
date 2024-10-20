@@ -1,10 +1,11 @@
 // testPointBox的容器
 // 接收一个题目的评测
 #pragma once
-#include "testPointBox.h"
-#include "minheap.hpp"
 #include <functional>
 #include <filesystem>
+
+#include "testPointBox.h"
+#include "minheap.hpp"
 
 namespace fs = std::filesystem;
 
@@ -18,9 +19,14 @@ enum class testBox_err {
 
 using Data_list_t = std::vector< std::pair<std::string,std::string> >;
 
+using singPointCompleteCallback = std::function<void(const testPointResult *)>;
+using allPointCompleteCallback = std::function<void(int)>;
 
 class testBox {
 public:
+
+    friend class testPointBox;
+
     using beginTestCallback = std::function<void(const testProblem *)>;
     using singPointCompleteCallback = std::function<void(const testPointResult *)>;
     using allPointCompleteCallback = std::function<void(int)>;
@@ -34,10 +40,15 @@ public:
     :
         head_(dataSizeLimit) ,
         problem_path(problem_path_),
-        pointBox_(std::make_unique<testPointBox>(workNum))
+        pointBox_(std::make_unique<testPointBox>(workNum,this))
     {
         head_.init();
     }
+
+    void setSingPointCompleteCallback(singPointCompleteCallback callback);
+    void setallPointCompleteCallback();
+
+    //处理 testPointBox 调用过来的信息
 
     ~testBox() {
 
@@ -55,6 +66,9 @@ public:
 
 
 private:
+
+    //处理testPointBox传递过来的评测结果
+    void deal_testPoint_singlePointComplete(testPointResult *);
 
     //处理testProblem 信息,转成 testPoint信息,传递给testPointBox
     void test_problem_info_deal(const testProblem *);

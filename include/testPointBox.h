@@ -20,8 +20,6 @@
  */
 class testBox;
 
-using singPointCompleteCallback = std::function<void(const testPointResult *)>;
-using allPointCompleteCallback = std::function<void(int)>;
 
 class testPointBox {
 
