@@ -1,6 +1,9 @@
+//块状内存池
 #pragma once
 #include <vector>
-//内存池
+#include <memory>
+#include <functional>
+
 template<typename T,int size=1024>
 class memoryPool {
 
@@ -10,8 +13,9 @@ public:
         T v1;
         TT * nxt;
     };
+    using Pointer = std::shared_ptr<T>;
 
-    T * get() {
+    Pointer get() {
         if( head == nullptr)
         {
             tot_new_ += size;
@@ -25,7 +29,7 @@ public:
         TT * x = head;
         head = head -> nxt;
         // return static_cast<T*>(x);
-        return reinterpret_cast<T*>(x);
+        return Pointer( reinterpret_cast<T*>(x),[this](T* p){this->del(p);});
     }
     unsigned long long tot_new() const {
         return tot_new_;
