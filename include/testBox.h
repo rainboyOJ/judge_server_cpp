@@ -3,9 +3,9 @@
 #pragma once
 #include <functional>
 #include <filesystem>
-
 #include "testPointBox.h"
 #include "minheap.hpp"
+#include "resultContainer.h"
 
 namespace fs = std::filesystem;
 
@@ -17,6 +17,8 @@ enum class testBox_err {
     BUSY,
 };
 
+
+//题目的测试数据的名字列表
 using Data_list_t = std::vector< std::pair<std::string,std::string> >;
 
 using singPointCompleteCallback = std::function<void(const testPointResult *)>;
@@ -38,11 +40,12 @@ public:
             const std::string & problem_path_
             )
     :
-        head_(dataSizeLimit) ,
+        heap_(dataSizeLimit) ,
         problem_path(problem_path_),
-        pointBox_(std::make_unique<testPointBox>(workNum,this))
+        pointBox_(std::make_unique<testPointBox>(workNum,this)),
+        resultContainer_(dataSizeLimit) //设计可以现时进行的测试的题目的多少
     {
-        head_.init();
+        heap_.init();
     }
 
     void setSingPointCompleteCallback(singPointCompleteCallback callback);
@@ -80,11 +83,13 @@ private:
 
     UniquePtrQueue<testProblem> que_; // 感觉不需要这个队列
     std::unique_ptr<testPointBox > pointBox_ = nullptr;
-    MinHeap head_;
+    MinHeap heap_;
 
     const fs::path problem_path; //题目路径
 
     std::mutex mtx_; //锁
+
+    resultContainer resultContainer_;
 
 
     // 一个存信息的数据池

@@ -13,9 +13,9 @@ public:
         T v1;
         TT * nxt;
     };
-    using Pointer = std::shared_ptr<T>;
+    using Pointer = T*;
 
-    Pointer get() {
+    T* get(){
         if( head == nullptr)
         {
             tot_new_ += size;
@@ -28,8 +28,9 @@ public:
         }
         TT * x = head;
         head = head -> nxt;
+        return reinterpret_cast<T*>(x);
         // return static_cast<T*>(x);
-        return Pointer( reinterpret_cast<T*>(x),[this](T* p){this->del(p);});
+        // return Pointer( reinterpret_cast<T*>(x),[this](T* p){this->del(p);});
     }
     unsigned long long tot_new() const {
         return tot_new_;

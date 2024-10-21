@@ -21,16 +21,6 @@ enum language {
     python
 };
 
-struct testPoint {
-    char id_[32]; // 唯一评测id
-    int testBoxId; //唯一主评测id // 对应于testBox 中使用
-    int seq_id; // 评测的测试点编号
-    language lang;
-    // std::string msg; //评测信息
-    // std::string err; //评测错误信息
-    // judge_result result_;
-};
-
 //一个题目的评测
 
 struct testProblem {
@@ -38,8 +28,6 @@ struct testProblem {
     char pid[32]; //题目的id
     language lang; // 语言
     std::string code; //代码
-
-    int judge_id; //唯一主评测id // 对应于testBox 中使用
 };
 
 struct testPointResult {
@@ -53,9 +41,22 @@ struct testPointResult {
     int exit_code;
     int error;
     int result;
+    testPointResult * nxt;
 
     // char msg[128]; //评测结果的信息 或 错误信息
 };
+
+struct testPoint {
+    char id_[32]; // 唯一评测id
+    int testBoxId; //唯一主评测id // 对应于testBox 中使用
+    int seq_id; // 评测的测试点编号
+    language lang;
+    testPointResult * trp; //存测试的内存地址
+    // std::string msg; //评测信息
+    // std::string err; //评测错误信息
+    // judge_result result_;
+};
+
 
 
 //评测

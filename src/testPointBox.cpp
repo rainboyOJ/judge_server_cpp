@@ -47,10 +47,10 @@ void testPointBox::test(const testPoint * val) {
     LOG_INFO("seq id: %d, result = %s\n",val->seq_id,resultStr.c_str());
     
     // 2.解析评测结果字符串
-    auto resultPtr = std::make_unique<testPointResult>();
+    auto resultPtr = val->trp; //得到需要写入结果的地址
     resultPtr ->seq_id = val-> seq_id;
     resultPtr ->testBoxId = val-> testBoxId;
-    parse_test_point_result(resultStr,resultPtr.get());
+    parse_test_point_result(resultStr,resultPtr);
 
     //解析
     // real_time 0
@@ -61,7 +61,7 @@ void testPointBox::test(const testPoint * val) {
     // result 0
     // 调用上一层testBox函数
     if(testBox_ != nullptr)
-        testBox_ -> deal_testPoint_singlePointComplete(resultPtr.get());
+        testBox_ -> deal_testPoint_singlePointComplete(resultPtr);
 
 }
 

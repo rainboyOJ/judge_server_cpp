@@ -32,10 +32,10 @@ testBox_err testBox::add(
 ) {
     std::lock_guard lck(mtx_);
     // 得到一个loca id
-    int lock_id = -1;
-    if( !head_.empty()) {
-        lock_id = head_.top();
-        head_.pop();
+    int testBoxId = -1;
+    if( !heap_.empty()) {
+        testBoxId= heap_.top();
+        heap_.pop();
     }
     else {
         return testBox_err::BUSY; //失败
@@ -60,12 +60,16 @@ testBox_err testBox::add(
 
     // 输出结果
     int test_point_idx = 0;
+    testPointResult * head = resultContainer_.init_by_test_id(testBoxId,filePairs.size());
     for (const auto& pair : filePairs) {
         std::cout << pair.first << " <-> " << pair.second << std::endl;
         //添加到testPoint 里
 
         testPoint * t = new testPoint;
         t->seq_id = ++test_point_idx;
+        t->testBoxId = testBoxId;
+        t->trp = head; //结果应该写入的内存
+        head = head->nxt;
         // t->id_ = "123";
         // strcpy(t->id_,"123");
         pointBox_->push(std::unique_ptr<testPoint>(t));
@@ -146,5 +150,21 @@ void testBox::deal_testPoint_singlePointComplete(testPointResult * resultPtr) {
              resultPtr->real_time,
              resultPtr->memory
              );
+
+    // 处理信息
+    int testBoxId = resultPtr-> testBoxId;
+
+    bool finish = resultContainer_.finish_cnt(resultPtr); // 加1
+    if( finish ) {
+
+        // TODO 把结果链 转成对应的信息
+        // !!! 信息传递给对应的 消息队列，
+
+        //把结果链 删除(放回内存池子)
+        // 不应该在这里发删除,应该在main线程发送完数据后删除
+        // resultContainer_.remove(testBoxId);
+    }
+    LOG_INFO("Finsh %d\n",finish);
+
 
 }
