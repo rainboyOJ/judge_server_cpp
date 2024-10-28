@@ -4,6 +4,7 @@
 #include <memory>
 #include <functional>
 
+// size 表示一次申请的内存块大小
 template<typename T,int size=1024>
 class memoryPool {
 
@@ -37,6 +38,8 @@ public:
     }
 
     void del(T * p) {
+        if(p == nullptr)
+            throw std::runtime_error("memoryPool::del: p is nullptr");
         // TT * x = static_cast<TT*>(p);
         TT * x = reinterpret_cast<TT*>(p);
         x -> nxt = head;

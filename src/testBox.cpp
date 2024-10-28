@@ -21,29 +21,28 @@ bool hasEnding (std::string const &fullString, std::string_view const &ending) {
     }
 }
 
+int testBox::getTestBoxId() {
+    int testBoxId = -1;
+    {
+        std::lock_guard lck(mtx_);
+        if( !testBoxIdQue_ -> empty() )
+            testBoxId = testBoxIdQue_->pop();
+    }
+    return testBoxId;
+}
 
+void testBox::putBackTestBoxId(int id) {
+    std::lock_guard lck(mtx_);
+    //因为放的元素都是从队列中取出来的,所以这里不用担心会超过队列的大小
+    testBoxIdQue_ -> push(id); 
+}
 
 testBox_err testBox::add(
-        // char id_[32],
-    std::string id_,
-    std::string pid,
-    std::string code,
-    language lang
-) {
-    std::lock_guard lck(mtx_);
-    // 得到一个loca id
-    int testBoxId = -1;
-    if( !heap_.empty()) {
-        testBoxId= heap_.top();
-        heap_.pop();
-    }
-    else {
-        return testBox_err::BUSY; //失败
-    }
-    // 创建一个valPtr
-    // pValPtr testProblem = std::unique_ptr<struct testProblem>(new struct testProblem);
-
-    // 转成testPoint
+    const int testBoxId,
+    std::unique_ptr<testProblem> test_problem)
+{
+    // getpid
+    const std::string pid = test_problem->pid;
 
     fs::path pid_path = this->problem_path / pid;
     if( !fs::exists(pid_path))
@@ -60,19 +59,37 @@ testBox_err testBox::add(
 
     // 输出结果
     int test_point_idx = 0;
-    testPointResult * head = resultContainer_.init_by_test_id(testBoxId,filePairs.size());
-    for (const auto& pair : filePairs) {
-        std::cout << pair.first << " <-> " << pair.second << std::endl;
-        //添加到testPoint 里
 
-        testPoint * t = new testPoint;
-        t->seq_id = ++test_point_idx;
-        t->testBoxId = testBoxId;
-        t->trp = head; //结果应该写入的内存
-        head = head->nxt;
-        // t->id_ = "123";
-        // strcpy(t->id_,"123");
-        pointBox_->push(std::unique_ptr<testPoint>(t));
+    // 得到 [存放的结果] 头部指针,注意这里一次就分配好了所有需要的存n结果的链表的内存
+    testPointResult *head = resultContainer_.init_by_test_id(testBoxId, filePairs.size());
+
+    // 得到 一串 testPoint * 内存的链表
+    testPoint *testPointList = pointBox_ -> get_testPoint_link(filePairs.size());
+    testPoint *t = testPointList;
+    {
+        // TODO 这里 应该不要加锁,因为这里只是对已经申请好的内存进行操作
+        // std::lock_guard lck(mtx_); // 加锁 
+        for (const auto &pair : filePairs)
+        {
+            std::cout << pair.first << " <-> " << pair.second << std::endl;
+            // TODO 得到pair.first 对应的 编号
+            // 添加到testPoint 里
+
+            t->seq_id = ++test_point_idx; //编号
+            t->testBoxId = testBoxId;
+            // !! 这里改写评测结果写入的内存地址
+            t->testPointResult_p = head; //结果应该写入的内存
+
+            t = t->nxt;
+            head = head->nxt; // 下一个可以写入结果的地址
+            // t->id_ = "123";
+            // strcpy(t->id_,"123");
+            // 加入到 testPointBox 里
+            
+            //TODO pointBox_ 一次添加多个元素
+            // pointBox_->push(std::unique_ptr<testPoint>(t));
+        }
+        pointBox_->push_link(testPointList);
     }
 
     return testBox_err::SUCC;
@@ -165,6 +182,12 @@ void testBox::deal_testPoint_singlePointComplete(testPointResult * resultPtr) {
         // resultContainer_.remove(testBoxId);
     }
     LOG_INFO("Finsh %d\n",finish);
+}
+
+
+std::string getResult(const int testBoxId) {
+    // std::lock_guard lck(mtx_);
+    // TODO
 
 
 }

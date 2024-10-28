@@ -31,3 +31,13 @@ void get_judge_args_from_path(int&);
 
 
 void parse_test_point_result(const std::string & str,testPointResult * result);
+
+//评测函数
+std::string judge(
+    long long max_cpu_time,
+    long long max_real_time,
+    long long max_memory,
+    std::string exe,
+    std::string input,
+    std::string output
+);

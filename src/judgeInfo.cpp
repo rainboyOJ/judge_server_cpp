@@ -1,0 +1,190 @@
+#include "judgeInfo.h"
+#include <arpa/inet.h>
+
+//把整数 int 或long long 转换成字符串
+template<typename T>
+void serializeInt(const T &t,std::vector<uint8_t> &ret){
+    int size = sizeof(T);
+    if constexpr ( std::is_same<T, int>::value  || std::is_same<T, unsigned int>::value )
+    {
+        T x = htonl(t);
+        for(int i=0; i<size; i++){
+            ret.push_back( x & 0xff );
+            x >>= 8;
+        }
+    }
+    else if constexpr ( std::is_same<T, long long>::value  || std::is_same<T, unsigned long long>::value )
+    {
+        T x = htobe64(t);
+        for(int i=0; i<size; i++){
+            ret.push_back( x & 0xff );
+            x >>= 8;
+        }
+    }
+}
+
+//转成整数 int 或long long
+template<typename T>
+T deserializeInt(const uint8_t * src){
+    int size = sizeof(T);
+    T x = 0;
+    for (int i = size-1; i >=0; i--)
+    {
+        x <<= 8;
+        x |= src[i];
+    }
+    if constexpr ( std::is_same<T, int>::value  || std::is_same<T, unsigned int>::value )
+    {
+        return ntohl(x);
+    }
+    else if constexpr ( std::is_same<T, long long>::value  || std::is_same<T, unsigned long long>::value )
+    {
+        return be64toh(x);
+    }
+}
+
+
+
+// ==================== 
+
+std::vector<uint8_t> serializeTestProblem(const testProblem &tp){
+    std::vector<uint8_t> ret; //开头填充4个字节，后面填充内容
+    // 这4个字节用来存放后面所有长度值
+    serializeInt(tp.uuid,ret);
+
+    for(int i = 0 ;i < sizeof(tp.pid)/sizeof(tp.pid[0]) ;i++)
+    {
+        ret.push_back(tp.pid[i]);
+    }
+
+    serializeInt(static_cast<int>(tp.lang),ret);
+
+    serializeInt<int>(tp.code.size(),ret); // 存放code长度
+
+    for(int i = 0 ;i < tp.code.size() ;i++)
+        ret.push_back(tp.code[i]);
+
+    //记录长度
+    // *(int *)&ret[0] = htonl(tot_len);
+
+    return std::move(ret);
+}
+
+//反序列化testProblem
+void deserializeTestProblem(const uint8_t * s, testProblem &tp) {
+    // 解析长度,这里不用解析长度了,因为长度已经在前面序列化的时候记录了
+    // int tot_len = deserializeInt<int>(s+idx);
+    // idx += sizeof(int);
+
+    int idx = 0; //下标
+    // 解析uuid
+    tp.uuid = deserializeInt<int>(s+idx);
+    idx += sizeof( tp.uuid );
+
+    // 解析pid
+    for(int i = 0 ;i < sizeof(tp.pid)/sizeof(tp.pid[0]) ;i++)
+    {
+        tp.pid[i] = s[idx];
+        idx += 1;
+    }
+
+    // 解析lang
+    tp.lang = static_cast<language>(deserializeInt<int>(s+idx));
+    idx += sizeof(int);
+
+    // 解析code长度
+    int code_len = deserializeInt<int>(s+idx);
+    idx += sizeof(int);
+
+    // 解析code
+    for(int i = 0 ;i < code_len ;i++)
+    {
+        tp.code += s[idx];
+        idx += 1;
+    }
+}
+
+
+std::vector<uint8_t> serializeTestPointResult(const testResult &tpr){
+    std::vector<uint8_t> ret;
+    //注意这里的结果有多种可能性
+    // [信息头] + [testPointResultArray] 组成
+    // 1. uuid
+    serializeInt(tpr.uuid,ret);
+
+    // 这里没有解析testBoxId 因应没有用
+
+    // 2. testError
+    serializeInt(static_cast<int>(tpr.err_type),ret);
+
+    // 3. msg TODO 要不要加入编译失败的信息呢?
+
+    // 3. language 这里没有加
+    // 因为不需要具体的language,本地肯定知道信息
+
+    int testPointResultArray_len = 0;
+    // 得到结果的链表的长度
+    testPointResult * head = tpr.trp;
+    while(head != nullptr ) {
+        ++testPointResultArray_len;
+        head = head->nxt;
+    }
+
+    serializeInt(testPointResultArray_len,ret);
+
+    head = tpr.trp;
+    while(head != nullptr ) {
+        serializeInt(head->seq_id,ret);
+        serializeInt(head->cpu_time,ret);
+        serializeInt(head->real_time,ret);
+        serializeInt<unsigned long long>(head->memory,ret);
+        serializeInt(head->signal,ret);
+        serializeInt(head->exit_code,ret);
+        serializeInt(head->error,ret);
+        serializeInt(head->result,ret);
+        head = head->nxt;
+    }
+
+    return std::move(ret);
+}
+
+//反序列化testPointResult
+void deserializeTestPointResult(const uint8_t* s, testResultWithVecotr &tpr) {
+    int idx = 0;
+    //1. 解析uuid
+    tpr.uuid = deserializeInt<decltype(tpr.uuid)>(s + idx);
+    idx+=sizeof(tpr.uuid);
+
+    // 2. 解析error_type
+    tpr.err_type = static_cast<testError>(deserializeInt<int>(s + idx));
+    idx+=sizeof(int);
+
+    // 得到结果的链表的长度
+    int testPointResultArray_len = deserializeInt<int>(s + idx);
+    idx+= sizeof(int); //记录长度的是int类型
+
+    for (int i = 0; i < testPointResultArray_len;i++)
+    {
+        testPointResult tp;
+
+        tp.seq_id = deserializeInt<decltype(tp.seq_id)>(s + idx);
+        idx+= sizeof(tp.seq_id);
+        tp.cpu_time = deserializeInt<decltype(tp.cpu_time)>(s + idx);
+        idx+= sizeof(tp.cpu_time);
+        tp.real_time = deserializeInt<decltype(tp.real_time)>(s + idx);
+        idx+= sizeof(tp.real_time);
+        //这里是强指定的
+        tp.memory = deserializeInt<unsigned long long>(s + idx);
+        idx+= sizeof(tp.memory);
+        tp.signal = deserializeInt<decltype(tp.signal)>(s + idx);
+        idx+= sizeof(tp.signal);
+        tp.exit_code = deserializeInt<decltype(tp.exit_code)>(s + idx);
+        idx+= sizeof(tp.exit_code);
+        tp.error = deserializeInt<decltype(tp.error)>(s + idx);
+        idx+= sizeof(tp.error);
+        tp.result = deserializeInt<decltype(tp.result)>(s + idx);
+        idx+= sizeof(tp.result);
+
+        tpr.trp.push_back(tp);
+    }
+}

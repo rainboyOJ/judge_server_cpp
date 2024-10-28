@@ -32,12 +32,22 @@ int main (int argc, char *argv[]) {
         std::cerr << "Error: " << e.what() << std::endl;
     }
     std::cout << "problem_path = " << problem_path << "\n";
-    testBox TB(3,20, problem_path);
+    
+
+    // 创建一个评测线程为4个, 评测队列大小为20,基础题目地址为problem_path的testBox
+    testBox TB(4,20, problem_path);
+
+    int testBoxId =  TB.getTestBoxId();
+
+    auto test_problem = std::make_unique<testProblem>();
+    test_problem -> uuid = 9527;
+    strcpy( test_problem -> pid ,"1000"); //这个id代表testData下的文件夹1000
+    test_problem -> lang = language::cpp;
+    test_problem->code = "#include <iostream>\nint main() {\n\tstd::cout << \"Hello World!\" << std::endl;\n\treturn 0;\n}\n";
+
     auto res = TB.add(
-        "1000-rainboy", //uuid
-        "1000", // pid
-        "code", //code src
-        language::cpp // which lang to judge
+        testBoxId,
+        std::move(test_problem)
     );
     if( res != testBox_err::SUCC)
     {
@@ -47,5 +57,8 @@ int main (int argc, char *argv[]) {
         std::cout << "testBox add SUCC!" << "\n";
     }
     // 添加任务
+
+    // TB.pushBackTestBoxId(testBoxId);
+    TB.putBackTestBoxId(testBoxId);
     return 0;
 }

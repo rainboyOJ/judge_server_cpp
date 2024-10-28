@@ -21,11 +21,12 @@ public:
         int data_size;//数据的大小
         int finish_cnt;
         // struct testProblem problem;
+        std::shared_ptr<testProblem> test_problem; //指向测试题目
     };
 
     resultContainer(int size){
-        vec_.reserve(size+5);
-        for(auto &p : vec_)
+        vec_.resize(size + 5);
+        for (auto &p : vec_)
             p.head = nullptr;
     }
 
@@ -45,7 +46,7 @@ public:
             while(p.head != nullptr) {
                 auto t = p.head;
                 p.head = p.head -> nxt;
-                mem_.del(p.head);
+                mem_.del(t);
             }
         }
     }
@@ -53,7 +54,7 @@ public:
     //返回头部地址
     Pointer init_by_test_id(int testId,int data_size) {
         std::lock_guard lck(mtx_);
-        vec_[testId].data_size = data_size;
+        vec_[testId].data_size = data_size; // 修改对应位置信息
         vec_[testId].finish_cnt = 0 ;
         if( vec_[testId].head != nullptr)
             throw std::runtime_error("init_by_test_id vec[testId].head not null");
