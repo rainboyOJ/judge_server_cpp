@@ -22,7 +22,7 @@ class Logger : noncopyable {
 
     void setLogLevel(int level);  // 设置日志级别
 
-    void log(std::string msg);  // 写日志
+    void log(const char * _file, const int _line, std::string msg);  // 写日志
 };
 
 #define LOG_INFO(logmsgFormat, ...)                                                                                    \
@@ -31,7 +31,7 @@ class Logger : noncopyable {
         logger.setLogLevel(INFO);                                                                                      \
         char buf[1024];                                                                                                \
         snprintf(buf, 1024, logmsgFormat, ##__VA_ARGS__);                                                              \
-        logger.log(buf);\
+        logger.log(__FILE__,__LINE__,buf);                                                                             \
     } while (0)
 
 #define LOG_ERROR(logmsgFormat, ...)                                                                                   \
@@ -40,7 +40,7 @@ class Logger : noncopyable {
         logger.setLogLevel(ERROR);                                                                                     \
         char buf[1024];                                                                                                \
         snprintf(buf, 1024, logmsgFormat, ##__VA_ARGS__);                                                              \
-        logger.log(buf);\
+        logger.log(__FILE__,__LINE__,buf);                                                                             \
     } while (0)
 
 #define LOG_FATAL(logmsgFormat, ...)                                                                                   \
@@ -49,7 +49,7 @@ class Logger : noncopyable {
         logger.setLogLevel(FATAL);                                                                                     \
         char buf[1024];                                                                                                \
         snprintf(buf, 1024, logmsgFormat, ##__VA_ARGS__);                                                              \
-        logger.log(buf);\
+        logger.log(__FILE__,__LINE__,buf);                                                                             \
         exit(-1);                                                                                                      \
     } while (0)
 
@@ -60,7 +60,7 @@ class Logger : noncopyable {
         logger.setLogLevel(DEBUG);                                                                                     \
         char buf[1024];                                                                                                \
         snprintf(buf, 1024, logmsgFormat, ##__VA_ARGS__);                                                              \
-        logger.log(buf);\
+        logger.log(__FILE__,__LINE__,buf);                                                                             \
     } while (0)
 #else
 #define LOG_DEBUG(logmsgFormat, ...)
