@@ -41,9 +41,16 @@ testBox_err testBox::add(
     const int testBoxId,
     std::unique_ptr<testProblem> test_problem)
 {
+    // !! 把test_problem 转移到 resultContainer_ 里
+    testProblem *test_problem_p = test_problem.get();
+    // resultContainer_.move_in_testProblem(testBoxId,std::move(test_problem));
     // getpid
-    const std::string pid = test_problem->pid;
+    const std::string pid = test_problem_p->pid;
 
+//TODO
+#if DEBUG
+    std::cout << this->problem_path << std::endl;
+#endif
     fs::path pid_path = this->problem_path / pid;
     if( !fs::exists(pid_path))
         return testBox_err::PROBLEM_NOT_EXIST;
@@ -89,6 +96,9 @@ testBox_err testBox::add(
             //TODO pointBox_ 一次添加多个元素
             // pointBox_->push(std::unique_ptr<testPoint>(t));
         }
+        // [!!流程3!!] 数据进入testPointBox ,
+        // resultContainer_.move_in_testProblem(testBoxId, std::move(test_problem));
+        resultContainer_.push_testProblem(testBoxId, std::move(test_problem));
         pointBox_->push_link(testPointList);
     }
 
@@ -141,38 +151,25 @@ Data_list_t
 }
 
 
-
-
-void testBox::setSingPointCompleteCallback(singPointCompleteCallback callback)
-{
-    this -> singPointCompleteCallback_ = callback;
-}
-
 void testBox::deal_testPoint_singlePointComplete(testPointResult * resultPtr) {
-    std::lock_guard lck(mtx_);
-    LOG_INFO("--> after parse_test_point_result \n\
-            result %d \n\
-            signal %d \n\
-            exit_code %d \n\
-            error %d \n\
-            cpu_time %d \n\
-            real_time %d \n\
-            memory %lld \n\
-            \n",
-             resultPtr->result,
-             resultPtr->signal,
-             resultPtr->exit_code,
-             resultPtr->error,
-             resultPtr->cpu_time,
-             resultPtr->real_time,
-             resultPtr->memory
-             );
+    LOG_DEBUG("--> after parse_test_point_result: result %d ; signal %d ; exit_code %d; error %d ; cpu_time %d ; real_time %d ; memory %lld ;\n",
+              resultPtr->result,
+              resultPtr->signal,
+              resultPtr->exit_code,
+              resultPtr->error,
+              resultPtr->cpu_time,
+              resultPtr->real_time,
+              resultPtr->memory);
 
     // 处理信息
     int testBoxId = resultPtr-> testBoxId;
 
+    // 将结果加入到 resultContainer_ 里，并且判断是否全部完成
+
     bool finish = resultContainer_.finish_cnt(resultPtr); // 加1
-    if( finish ) {
+    LOG_INFO("Finsh %d\n", finish);
+    // [!!流程5!!] 处理完毕,通知主线程
+    if( finish && allPointCompleteCallback_ != nullptr) {
 
         // TODO 把结果链 转成对应的信息
         // !!! 信息传递给对应的 消息队列，
@@ -180,14 +177,29 @@ void testBox::deal_testPoint_singlePointComplete(testPointResult * resultPtr) {
         //把结果链 删除(放回内存池子)
         // 不应该在这里发删除,应该在main线程发送完数据后删除
         // resultContainer_.remove(testBoxId);
+        allPointCompleteCallback_(testBoxId); 
     }
-    LOG_INFO("Finsh %d\n",finish);
+    else if( singPointCompleteCallback_ != nullptr ) {
+        singPointCompleteCallback_(testBoxId);
+    }
+
+}
+
+void testBox::clearResultByTestBoxId(int testBoxId) {
+    resultContainer_.remove(testBoxId);
 }
 
 
-std::string getResult(const int testBoxId) {
+// 从resultContainer_ 读取数据,并返回 testResultWithVecotr 序列化后的数据
+std::vector<uint8_t> testBox::getResult(const int testBoxId) {
+    // 这里不需要加锁,因为 resultContainer 本身就有锁
     // std::lock_guard lck(mtx_);
     // TODO
+    return this->resultContainer_.getResult(testBoxId);
+}
 
-
+void testBox::writeResult(int testBoxId, int seq_id, testPointResult * trp) {
+    // 这里不需要加锁,因为 resultContainer 本身就有锁
+    // std::lock_guard lck(mtx_);
+    resultContainer_.writeResult(testBoxId, seq_id, trp);
 }

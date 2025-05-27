@@ -43,6 +43,7 @@ public:
     void push_link(testPoint * ptr);
 
     // 得到元素为size个的测试点testPoint链表
+    // 与push_link配合使用
     testPoint * get_testPoint_link(int size);
 
 private:
@@ -55,7 +56,7 @@ private:
     // UniquePtrQueue<testPoint> que_; 
 
 
-    //队列
+    //队列,保证所有的操作都是在有锁 work_mtx 的情况下进行的
     testPoint * que_head;
     testPoint * que_tail;
 

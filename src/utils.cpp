@@ -101,7 +101,7 @@ void parse_test_point_result(const std::string & str,testPointResult * result){
 
         if(isblank(i) || i+1 == str.length()) {
             if( state == State::val) {
-                LOG_INFO("in parse_test_point_result :  name = %s,val = %s\n",name.c_str(),val.c_str());
+                // LOG_INFO("in parse_test_point_result :  name = %s,val = %s\n",name.c_str(),val.c_str());
                 if( name == "result") {
                     result->result= std::stoi(val);
                 }
@@ -145,9 +145,5 @@ void parse_test_point_result(const std::string & str,testPointResult * result){
                 state = State::val;
             }
         }
-
-
     }
-
-
 }

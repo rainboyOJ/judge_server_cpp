@@ -1,49 +1,7 @@
+#include <iostream>
+#include <iomanip>
 #include "judgeInfo.h"
-#include <arpa/inet.h>
-
-//把整数 int 或long long 转换成字符串
-template<typename T>
-void serializeInt(const T &t,std::vector<uint8_t> &ret){
-    int size = sizeof(T);
-    if constexpr ( std::is_same<T, int>::value  || std::is_same<T, unsigned int>::value )
-    {
-        T x = htonl(t);
-        for(int i=0; i<size; i++){
-            ret.push_back( x & 0xff );
-            x >>= 8;
-        }
-    }
-    else if constexpr ( std::is_same<T, long long>::value  || std::is_same<T, unsigned long long>::value )
-    {
-        T x = htobe64(t);
-        for(int i=0; i<size; i++){
-            ret.push_back( x & 0xff );
-            x >>= 8;
-        }
-    }
-}
-
-//转成整数 int 或long long
-template<typename T>
-T deserializeInt(const uint8_t * src){
-    int size = sizeof(T);
-    T x = 0;
-    for (int i = size-1; i >=0; i--)
-    {
-        x <<= 8;
-        x |= src[i];
-    }
-    if constexpr ( std::is_same<T, int>::value  || std::is_same<T, unsigned int>::value )
-    {
-        return ntohl(x);
-    }
-    else if constexpr ( std::is_same<T, long long>::value  || std::is_same<T, unsigned long long>::value )
-    {
-        return be64toh(x);
-    }
-}
-
-
+#include "Logger.h"
 
 // ==================== 
 
@@ -80,12 +38,14 @@ void deserializeTestProblem(const uint8_t * s, testProblem &tp) {
     // 解析uuid
     tp.uuid = deserializeInt<int>(s+idx);
     idx += sizeof( tp.uuid );
+    LOG_DEBUG("uuid: %d \n", tp.uuid);
 
     // 解析pid
     for(int i = 0 ;i < sizeof(tp.pid)/sizeof(tp.pid[0]) ;i++)
     {
         tp.pid[i] = s[idx];
         idx += 1;
+        // LOG_DEBUG("pid[%d]  = %c \n", i,tp.pid[i]);
     }
 
     // 解析lang
@@ -102,8 +62,8 @@ void deserializeTestProblem(const uint8_t * s, testProblem &tp) {
         tp.code += s[idx];
         idx += 1;
     }
+    LOG_DEBUG("test_problem code \n%s\n", tp.code.c_str());
 }
-
 
 std::vector<uint8_t> serializeTestPointResult(const testResult &tpr){
     std::vector<uint8_t> ret;
@@ -119,7 +79,7 @@ std::vector<uint8_t> serializeTestPointResult(const testResult &tpr){
 
     // 3. msg TODO 要不要加入编译失败的信息呢?
 
-    // 3. language 这里没有加
+    // 4. language 这里没有加
     // 因为不需要具体的language,本地肯定知道信息
 
     int testPointResultArray_len = 0;
@@ -187,4 +147,22 @@ void deserializeTestPointResult(const uint8_t* s, testResultWithVecotr &tpr) {
 
         tpr.trp.push_back(tp);
     }
+}
+
+void debug_print_uint8_t_vector(const std::vector<uint8_t>& vec) {
+    int cnt = 0;
+    for (uint8_t byte : vec)
+    {
+        std::cout << std::setw(2)      // 宽度为 2 位
+                  << std::setfill('0') // 如果不足 2 位，填充零
+                  << std::hex          // 十六进制输出格式
+                  << (int)byte << " ";
+        ++cnt;
+        if( cnt == 16) 
+        {
+            std::cout << std::endl;
+            cnt = 0;
+        }
+    }
+    std::cout << std::endl;
 }

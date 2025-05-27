@@ -8,6 +8,7 @@
 #include "static_loop_queue.h"
 #include "resultContainer.h"
 
+
 /*
 testBox设计的思路:
 
@@ -45,8 +46,8 @@ public:
 
     friend class testPointBox;
 
-    using beginTestCallback = std::function<void(const testProblem *)>;
-    using singPointCompleteCallback = std::function<void(const testPointResult *)>;
+    using beginTestCallback = std::function<void(int testBoxId)>;
+    using singPointCompleteCallback = std::function<void(int testBoxId)>;
     using allPointCompleteCallback = std::function<void(int)>;
 
     using pValPtr = UniquePtrQueue<testProblem>::Ptr;
@@ -60,7 +61,9 @@ public:
         testBoxIdQue_(std::make_unique<StaticLoopQueue<int>>(dataSizeLimit) ) ,
         problem_path(problem_path_),
         pointBox_(std::make_unique<testPointBox>(workNum,this)),
-        resultContainer_(dataSizeLimit) //设计可以现时进行的测试的题目的多少
+        resultContainer_(dataSizeLimit), //设计可以现时进行的测试的题目的多少
+        allPointCompleteCallback_(nullptr),
+        singPointCompleteCallback_(nullptr)
     {
         //在队列里存n个元素
         for (int i = 0;i< dataSizeLimit_;i++)
@@ -69,10 +72,15 @@ public:
         }
     }
 
+    // 最多可以同时测试多少个题目
     int size() const { return dataSizeLimit_; }
 
-    void setSingPointCompleteCallback(singPointCompleteCallback callback);
-    void setallPointCompleteCallback();
+    void setSingPointCompleteCallback(singPointCompleteCallback callback) {
+        this -> singPointCompleteCallback_ = callback;
+    }
+    void setallPointCompleteCallback(allPointCompleteCallback callback) {
+        this -> allPointCompleteCallback_ = callback;
+    }
 
     //处理 testPointBox 调用过来的信息
 
@@ -84,12 +92,16 @@ public:
 
     //得到一个可以用的空位置,-1表示没有空位置了
     int getTestBoxId();
+
+    // 更好的名字
+    // int getTestBoxIdNoWorking();
+
     // 放回testBoxId
     void putBackTestBoxId(int id);
 
 
     //得到结果,返回的为protobuf格式的字符串
-    std::string getResult(const int testBoxId);
+    std::vector<uint8_t> getResult(const int testBoxId);
 
     //清空
     // testBox_err add(
@@ -109,6 +121,21 @@ public:
         const int testBox_id, // testBox 可以用的空位置
         std::unique_ptr<testProblem> test_problem
     );
+
+
+    //通过testBoxId 得到resultContainer_里的结果
+    // 并返回testResult 序列化后的结果
+    std::string getResultByTestBoxId(int testBoxId);
+
+    void clearResultByTestBoxId(int testBoxId); //清空resultContainer_里的结果
+
+protected:
+
+    // 向 resultContainer 写入测试结果
+    // @param testBoxId  测试箱ID,用于标识不同的测试实例
+    // @param seq_id     测试点的序号
+    // @param trp        测试点结果的指针,包含该测试点的详细评测信息
+    void writeResult(int testBoxId,int seq_id,testPointResult * trp);
 
 private:
 
