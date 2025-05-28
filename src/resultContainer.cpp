@@ -1,8 +1,7 @@
 #include "resultContainer.h"
 #include "judgeInfo.h"
 
-// TODO
-void resultContainer::writeResult(int testBoxId,int seq_id,testPointResult * trp) {
+bool resultContainer::writeResult(int testBoxId,int seq_id,testPointResult * trp) {
 
     // std::lock_guard<std::mutex> lock(mtx_);
     // 对应testBoxId testResult 上锁
@@ -25,10 +24,11 @@ void resultContainer::writeResult(int testBoxId,int seq_id,testPointResult * trp
             p->result = trp->result;
 
             ++__Result__.finish_cnt; // 完成计数加一
-            return;
+            return __Result__.finish_cnt >= __Result__.data_size; // 返回是否所有测试点都完成了评测
         }
         p = p->nxt;
     }
+    return false; // 没有找到对应的测试点
     
 }
 
@@ -47,7 +47,7 @@ std::vector<uint8_t> resultContainer::readResult(int idx, readResultStatus & sta
     }
 
 
-    if(__Result__.readDone_cnt <= __Result__.finish_cnt) {
+    if(__Result__.readDone_cnt >= __Result__.finish_cnt) {
         // 没有数据可以读取
         status = readResultStatus::NOT_NEW_DATA;
         return std::vector<uint8_t>();

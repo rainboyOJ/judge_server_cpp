@@ -6,3 +6,6 @@
 
 
 - [ ] 实现testBox的回调函数
+
+
+- [ ] client_sockets 应该只有两种状态: readAble 和 writeAble ,通过 aotimc_bool 来实现

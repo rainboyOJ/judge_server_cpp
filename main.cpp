@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
 
     //1. 创建testBox
     // TestBox test_box;
-    std::unique_ptr<testBox> test_box = std::make_unique<testBox>(4,4,"/home/rainboy/mycode/boxtest/testData");
+    std::unique_ptr<testBox> test_box = std::make_unique<testBox>(4,4,"/home/rainboy/mycode/RainboyOJ/boxtest/testData");
     //创建client_sockets
     ClientSockets client_sockets(test_box.get());
 
@@ -113,7 +113,8 @@ int main(int argc, char* argv[]) {
             // 将客户端 socket 添加到 client_sockets 列表中
             // 有可能添加不成功，这里会在client_sockets中处理
             client_sockets.add_socket(client_socket);
-            std::cout << "Accepted connection" << std::endl;
+            // std::cout << "Accepted connection" << std::endl;
+            LOG_INFO("Accepted connection, fd: %d", client_socket);
         }
         // 处理客户端 socket 上的事件
         client_sockets.deal_events(read_fds, write_fds);

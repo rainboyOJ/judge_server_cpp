@@ -50,7 +50,7 @@ void Logger::log(const char * _file, const int _line, std::string msg) {
     
     //!NOTE: 将日志打印由两次改为一次，避免并发时打印错位
     std::cout 
-        << " [" << file_path << ":" << std::dec << _line << "]"
+        << "[" << file_path << ":" << std::dec << _line << "]"
         << pre 
         << Timestamp::now().toString() 
         << ": " << msg << std::endl;

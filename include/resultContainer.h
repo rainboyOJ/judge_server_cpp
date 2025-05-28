@@ -54,8 +54,16 @@ public:
      * @param testBoxId         测试箱ID,用于标识不同的测试实例
      * @param test_point_seq_id 测试点序号,表示当前是第几个测试点
      * @param p                 指向测试点结果的指针,存储了该测试点的详细评测信息
+     * @return bool            写入结果的状态
+     *                        - true: 所有测试点都已完成评测
+     *                        - false: 还有测试点未完成评测
+     * 
+     * @note 此函数是线程安全的,内部使用互斥锁保护共享资源
+     * @note 写入成功后会增加完成计数器(finish_cnt)
+     * @warning testBoxId必须是有效的索引值,且小于容器大小
+     * @see isJudgeFinished() 检查评测是否完成
      */
-    void writeResult(int testBoxId,int test_point_seq_id,Pointer p);
+    bool writeResult(int testBoxId, int test_point_seq_id, Pointer p);
         
 
 // TODO change name -> add_finish_cnt 添加计数
@@ -118,18 +126,33 @@ public:
     std::vector<uint8_t> readResult(int idx,readResultStatus & status);
 
 
-    //移除所有的以idx为标记的所有的内存
-    //放回memPool里
-    // TODO 改成更好的名字
-    void clear(int idx){
-        std::lock_guard lck(mtx_);
-        Pointer p = vec_[idx].trp;
-        vec_[idx].finish_cnt = 0;
-        vec_[idx].data_size = 0;
+    /**
+     * 清空指定测试箱的所有评测结果并释放相关资源
+     * 
+     * @param idx 测试箱索引(testBoxId),用于标识要清空的测试实例
+     * 
+     * @note 此函数是线程安全的,内部使用互斥锁保护共享资源
+     * @note 清空操作包括:
+     *       - 重置完成计数器(finish_cnt)为0
+     *       - 重置数据大小(data_size)为0  
+     *       - 遍历并释放该测试箱对应的所有testPointResult链表节点
+     *       - 将释放的内存归还给内存池(memPool)
+     * 
+     * @warning idx必须是有效的索引值,且小于容器大小
+     * 
+     * TODO: 考虑重命名为更清晰的函数名,如clearTestResults()或resetTestBox()
+     */
+    void resetTestBoxById(int idx){
+        std::lock_guard lck(mtx_);          // 获取互斥锁,保证线程安全
+        Pointer p = vec_[idx].trp;          // 获取该测试箱的结果链表头指针
+        vec_[idx].finish_cnt = 0;           // 重置完成计数器
+        vec_[idx].data_size = 0;            // 重置数据大小
+        
+        // 遍历链表,释放所有节点内存
         while(p != nullptr) {
-            auto t = p;
-            p = p -> nxt;
-            mem_.del(t);
+            auto t = p;                     // 保存当前节点
+            p = p -> nxt;                   // 移动到下一个节点
+            mem_.del(t);                    // 将当前节点归还给内存池
         }
     }
 

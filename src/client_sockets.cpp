@@ -31,7 +31,7 @@ ClientSockets::ClientSockets(testBox* test_box)
         {
             // 设置为可以写,等待下一轮事件循环把这个对应的fd加入可以写的事件监听里
             // client_sockets_[testBoxId] -> writeAble = true;
-            LOG_DEBUG("[client_socket recv testBol callback],set testBoxId %d writeAble\n",testBoxId);
+            LOG_DEBUG("[client_socket recv testBox callback],set testBoxId %d writeAble\n",testBoxId);
             
             // TODO 这里修改一下,只让最后一次的测试点完成后,才设置写标志 
             // client_sockets_[testBoxId]->set_write_able();
@@ -40,7 +40,7 @@ ClientSockets::ClientSockets(testBox* test_box)
     test_box_->setallPointCompleteCallback(
         [this](int testBoxId) {
             // 设置为可以写,等待下一轮事件循环把这个对应的fd加入可以写的事件监听里
-            LOG_DEBUG("[client_socket recv testBol callback],set all testBoxId %d completed\n",testBoxId);
+            LOG_DEBUG("[client_socket recv testBox callback],set all testBoxId %d completed\n",testBoxId);
             client_sockets_[testBoxId]->set_completed();
         }
     );
@@ -283,6 +283,12 @@ int FdInfo::send(const std::vector<uint8_t>& result_data)
     // TODO 这里应该加一个highwater 阈值, 防止发送过快
     int send_size = result_data.size();
     LOG_DEBUG("ready to write %d result_data bytes to socket %d", send_size, fd);
+
+    if( send_size <= 0) {
+        LOG_ERROR("send size is 0, return");
+        return 0; // 没有数据需要发送
+    }
+
     int tot_send = send_size;
     // 先发送这个数据长度
     int snd_size = htonl(send_size);

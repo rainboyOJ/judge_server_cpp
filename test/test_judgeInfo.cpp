@@ -40,7 +40,7 @@ void test_testResult () {
     my_testResult.uuid = 9527;
     my_testResult.testBoxId = 1234;
     my_testResult.err_type = testError::compile_error;
-    my_testResult.lang = language::cpp;
+    // my_testResult.lang = language::cpp;
     my_testResult.trp = nullptr;
     for (int i = 0; i < 9;i++)
     {

@@ -7,7 +7,10 @@ project(boxTest VERSION 1.0)
 set(CMAKE_CXX_STANDARD 17)          # 可以根据需要调整标准版本
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-# 添加头文件目录
+# 定义项目根目录的宏
+add_definitions(-DPROJECT_ROOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+
+# 添加头文件目
 include_directories(include)
 
 #  from this https://github.com/protocolbuffers/protobuf/issues/14500

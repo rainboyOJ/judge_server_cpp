@@ -166,27 +166,27 @@ void testBox::deal_testPoint_singlePointComplete(testPointResult * resultPtr) {
 
     // 将结果加入到 resultContainer_ 里，并且判断是否全部完成
 
-    bool finish = resultContainer_.finish_cnt(resultPtr); // 加1
-    LOG_INFO("Finsh %d\n", finish);
-    // [!!流程5!!] 处理完毕,通知主线程
-    if( finish && allPointCompleteCallback_ != nullptr) {
+    // bool finish = resultContainer_.finish_cnt(resultPtr); // 加1
+    // LOG_INFO("Finsh %d\n", finish);
+    // // [!!流程5!!] 处理完毕,通知主线程
+    // if( finish && allPointCompleteCallback_ != nullptr) {
 
-        // TODO 把结果链 转成对应的信息
-        // !!! 信息传递给对应的 消息队列，
+    //     // TODO 把结果链 转成对应的信息
+    //     // !!! 信息传递给对应的 消息队列，
 
-        //把结果链 删除(放回内存池子)
-        // 不应该在这里发删除,应该在main线程发送完数据后删除
-        // resultContainer_.remove(testBoxId);
-        allPointCompleteCallback_(testBoxId); 
-    }
-    else if( singPointCompleteCallback_ != nullptr ) {
-        singPointCompleteCallback_(testBoxId);
-    }
+    //     //把结果链 删除(放回内存池子)
+    //     // 不应该在这里发删除,应该在main线程发送完数据后删除
+    //     // resultContainer_.remove(testBoxId);
+    //     allPointCompleteCallback_(testBoxId); 
+    // }
+    // else if( singPointCompleteCallback_ != nullptr ) {
+    //     singPointCompleteCallback_(testBoxId);
+    // }
 
 }
 
 void testBox::clearResultByTestBoxId(int testBoxId) {
-    resultContainer_.remove(testBoxId);
+    resultContainer_.resetTestBoxById(testBoxId);
 }
 
 
@@ -195,11 +195,37 @@ std::vector<uint8_t> testBox::getResult(const int testBoxId) {
     // 这里不需要加锁,因为 resultContainer 本身就有锁
     // std::lock_guard lck(mtx_);
     // TODO
-    return this->resultContainer_.getResult(testBoxId);
+    readResultStatus status = readResultStatus::NOT_DATA;
+    std::vector<uint8_t> result = this->resultContainer_.readResult(testBoxId,status);
+    if( status == readResultStatus::NOT_DATA) {
+        // TODO 这里应该返回一个特定的信信息, 表示没有数据
+        // { code : -1, msg : "no data" }
+        return std::vector<uint8_t>();
+    }
+    else if ( status == readResultStatus::NOT_NEW_DATA) {
+        // TODO 这里应该返回一个特定的信信息, 表示没有数据
+        // { code : -1, msg : "no new data" }
+        return std::vector<uint8_t>();
+    }
+    else if ( status == readResultStatus::FINISHED || status == readResultStatus::SUCCESS
+    ) {
+        // 这里应该返回 序列化后的结果
+        return result; // 返回序列化后的结果
+    }
+    return std::vector<uint8_t>();
 }
 
 void testBox::writeResult(int testBoxId, int seq_id, testPointResult * trp) {
     // 这里不需要加锁,因为 resultContainer 本身就有锁
     // std::lock_guard lck(mtx_);
-    resultContainer_.writeResult(testBoxId, seq_id, trp);
+    bool finishAllTestPoint = resultContainer_.writeResult(testBoxId, seq_id, trp);
+    LOG_DEBUG("writeResult: testBoxId %d, seq_id %d, finishAllTestPoint %d\n", testBoxId, seq_id, finishAllTestPoint);
+    if( finishAllTestPoint && allPointCompleteCallback_ != nullptr) {
+        // TODO 把结果链 转成对应的信息
+        // !!! 信息传递给对应的 消息队列，
+        allPointCompleteCallback_(testBoxId); 
+    }
+    else if( singPointCompleteCallback_ != nullptr ) {
+        singPointCompleteCallback_(testBoxId);
+    }
 }
