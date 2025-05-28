@@ -7,6 +7,8 @@
 #include <memory>  // For std::unique_ptr
 #include <stdexcept>
 #include <string>
+#include <iostream>
+#include <iomanip>
 #include "judgeInfo.h"
 
 std::string Popen(const char* cmd);
@@ -41,3 +43,9 @@ std::string judge(
     std::string input,
     std::string output
 );
+
+// 反序列化测试点结果
+void deserializeTestPointResult(const uint8_t* s, testResultWithVecotr &tpr);
+
+// 调试用的函数,打印出uint8_t 数组
+void debug_print_uint8_t_vector(const std::vector<uint8_t> &vec);

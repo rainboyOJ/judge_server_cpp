@@ -10,6 +10,7 @@
 #include <cassert>
 
 #include "judgeInfo.h"
+#include "utils.h"
 
 int main(int argc, char const *argv[])
 {

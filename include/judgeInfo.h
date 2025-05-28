@@ -188,7 +188,3 @@ void deserializeTestProblem(const uint8_t * s, testProblem &tp);
 
 // 对发送的测试结果testPointResult进行反序列化
 std::vector<uint8_t> serializeTestPointResult(const testResult &tpr);
-void deserializeTestPointResult(const uint8_t * s, testResultWithVecotr &tpr);
-
-// 调试用的函数,打印出uint8_t 数组
-void debug_print_uint8_t_vector(const std::vector<uint8_t> &vec);
