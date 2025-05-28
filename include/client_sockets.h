@@ -16,6 +16,7 @@
 #include <sys/select.h>
 
 #include <mutex>
+#include <string_view>
 
 #include "testBox.h" //与testBox 建立连接
 
@@ -95,7 +96,7 @@ public:
     std::unique_ptr<testProblem> read(int &read_size);
 
     //发送数据
-    int send(const std::vector<uint8_t>& data);
+    int send(std::string_view result_data);
 
 private:
     int fd;

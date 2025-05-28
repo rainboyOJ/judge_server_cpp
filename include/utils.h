@@ -14,6 +14,9 @@
 #include <arpa/inet.h>
 #include "judgeInfo.h"
 
+// 前向声明
+class testResult;
+
 std::string Popen(const char* cmd) ;
 
 //序列化与反序列化
@@ -98,8 +101,6 @@ std::string judge(
     std::string input,
     std::string output
 );
-
-std::vector<uint8_t> serializeTestPointResult(const testResult &tpr);
 
 // 反序列化测试点结果
 void deserializeTestPointResult(const uint8_t* s, testResultWithVecotr &tpr);

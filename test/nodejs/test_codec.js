@@ -5,7 +5,8 @@
  * 测试 DataCodec 类的序列化和反序列化功能
  */
 
-const { DataCodec, Language, TestError } = require('./send_one_judge.js');
+// 使用相对路径导入模块
+const { DataCodec, Language, TestError } = require('./lib/index.js');
 
 console.log('🧪 开始编码解码测试...\n');
 

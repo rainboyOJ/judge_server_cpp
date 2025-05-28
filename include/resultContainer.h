@@ -10,12 +10,86 @@
 
 #include "judgeInfo.h"
 #include "memPool.h"
+#include "utils.h"
+#include "json.hpp"
+using json = nlohmann::json;
 
 enum class readResultStatus {
     NOT_DATA, // 没有数据
     NOT_NEW_DATA, // 没有新的数据
     SUCCESS, // 成功读取数据
     FINISHED, // 所有结果都已经读取完毕
+};
+
+using TestPointResultMemoryPool = memoryPool<testPointResult>;
+/**
+ * @brief 自定义删除器函数，用于释放 `testPointResult` 对象的内存。
+ * 
+ * 该函数接收一个指向 `TestPointResultMemoryPool` 内存池的指针和一个指向 `testPointResult` 对象的指针。
+ * 如果 `testPointResult` 指针不为空，它会调用内存池的 `del` 方法将该对象的内存归还给内存池。
+ * 
+ * @param pool 指向 `TestPointResultMemoryPool` 内存池的指针，用于管理 `testPointResult` 对象的内存。
+ * @param p 指向 `testPointResult` 对象的指针，该对象的内存将被释放。
+ */
+inline void __deleter(TestPointResultMemoryPool * pool,testPointResult * p) {
+    // 检查指针是否为空，如果不为空则调用内存池的 del 方法释放内存
+    if(p != nullptr)
+        pool->del(p); // 释放内存
+}
+
+using TestPointResultPtr = std::unique_ptr<testPointResult, std::function<void(testPointResult*)>>;
+
+inline TestPointResultPtr create_testPointResult(TestPointResultMemoryPool * pool) {
+    // 创建一个 unique_ptr，使用自定义删除器函数 __deleter
+    // 这个 unique_ptr 会在超出作用域时自动调用 __deleter 来释放内存
+    return std::unique_ptr<testPointResult, std::function<void(testPointResult*)>>(pool->get(), [pool](testPointResult* p) {
+        __deleter(pool, p);
+    });
+}
+
+//测试结果
+class testResult {
+public:
+    int testBoxId; //唯一主评测id // 对应于testBox 中使用
+    int uuid; // 唯一评测id
+    testError err_type; // 错误类型
+
+    std::unique_ptr<testProblem> test_problem_p; // 题目信息
+    std::vector<TestPointResultPtr> TPR; // 存储测试点结果的指针数组,每个元素是一个 testPointResult 的智能指针
+
+    int data_size; // 数据点的数量
+    int finish_cnt;
+    int readDone_cnt;
+
+    std::mutex mtx_; // 互斥锁
+
+    // 为了兼容旧代码，保留trp链表指针
+    testPointResult * trp;
+
+public:
+    testResult()
+        : testBoxId(-1),
+          uuid(-1),
+          err_type(testError::succ),
+          data_size(0),
+          finish_cnt(0), readDone_cnt(0),
+          TPR(100), // 初始化 TPR 数组大小为 100
+          trp(nullptr)
+    {
+        // 初始化互斥锁
+    }
+
+    // 添加测试点结果
+    void addTestPointResult(int idx,TestPointResultPtr && trp) {
+        std::lock_guard<std::mutex> lock(mtx_);
+        TPR[idx] = std::move(trp);
+    }
+
+    // 清空并初始化测试数据
+    void clear();
+
+    // 序列化测试结果
+    json serialize() const;
 };
 
 class resultContainer {
@@ -32,14 +106,16 @@ public:
         // std::shared_ptr<testProblem> test_problem; //指向测试题目
     // };
 
-    resultContainer(int size){
+    resultContainer(int size) : mem_() {
         // 包含 std::mutex 的类型不能被复制，因此不能直接使用 vec_.resize 。
         // 又因为 testResult 没有默认构造函数，因此不能直接使用 vec_.resize(size); vec_.emplace_back();
         // 正确的做法是使用 std::vector 的构造函数，如下：
 
         vec_ = std::vector<testResult>(size + 5);
-        for (auto &p : vec_)
-          p.trp = nullptr;
+        // 初始化每个testResult的基本信息
+        for (int i = 0; i < vec_.size(); ++i) {
+            vec_[i].testBoxId = i;
+        }
     }
 
     //对p对应的testBoxId 里进行测试结束计数
@@ -63,7 +139,32 @@ public:
      * @warning testBoxId必须是有效的索引值,且小于容器大小
      * @see isJudgeFinished() 检查评测是否完成
      */
-    bool writeResult(int testBoxId, int test_point_seq_id, Pointer p);
+    bool writeResult(int testBoxId, int test_point_seq_id, Pointer p) {
+        if (testBoxId < 0 || testBoxId >= vec_.size()) return false;
+        
+        std::lock_guard<std::mutex> lock(vec_[testBoxId].mtx_);
+        auto & result = vec_[testBoxId];
+
+        // 遍历链表找到对应的测试点
+        testPointResult * current = result.trp;
+        while (current) {
+            if (current->seq_id == test_point_seq_id) {
+                // 复制结果数据
+                current->cpu_time = p->cpu_time;
+                current->real_time = p->real_time;
+                current->memory = p->memory;
+                current->signal = p->signal;
+                current->exit_code = p->exit_code;
+                current->error = p->error;
+                current->result = p->result;
+
+                ++result.finish_cnt;
+                return result.finish_cnt >= result.data_size;
+            }
+            current = current->nxt;
+        }
+        return false;
+    }
         
 
 // TODO change name -> add_finish_cnt 添加计数
@@ -78,34 +179,44 @@ public:
     // }
 
     ~resultContainer() {
-        std::lock_guard lck(mtx_);
-        for(auto &p : vec_)
-        {
-            while(p.test_problem_p != nullptr) {
-                auto t = p.trp;
-                p.trp = p.trp-> nxt;
-                mem_.del(t);
+        std::lock_guard<std::mutex> lck(mtx_);
+        for(auto &result : vec_) {
+            // 清理链表
+            while(result.trp != nullptr) {
+                auto temp = result.trp;
+                result.trp = result.trp->nxt;
+                mem_.del(temp);
             }
         }
     }
 
     //返回头部地址
-    Pointer init_by_test_id(int testId,int data_size) {
-        std::lock_guard lck(mtx_);
-        vec_[testId].data_size = data_size; // 修改对应位置信息
-        vec_[testId].finish_cnt = 0 ;
-        vec_[testId].readDone_cnt = 0 ;
-        if( vec_[testId].trp != nullptr)
-            throw std::runtime_error("init_by_test_id vec[testId].head not null");
-
-        //一口气申请所有的需要写结果的内存
-        for(int i = 0 ;i< data_size;i++) {
-            auto t = mem_.get();
-            t->nxt = vec_[testId].trp;
-            vec_[testId].trp= t;
+    Pointer init_by_test_id(int testId, int data_size) {
+        if (testId < 0 || testId >= vec_.size()) {
+            throw std::out_of_range("testId out of range");
         }
 
-        return vec_[testId].trp;
+        std::lock_guard<std::mutex> lck(mtx_);
+        auto & result = vec_[testId];
+        
+        result.data_size = data_size;
+        result.finish_cnt = 0;
+        result.readDone_cnt = 0;
+        result.testBoxId = testId;
+
+        if (result.trp != nullptr)
+            throw std::runtime_error("init_by_test_id vec[testId].trp not null");
+
+        // 一口气申请所有的需要写结果的内存
+        for(int i = 0; i < data_size; i++) {
+            auto t = mem_.get();
+            t->testBoxId = testId;
+            t->seq_id = i;
+            t->nxt = result.trp;
+            result.trp = t;
+        }
+
+        return result.trp;
     }
 
     //得到一个数据内存
@@ -120,11 +231,6 @@ public:
     //
     //     return t;
     // }
-
-    // 得到idx 对应的数据
-    // 从resultContainer_ 读取数据,并返回 testResultWithVecotr 序列化后的数据
-    std::vector<uint8_t> readResult(int idx,readResultStatus & status);
-
 
     /**
      * 清空指定测试箱的所有评测结果并释放相关资源
@@ -142,25 +248,72 @@ public:
      * 
      * TODO: 考虑重命名为更清晰的函数名,如clearTestResults()或resetTestBox()
      */
-    void resetTestBoxById(int idx){
-        std::lock_guard lck(mtx_);          // 获取互斥锁,保证线程安全
-        Pointer p = vec_[idx].trp;          // 获取该测试箱的结果链表头指针
-        vec_[idx].finish_cnt = 0;           // 重置完成计数器
-        vec_[idx].data_size = 0;            // 重置数据大小
-        
-        // 遍历链表,释放所有节点内存
-        while(p != nullptr) {
-            auto t = p;                     // 保存当前节点
-            p = p -> nxt;                   // 移动到下一个节点
-            mem_.del(t);                    // 将当前节点归还给内存池
-        }
+    void resetTestBoxById(int idx) {
+        if (idx < 0 || idx >= vec_.size()) return;
+        auto & result = vec_[idx];
+        result.clear();
     }
 
     //把testProblem 放入到对应的testBoxId 里
-    void push_testProblem(int testBoxId,std::unique_ptr<testProblem> test_problem)
-    {
-        std::lock_guard lck(mtx_);
+    void push_testProblem(int testBoxId, std::unique_ptr<testProblem> test_problem) {
+        if (testBoxId < 0 || testBoxId >= vec_.size()) return;
+
+        std::lock_guard<std::mutex> lck(mtx_);
         vec_[testBoxId].test_problem_p = std::move(test_problem);
+        vec_[testBoxId].uuid = vec_[testBoxId].test_problem_p->uuid;
+    }
+
+    /**
+     * 设置错误类型
+     */
+    void setErrorType(int testBoxId, testError err_type) {
+        if (testBoxId < 0 || testBoxId >= vec_.size()) return;
+
+        std::lock_guard<std::mutex> lock(vec_[testBoxId].mtx_);
+        vec_[testBoxId].err_type = err_type;
+    }
+
+    /**
+     * 获取测试结果的引用（用于直接操作）
+     */
+    testResult& getTestResult(int testBoxId) {
+        if (testBoxId < 0 || testBoxId >= vec_.size()) {
+            throw std::out_of_range("testBoxId out of range");
+        }
+        return vec_[testBoxId];
+    }
+
+    /**
+     * 读取JSON格式的测试结果
+     */
+    json readResultAsJson(int idx, readResultStatus & status) {
+        if (idx < 0 || idx >= vec_.size()) {
+            status = readResultStatus::NOT_DATA;
+            return json{};
+        }
+
+        std::lock_guard<std::mutex> lock(vec_[idx].mtx_);
+        auto & result = vec_[idx];
+
+        if (result.finish_cnt == 0) {
+            status = readResultStatus::NOT_DATA;
+            return json{};
+        }
+
+        if (result.readDone_cnt >= result.finish_cnt) {
+            status = readResultStatus::NOT_NEW_DATA;
+            return json{};
+        }
+
+        result.readDone_cnt = result.finish_cnt;
+        
+        if (result.finish_cnt == result.data_size) {
+            status = readResultStatus::FINISHED;
+        } else {
+            status = readResultStatus::SUCCESS;
+        }
+
+        return result.serialize();
     }
 
 
@@ -168,25 +321,6 @@ public:
 private:
     std::mutex mtx_;
     memoryPool<testPointResult> mem_; //内存池
-    std::vector<testResult> vec_;
-    // vec_ 维护一个testBoxId 对应的 testPointResult 链表
-
-/*
-通过testBoxId(也就是下标) 找到对应的testPointResult 链表的头部
-
-+----------+
-+          +
-+ infoHead + ---> testPointResult1 -> testPointResult2 -> ... -> testPointResultN
-+          +
-+----------+
-
-+----------+
-+          +
-+ infoHead + ---> testPointResult1 -> testPointResult2 -> ... -> testPointResultN
-+          +
-+----------+
-
-
-*/
+    std::vector<testResult> vec_; // 维护一个testBoxId 对应的 testResult 的数组
 
 };

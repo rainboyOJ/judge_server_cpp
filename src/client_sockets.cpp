@@ -8,7 +8,6 @@
 
 #include "Logger.h"
 #include "judgeInfo.h"
-#include "utils.h"
 #include "client_sockets.h"
 
 
@@ -174,7 +173,7 @@ void ClientSockets::deal_events(const fd_set &read_sets, const fd_set &write_set
                 continue;
 
             // 2. 得到testBox里的数据
-            std::vector<uint8_t> result_data = this->test_box_->getResult(testBoxId);
+            std::string result_data = this->test_box_->getResult(testBoxId);
 #ifdef MUDEBUG
             // LOG_DEBUG("send %d bytes to socket %d", result_data.size(), client_socket);
             // debug_print_uint8_t_vector(result_data);
@@ -275,7 +274,7 @@ std::unique_ptr<testProblem> FdInfo::read(int &tot_read)
 
 //发送数据
 // int ClientSockets::send_socket(int testBoxId, FdInfo& fd_info)
-int FdInfo::send(const std::vector<uint8_t>& result_data)
+int FdInfo::send(std::string_view result_data)
 {
     // 1. 从testBox上读取信息
 

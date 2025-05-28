@@ -7,7 +7,8 @@
 // #include "minheap.hpp" //不再使用这个heap, 因为用队列更快
 #include "static_loop_queue.h"
 #include "resultContainer.h"
-
+#include "json.hpp"
+using json = nlohmann::json;
 
 /*
 testBox设计的思路:
@@ -100,8 +101,8 @@ public:
     void putBackTestBoxId(int id);
 
 
-    //得到结果,返回的为protobuf格式的字符串
-    std::vector<uint8_t> getResult(const int testBoxId);
+    //得到结果,返回的为JSON格式的字符串
+    std::string getResult(const int testBoxId);
 
     //清空
     // testBox_err add(

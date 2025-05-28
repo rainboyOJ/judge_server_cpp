@@ -7,6 +7,8 @@
 
 #include "testBox.h"
 #include "Logger.h"
+#include "json.hpp"
+using json = nlohmann::json;
 
 
 namespace fs = std::filesystem;
@@ -191,28 +193,30 @@ void testBox::clearResultByTestBoxId(int testBoxId) {
 
 
 // 从resultContainer_ 读取数据,并返回 testResultWithVecotr 序列化后的数据
-std::vector<uint8_t> testBox::getResult(const int testBoxId) {
+std::string testBox::getResult(const int testBoxId) {
     // 这里不需要加锁,因为 resultContainer 本身就有锁
     // std::lock_guard lck(mtx_);
     // TODO
     readResultStatus status = readResultStatus::NOT_DATA;
-    std::vector<uint8_t> result = this->resultContainer_.readResult(testBoxId,status);
+    // std::vector<uint8_t> result = this->resultContainer_.readResult(testBoxId,status);
+    json ResultJSON = resultContainer_.readResultAsJson(testBoxId, status);
+    LOG_DEBUG("getResult: testBoxId %d, status %d\n", testBoxId, static_cast<int>(status));
     if( status == readResultStatus::NOT_DATA) {
         // TODO 这里应该返回一个特定的信信息, 表示没有数据
         // { code : -1, msg : "no data" }
-        return std::vector<uint8_t>();
+        return R"({"code": -1, "msg": "no data"})";
     }
     else if ( status == readResultStatus::NOT_NEW_DATA) {
         // TODO 这里应该返回一个特定的信信息, 表示没有数据
         // { code : -1, msg : "no new data" }
-        return std::vector<uint8_t>();
+        return R"({"code": -1, "msg": "no new data"})";
     }
     else if ( status == readResultStatus::FINISHED || status == readResultStatus::SUCCESS
     ) {
         // 这里应该返回 序列化后的结果
-        return result; // 返回序列化后的结果
+        return ResultJSON.dump();
     }
-    return std::vector<uint8_t>();
+    return R"({"code": -1, "msg": "unknown error"})";
 }
 
 void testBox::writeResult(int testBoxId, int seq_id, testPointResult * trp) {

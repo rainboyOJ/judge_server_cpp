@@ -99,31 +99,6 @@ enum testError {
     other, // 其他错误
 };
 
-
-//测试结果
-struct testResult {
-    int testBoxId; //唯一主评测id // 对应于testBox 中使用
-    int uuid; // 唯一评测id
-    // int seq_id; // 评测的测试点编号
-    testError err_type; // 错误类型
-    // language lang;
-
-    testPointResult * trp; //存测试的内存地址,这是一个链表的开头
-    std::unique_ptr<testProblem> test_problem_p; // 题目信息
-
-    int data_size; // 数据点的数量
-    // std::atomic_int finish_cnt; // 已经完成的测试点的数量
-    // std::atomic_int readDone_cnt; // 已经读取的结果的数量
-    int finish_cnt;
-    int readDone_cnt;
-
-    std::mutex mtx_; // 互斥锁
-
-    // std::string msg; //评测信息
-    // std::string err; //评测错误信息
-    // judge_result result_;
-};
-
 //测试结果 vecotr 版本
 //对序列化后的信息进行反序列化时的容器
 struct testResultWithVecotr {

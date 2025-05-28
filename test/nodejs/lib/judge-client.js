@@ -32,10 +32,14 @@ class JudgeClient {
             const resultData = await this.connector.receiveData();
             
             // 解码结果
-            const result = DataCodec.deserializeTestResult(resultData);
-            
+            // const result = DataCodec.deserializeTestResult(resultData);
+            const result = Buffer.from(resultData).toString(); // 假设已经是解码后的结果
+            console.log('📥 收到评测结果:');
+            let json = JSON.parse(result);
+            console.log(JSON.stringify(json, null, 2));
+
             // 输出结果
-            this.printResult(result);
+            // this.printResult(result);
             
             return result;
             
