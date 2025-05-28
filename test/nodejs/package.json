@@ -1,0 +1,19 @@
+{
+  "name": "rainboyoj-client",
+  "version": "1.0.0",
+  "description": "RainboyOJ评测系统客户端库",
+  "main": "lib/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node test_codec_new.js",
+    "demo": "node demo_new.js",
+    "judge": "node send_one_judge_new.js"
+  },
+  "keywords": [
+    "RainboyOJ",
+    "judge",
+    "client"
+  ],
+  "author": "",
+  "license": "ISC"
+}
