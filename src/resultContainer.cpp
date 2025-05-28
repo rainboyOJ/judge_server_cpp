@@ -1,5 +1,6 @@
 #include "resultContainer.h"
 #include "judgeInfo.h"
+#include "utils.h"
 
 bool resultContainer::writeResult(int testBoxId,int seq_id,testPointResult * trp) {
 
