@@ -17,6 +17,7 @@ using json = nlohmann::json;
 enum class readResultStatus {
     NOT_DATA, // 没有数据
     NOT_NEW_DATA, // 没有新的数据
+    EXCEED_TESTBOX_ID,//
     SUCCESS, // 成功读取数据
     FINISHED, // 所有结果都已经读取完毕
 };
@@ -274,7 +275,7 @@ public:
      */
     json readResultAsJson(int idx, readResultStatus & status) {
         if (idx < 0 || idx >= vec_.size()) {
-            status = readResultStatus::NOT_DATA;
+            status = readResultStatus::EXCEED_TESTBOX_ID;
             return json{};
         }
 

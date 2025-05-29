@@ -1,6 +1,7 @@
 #include "Logger.h"
 #include "Timestamp.h"
 #include <iostream>
+#include <mutex>
 #include <string>
 #include <string_view>
 
@@ -12,6 +13,7 @@ Logger &Logger::instance() {
 void Logger::setLogLevel(int level) { logLevel_ = level; }
 
 void Logger::log(const char * _file, const int _line, std::string msg) {
+    std::lock_guard<std::mutex> lock(mtx_);
     std::string pre = "";
     switch (logLevel_) {
         case INFO:

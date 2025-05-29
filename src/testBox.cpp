@@ -198,9 +198,11 @@ std::string testBox::getResult(const int testBoxId) {
     // std::vector<uint8_t> result = this->resultContainer_.readResult(testBoxId,status);
     json ResultJSON = resultContainer_.readResultAsJson(testBoxId, status);
     LOG_DEBUG("getResult: testBoxId %d, status %d\n", testBoxId, static_cast<int>(status));
-    if( status == readResultStatus::NOT_DATA) {
+    if( status == readResultStatus::EXCEED_TESTBOX_ID){
+        return R"({"code": -1, "msg": "testBoxId exceed"})";
+    }
+    else if( status == readResultStatus::NOT_DATA) {
         // TODO 这里应该返回一个特定的信信息, 表示没有数据
-        // { code : -1, msg : "no data" }
         return R"({"code": -1, "msg": "no data"})";
     }
     else if ( status == readResultStatus::NOT_NEW_DATA) {

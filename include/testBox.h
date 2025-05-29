@@ -53,7 +53,7 @@ public:
 
     using pValPtr = UniquePtrQueue<testProblem>::Ptr;
 
-    // dataSizeLimit 可以同时处理的数据的数量
+    // dataSizeLimit 可以同时处理的数据的数量,testBoxId 的数量
     testBox(int workNum,int dataSizeLimit,
             const std::string & problem_path_
             )

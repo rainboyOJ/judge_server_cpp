@@ -2,6 +2,7 @@
 
 #include "noncopyable.h"
 #include <string>
+#include <mutex>
 
 // 定义日志级别
 enum LogLevel {
@@ -16,7 +17,7 @@ class Logger : noncopyable {
   private:
     Logger(/* args */) {}
     int logLevel_;
-
+    std::mutex mtx_;
   public:
     static Logger &instance();  // 获取日志唯一实例对象
 

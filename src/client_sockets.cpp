@@ -32,17 +32,17 @@ ClientSockets::ClientSockets(testBox* test_box)
         {
             // 设置为可以写,等待下一轮事件循环把这个对应的fd加入可以写的事件监听里
             // client_sockets_[testBoxId] -> writeAble = true;
-            LOG_DEBUG("[client_socket recv testBox callback],set testBoxId %d writeAble\n",testBoxId);
+            // LOG_DEBUG("[client_socket recv testBox callback],set testBoxId %d writeAble\n",testBoxId);
             
             // TODO 这里修改一下,只让最后一次的测试点完成后,才设置写标志 
-            // client_sockets_[testBoxId]->set_write_able();
+            // client_sockets_[testBoxId]->set_writable();
         });
 
     test_box_->setallPointCompleteCallback(
         [this](int testBoxId) {
             // 设置为可以写,等待下一轮事件循环把这个对应的fd加入可以写的事件监听里
             LOG_DEBUG("[client_socket recv testBox callback],set all testBoxId %d completed\n",testBoxId);
-            client_sockets_[testBoxId]->set_completed();
+            client_sockets_[testBoxId]->set_writable();
         }
     );
 }
@@ -57,17 +57,15 @@ int ClientSockets::add_to_sets(fd_set &read_sets, fd_set &write_sets)
         if (fd == 0)
             continue; // 这个fd 没有值
 
-        // !!注意这里只可以使用这种判断方式,不能使用函数获得对应的状态
-        SocketStatus fd_status = client_socket -> get_status();
-        // LOG_DEBUG("[in client_socket add_to_sets()] fd %d status %d", fd, (int)fd_status);
-        if (fd_status == SocketStatus::readAble)
+        // 使用新的状态判断方式
+        if (client_socket->is_readable())
         {
-            LOG_DEBUG("[in client_socket add_to_sets()]add socket %d to read_sets", fd);
+            // LOG_DEBUG("[in client_socket add_to_sets()]add socket %d to read_sets", fd);
             FD_SET(fd, &read_sets);
         }
-        else if(fd_status == SocketStatus::writeAble || fd_status == SocketStatus::completed)
+        else if(client_socket->is_writable())
         {
-            LOG_DEBUG("[in client_socket add_to_sets()]add socket %d to write_sets", fd);
+            // LOG_DEBUG("[in client_socket add_to_sets()]add socket %d to write_sets", fd);
             FD_SET(fd, &write_sets);
         }
         if ( fd > max_fd)
@@ -127,7 +125,7 @@ void ClientSockets::deal_events(const fd_set &read_sets, const fd_set &write_set
                 LOG_ERROR("Failed to read frome socket: %d\n",client_socket);
                 del_socket(i);
             }
-            else { //没有发生错误
+            else if ( tp != nullptr) { //没有发生错误
 
 #ifdef MUDEBUG
                 // 此处输出解析后的testProblem,用于调试
@@ -161,16 +159,16 @@ void ClientSockets::deal_events(const fd_set &read_sets, const fd_set &write_set
                 }
                 // else if( err == testBox_err::FULL)
             }//没有读取发生错误else end
+            else {
+                LOG_DEBUG("read bytes_read = %d, but not get All testProblem data", bytes_read);
+            }
         }
         // 写事件
         else if( FD_ISSET(client_socket, &write_sets) )
         {
             LOG_DEBUG("write event on socket %d\n", client_socket);
-            // 1. 先得到 FdInfo 的状态
-            SocketStatus status = client_sockets_[i]->get_status();
-            
-            // 这个应该不会发生
-            if( status == SocketStatus::testing) // 评测中
+            // 1. 检查socket状态，确保可写
+            if(!client_sockets_[i]->is_writable()) // 不是可写状态
                 continue;
 
             // 2. 得到testBox里的数据
@@ -180,108 +178,102 @@ void ClientSockets::deal_events(const fd_set &read_sets, const fd_set &write_set
             // debug_print_uint8_t_vector(result_data);
 #endif
             int bytes_write = client_sockets_[i]->send(result_data);
-            if( status == SocketStatus::completed)
-            {
-                // add : 2025-04-08
-                //清空testBox对应resultContainer的数据
-                this-> test_box_ -> clearResultByTestBoxId(testBoxId);
+            
+            // 发送完成后，清空testBox对应resultContainer的数据并设置为可读状态
+            //清空testBox对应resultContainer的数据
+            this-> test_box_ -> clearResultByTestBoxId(testBoxId);
 
-
-                client_sockets_[i]->set_read_able(); //转入read_able 的状态
-            }
+            client_sockets_[i]->set_readable(); //转入readable 的状态
         }
     }
 }
 
 std::unique_ptr<testProblem> FdInfo::read(int &tot_read)
 {
-    char buf[1024];
-    std::lock_guard lock(mtx_);
+     //这里不需要锁,因为read 函数是单线程的
+    // std::lock_guard lock(mtx_);
+    tot_read = 0; // 初始化 tot_read
 
-    // 先读取4个字节的数据,表示后面的数据的长度
-    int ready_to_read = 0;
-    int read_size = recv(fd, &ready_to_read, 4, 0);
-    if( read_size <= 0) // 出错或者关闭连接
-    {
-        tot_read= read_size;
-        LOG_DEBUG("read error or closed on socket %d,read return code %d", fd, read_size);
+    // 从socket读取数据到input_buffer_
+    int saved_errno = 0;
+    ssize_t n = input_buffer_.readFd(fd, &saved_errno);
+    tot_read = n;
+
+    if (n < 0) { // 读取出错
+        if (saved_errno != EAGAIN && saved_errno != EWOULDBLOCK) {
+            LOG_ERROR("FdInfo::read error on socket %d, errno: %d", fd, saved_errno);
+            tot_read = -1; // 表示读取错误
+        }
+        // 如果是 EAGAIN 或 EWOULDBLOCK，表示数据未准备好，不是错误，tot_read 保持 0
         return nullptr;
     }
-    ready_to_read = ntohl(ready_to_read);
-    LOG_DEBUG("ready_to_read = %d bytes\n", ready_to_read);
-
-    //TODO 一次性读取数据,这里可能需要优化,
-    // 1. 因为可能client 不会一次发送完整的数据过来
-    // 所有fdinfo 需要一个buffer，这个buffer可以直接用muduo里buffer
-    
-    // 一直读取数据, 直到数据长度等于 ready_to_read
-    tot_read = ready_to_read + 4;
-    std::vector<uint8_t> read_data;
-    while (ready_to_read > 0)
-    {
-        int size = recv(fd, buf, ready_to_read > 1024 ? 1024 : ready_to_read, 0);
-        LOG_DEBUG("read %d bytes ,ready_to_read = %d", size, ready_to_read);
-        if( size <= 0) // 出错或者关闭连接
-        {
-            //TODO 这里不能这样,需要一个读取缓冲区
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
-            {
-                continue;
-            }
-
-            tot_read = size;
-            LOG_DEBUG("read error or closed on socket %d,read return code %d", fd, tot_read);
-            return nullptr;
-        }
-        // read_data.append(buf, size);
-        read_data.assign(buf, buf + size);
-        ready_to_read -= size;
+    if (n == 0) { // 对端关闭连接
+        LOG_INFO("Connection closed by peer on socket %d", fd);
+        tot_read = 0; // 表示连接关闭，但不是读取错误，所以不设为-1
+        return nullptr;
     }
 
-    //TODO 这里有一个BUG,如果读取deserilize 数据失败
-    //这里要进行处理,关闭 或返回一个信息,表示失败
-    // 不能进行一步的测试
+    // 检查input_buffer_中是否有足够的数据解析出一个完整的消息
+    // 消息格式：4字节长度前缀 (网络字节序) + 消息体
+    if (input_buffer_.readableBytes() < sizeof(uint32_t)) {
+        // 长度前缀都还没收到，等待更多数据
+        return nullptr;
+    }
+
+    uint32_t msg_len_net;
+    // 查看 (peek) 长度前缀，但不消耗它
+    memcpy(&msg_len_net, input_buffer_.peek(), sizeof(uint32_t));
+    uint32_t msg_len_host = ntohl(msg_len_net);
+
+    LOG_DEBUG("Expected message body length = %u bytes\n", msg_len_host);
+
+    if (input_buffer_.readableBytes() < sizeof(uint32_t) + msg_len_host) {
+        // 消息体不完整，等待更多数据
+        LOG_DEBUG("Incomplete message: readableBytes()=%zu, needed=%zu", input_buffer_.readableBytes(), sizeof(uint32_t) + msg_len_host);
+        return nullptr;
+    }
+
+    // 消耗掉长度前缀
+    input_buffer_.retrieve(sizeof(uint32_t));
+
+    // 读取消息体
+    std::string msg_body_str = input_buffer_.retrieveAsString(msg_len_host);
+    // tot_read = sizeof(uint32_t) + msg_len_host; // 更新实际读取的总字节数
 
 #ifdef MUDEBUG
-    debug_print_uint8_t_vector(read_data);
+    LOG_DEBUG("Received message body: %s", msg_body_str.c_str());
 #endif
 
     // 到这里, 已经读取了完整的数据
-    status_ = SocketStatus::testing;
+    set_idle(); // 设置为不可读写状态
+    
 
     // 智能检测数据格式并解析数据
     std::unique_ptr<testProblem> tp = nullptr;
     
     // 检测是否为JSON格式：查看第一个字符是否为 '{'
-    if (read_data.size() > 0 ) {
-        // JSON格式处理
+    if (!msg_body_str.empty() && msg_body_str[0] == '{') {
         LOG_DEBUG("Detected JSON format data\n");
         try {
-            std::string json_str(read_data.begin(), read_data.end());
-            LOG_DEBUG("JSON string: %s\n", json_str.c_str());
-            
-            tp = deserializeTestProblemFromJsonString(json_str);
+            tp = deserializeTestProblemFromJsonString(msg_body_str);
             if (!tp) {
                 LOG_ERROR("Failed to deserialize JSON data\n");
+                set_readable(); // 反序列化失败，重置为可读状态
                 return nullptr;
             }
             LOG_DEBUG("JSON deserializeTestProblem success\n");
         } catch (const std::exception& e) {
             LOG_ERROR("JSON parsing exception: %s\n", e.what());
+            set_readable(); // 解析异常，重置为可读状态
             return nullptr;
         }
+    } else {
+        LOG_ERROR("Unknown data format or empty message body received.");
+        set_readable(); // 未知格式，重置为可读状态
+        return nullptr;
     }
     
-
-    return std::move(tp);
-    // deserializeTestProblem( read_data.data(), *tp.get());
-
-        // // 3. 传递给testBox
-    // test_box_->add(
-    //     testBoxId,
-    //     std::move(tp)
-    // );
-    // return tot_read;
+    return tp; // 使用 std::move 不是必要的，因为有 NRVO
 }
 
 

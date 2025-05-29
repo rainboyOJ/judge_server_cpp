@@ -17,91 +17,81 @@
 
 #include <mutex>
 #include <string_view>
+#include <atomic>
 
 #include "testBox.h" //与testBox 建立连接
+#include "Buffer.h" // 引入 Buffer 类
 
-// socket 进行测试的状态
-enum class SocketStatus {
-    readAble, // 准备好进行测试,此时可以读取数据
-    testing, // 正在进行测试,此时不能进行读写操作
-    writeAble, // 已经得到测试点的数据,可以进行写数据
-    completed // 已经测试完毕,可以发数据
+enum class FdInfoStatus {
+    READABLE,
+    WRITABLE,
+    IDLE,
 };
 
-class FdInfo
-{
+class FdInfo {
 public:
-    FdInfo() :fd(0), status_(SocketStatus::readAble) { }
+    FdInfo() :fd(0), status(FdInfoStatus::READABLE) { }
 
     int get_fd() const { return fd; }
 
     void set_fd(int fd_) { fd = fd_;}
-    void set_status(SocketStatus status) { status_ = status; }
 
     // 初始化
     void init(int fd_) {
         // TODO 其时这里完全不用锁，因为根据这个函数使用时机
         std::lock_guard<std::mutex> lock(mtx_);
         fd = fd_;
-        status_ = SocketStatus::readAble;
+        status = FdInfoStatus::READABLE;
+        input_buffer_.retrieveAll(); // 清空缓冲区
     }
 
     void clear() {
         std::lock_guard<std::mutex> lock(mtx_);
         if( fd !=0 ) close(fd);
         fd = 0;
-        status_ = SocketStatus::readAble;
+        status = FdInfoStatus::READABLE;
+        input_buffer_.retrieveAll(); // 清空缓冲区
     }
 
-    SocketStatus get_status() {
+    bool is_readable() {
         std::lock_guard<std::mutex> lock(mtx_);
-        return status_;
+        return status == FdInfoStatus::READABLE;
     }
-
-    bool is_read_able() {
-        return get_status() == SocketStatus::readAble;
-    }
-    bool is_write_able() {
-        return get_status() == SocketStatus::writeAble;
-    }
-    bool is_testing() {
-        return get_status() == SocketStatus::testing;
-    }
-    bool is_completed() {
-        return get_status() == SocketStatus::completed;
-    }
-
-    void set_write_able() {
+    bool is_writable() {
         std::lock_guard<std::mutex> lock(mtx_);
-        status_ = SocketStatus::writeAble;
+        return status == FdInfoStatus::WRITABLE;
     }
 
-    void set_read_able() {
+    void set_writable() {
         std::lock_guard<std::mutex> lock(mtx_);
-        status_ = SocketStatus::readAble;
+        status = FdInfoStatus::WRITABLE;
     }
 
-    void set_testing() {
+    void set_readable() {
         std::lock_guard<std::mutex> lock(mtx_);
-        status_ = SocketStatus::testing;
+        status = FdInfoStatus::READABLE;
     }
 
-    void set_completed() {
+    void set_idle() {
+        std::cout << ("set_idle in!") << std::endl;
         std::lock_guard<std::mutex> lock(mtx_);
-        status_ = SocketStatus::completed;
+        std::cout << ("set_idle in2!") << std::endl;
+        status = FdInfoStatus::IDLE;
     }
-
 
     //读取数据
+    // 读取输入缓冲区中的数据，并返回一个指向testProblem的unique_ptr
     std::unique_ptr<testProblem> read(int &read_size);
 
     //发送数据
     int send(std::string_view result_data);
+       
 
 private:
     int fd;
     std::mutex mtx_;
-    SocketStatus status_;
+    Buffer input_buffer_; // 为每个FdInfo添加一个输入缓冲区
+    FdInfoStatus status;
 };
 
 class ClientSockets {
