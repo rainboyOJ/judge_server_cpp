@@ -220,7 +220,7 @@ std::unique_ptr<testProblem> FdInfo::read(int &tot_read)
     while (ready_to_read > 0)
     {
         int size = recv(fd, buf, ready_to_read > 1024 ? 1024 : ready_to_read, 0);
-        LOG_DEBUG("read %d bytes ...\n", size);
+        LOG_DEBUG("read %d bytes ,ready_to_read = %d", size, ready_to_read);
         if( size <= 0) // 出错或者关闭连接
         {
             //TODO 这里不能这样,需要一个读取缓冲区
@@ -253,7 +253,7 @@ std::unique_ptr<testProblem> FdInfo::read(int &tot_read)
     std::unique_ptr<testProblem> tp = nullptr;
     
     // 检测是否为JSON格式：查看第一个字符是否为 '{'
-    if (read_data.size() > 0 && read_data[0] == '{') {
+    if (read_data.size() > 0 ) {
         // JSON格式处理
         LOG_DEBUG("Detected JSON format data\n");
         try {
@@ -270,18 +270,8 @@ std::unique_ptr<testProblem> FdInfo::read(int &tot_read)
             LOG_ERROR("JSON parsing exception: %s\n", e.what());
             return nullptr;
         }
-    } else {
-        // 二进制格式处理（保持向后兼容）
-        LOG_DEBUG("Using binary format deserialization\n");
-        tp = std::make_unique<testProblem>();
-        try {
-            deserializeTestProblem(read_data.data(), *tp.get());
-            LOG_DEBUG("Binary deserializeTestProblem success\n");
-        } catch (const std::exception& e) {
-            LOG_ERROR("Binary deserialization exception: %s\n", e.what());
-            return nullptr;
-        }
     }
+    
 
     return std::move(tp);
     // deserializeTestProblem( read_data.data(), *tp.get());

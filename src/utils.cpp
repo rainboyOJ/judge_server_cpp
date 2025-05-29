@@ -27,43 +27,6 @@ std::vector<uint8_t> serializeTestProblem(const testProblem &tp){
     return std::move(ret);
 }
 
-//反序列化testProblem
-void deserializeTestProblem(const uint8_t * s, testProblem &tp) {
-    // 解析长度,这里不用解析长度了,因为长度已经在前面序列化的时候记录了
-    // int tot_len = deserializeInt<int>(s+idx);
-    // idx += sizeof(int);
-
-    int idx = 0; //下标
-    // 解析uuid
-    tp.uuid = deserializeInt<int>(s+idx);
-    idx += sizeof( tp.uuid );
-    LOG_DEBUG("uuid: %d \n", tp.uuid);
-
-    // 解析pid
-    for(int i = 0 ;i < sizeof(tp.pid)/sizeof(tp.pid[0]) ;i++)
-    {
-        tp.pid[i] = s[idx];
-        idx += 1;
-        // LOG_DEBUG("pid[%d]  = %c \n", i,tp.pid[i]);
-    }
-
-    // 解析lang
-    tp.lang = static_cast<language>(deserializeInt<int>(s+idx));
-    idx += sizeof(int);
-
-    // 解析code长度
-    int code_len = deserializeInt<int>(s+idx);
-    idx += sizeof(int);
-
-    // 解析code
-    for(int i = 0 ;i < code_len ;i++)
-    {
-        tp.code += s[idx];
-        idx += 1;
-    }
-    LOG_DEBUG("test_problem code \n%s\n", tp.code.c_str());
-}
-
 // ==================== JSON版本的序列化和反序列化函数 ====================
 
 json serializeTestProblemToJson(const testProblem &tp) {
