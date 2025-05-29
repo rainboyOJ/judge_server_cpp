@@ -69,8 +69,11 @@ testBox_err testBox::add(
     // 输出结果
     int test_point_idx = 0;
 
-    // 得到 [存放的结果] 头部指针,注意这里一次就分配好了所有需要的存n结果的链表的内存
-    testPointResult *head = resultContainer_.init_by_test_id(testBoxId, filePairs.size());
+    // 初始化
+    resultContainer_.init_by_test_id(testBoxId, filePairs.size());
+
+    // 连续申请 n 个内存
+    testPointResult  * head =  resultContainer_.allocateTestPointResult_of_N(filePairs.size());
 
     // 得到 一串 testPoint * 内存的链表
     testPoint *testPointList = pointBox_ -> get_testPoint_link(filePairs.size());
@@ -80,28 +83,22 @@ testBox_err testBox::add(
         // std::lock_guard lck(mtx_); // 加锁 
         for (const auto &pair : filePairs)
         {
-            std::cout << pair.first << " <-> " << pair.second << std::endl;
-            // TODO 得到pair.first 对应的 编号
-            // 添加到testPoint 里
+            // std::cout << pair.first << " <-> " << pair.second << std::endl;
+            // 这里的pair.first 是输入数据的文件名, pair.second 是输出数据的文件名
+            LOG_DEBUG("pair.first: %s, pair.second: %s\n", pair.first.c_str(), pair.second.c_str());
+
 
             t->seq_id = ++test_point_idx; //编号
             t->testBoxId = testBoxId;
             // !! 这里改写评测结果写入的内存地址
             t->testPointResult_p = head; //结果应该写入的内存
-
             t = t->nxt;
-            head = head->nxt; // 下一个可以写入结果的地址
-            // t->id_ = "123";
-            // strcpy(t->id_,"123");
-            // 加入到 testPointBox 里
-            
-            //TODO pointBox_ 一次添加多个元素
-            // pointBox_->push(std::unique_ptr<testPoint>(t));
+            head = head->nxt;
         }
         // [!!流程3!!] 数据进入testPointBox ,
         // resultContainer_.move_in_testProblem(testBoxId, std::move(test_problem));
         resultContainer_.push_testProblem(testBoxId, std::move(test_problem));
-        pointBox_->push_link(testPointList);
+        pointBox_->push_link(testPointList); // 把链表放入队列,等待评测,一次评测多个点
     }
 
     return testBox_err::SUCC;

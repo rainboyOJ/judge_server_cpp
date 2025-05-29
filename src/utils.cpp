@@ -64,47 +64,70 @@ void deserializeTestProblem(const uint8_t * s, testProblem &tp) {
     LOG_DEBUG("test_problem code \n%s\n", tp.code.c_str());
 }
 
-std::vector<uint8_t> serializeTestPointResult(const testResult &tpr){
-    std::vector<uint8_t> ret;
-    //注意这里的结果有多种可能性
-    // [信息头] + [testPointResultArray] 组成
-    // 1. uuid
-    serializeInt(tpr.uuid,ret);
+// ==================== JSON版本的序列化和反序列化函数 ====================
 
-    // 这里没有解析testBoxId 因应没有用
+json serializeTestProblemToJson(const testProblem &tp) {
+    json j;
+    j["uuid"] = tp.uuid;
+    j["pid"] = std::string(tp.pid);
+    j["lang"] = static_cast<int>(tp.lang);
+    j["code"] = tp.code;
+    return j;
+}
 
-    // 2. testError
-    serializeInt(static_cast<int>(tpr.err_type),ret);
-
-    // 3. msg TODO 要不要加入编译失败的信息呢?
-
-    // 4. language 这里没有加
-    // 因为不需要具体的language,本地肯定知道信息
-
-    int testPointResultArray_len = 0;
-    // 得到结果的链表的长度
-    testPointResult * head = tpr.trp;
-    while(head != nullptr ) {
-        ++testPointResultArray_len;
-        head = head->nxt;
+std::unique_ptr<testProblem> deserializeTestProblemFromJson(const json &j) {
+    auto tp = std::make_unique<testProblem>();
+    
+    try {
+        // 使用 .at() 方法，会抛出异常而不是断言失败
+        if (j.contains("uuid")) {
+            tp->uuid = j.at("uuid");
+        } else {
+            LOG_ERROR("Missing 'uuid' field in JSON");
+            return nullptr;
+        }
+        
+        if (j.contains("pid")) {
+            std::string pid_str = j.at("pid");
+            memset(tp->pid, 0, sizeof(tp->pid));
+            strncpy(tp->pid, pid_str.c_str(), sizeof(tp->pid) - 1);
+        } else {
+            LOG_ERROR("Missing 'pid' field in JSON");
+            return nullptr;
+        }
+        
+        if (j.contains("lang")) {
+            tp->lang = static_cast<language>(j.at("lang").get<int>());
+        } else {
+            LOG_ERROR("Missing 'lang' field in JSON");
+            return nullptr;
+        }
+        
+        if (j.contains("code")) {
+            tp->code = j.at("code");
+        } else {
+            LOG_ERROR("Missing 'code' field in JSON");
+            return nullptr;
+        }
+        
+        LOG_DEBUG("JSON deserialize: uuid=%d, pid=%s, lang=%d\n", 
+                  tp->uuid, tp->pid, static_cast<int>(tp->lang));
+        
+        return tp;
+    } catch (const json::exception& e) {
+        LOG_ERROR("JSON deserialization error: %s", e.what());
+        return nullptr;
     }
+}
 
-    serializeInt(testPointResultArray_len,ret);
-
-    head = tpr.trp;
-    while(head != nullptr ) {
-        serializeInt(head->seq_id,ret);
-        serializeInt(head->cpu_time,ret);
-        serializeInt(head->real_time,ret);
-        serializeInt<unsigned long long>(head->memory,ret);
-        serializeInt(head->signal,ret);
-        serializeInt(head->exit_code,ret);
-        serializeInt(head->error,ret);
-        serializeInt(head->result,ret);
-        head = head->nxt;
+std::unique_ptr<testProblem> deserializeTestProblemFromJsonString(const std::string &json_str) {
+    try {
+        json j = json::parse(json_str);
+        return deserializeTestProblemFromJson(j);
+    } catch (const json::exception& e) {
+        LOG_ERROR("JSON parsing error: %s", e.what());
+        return nullptr;
     }
-
-    return std::move(ret);
 }
 
 std::string Popen(const char* cmd) {

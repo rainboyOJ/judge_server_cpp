@@ -13,6 +13,8 @@
 #include <type_traits>
 #include <arpa/inet.h>
 #include "judgeInfo.h"
+#include "json.hpp"
+using json = nlohmann::json;
 
 // 前向声明
 class testResult;
@@ -68,6 +70,11 @@ T deserializeInt(const uint8_t * src){
 // 对接收的测试信息testProblem进行序列化
 std::vector<uint8_t> serializeTestProblem(const testProblem &tp);
 void deserializeTestProblem(const uint8_t * s, testProblem &tp);
+
+// JSON版本的序列化和反序列化函数
+json serializeTestProblemToJson(const testProblem &tp);
+std::unique_ptr<testProblem> deserializeTestProblemFromJson(const json &j);
+std::unique_ptr<testProblem> deserializeTestProblemFromJsonString(const std::string &json_str);
 
 // 对发送的测试结果testPointResult进行反序列化
 std::vector<uint8_t> serializeTestPointResult(const testResult &tpr);

@@ -22,7 +22,8 @@ class JudgeClient {
             
             // 编码测试数据
             console.log('📝 测试数据:', testProblem);
-            const encodedData = DataCodec.serializeTestProblem(testProblem);
+            // const encodedData = DataCodec.serializeTestProblem(testProblem);
+            const encodedData = DataCodec.serializeTestProblemToJsonString(testProblem);
             
             // 发送数据
             await this.connector.sendData(encodedData);

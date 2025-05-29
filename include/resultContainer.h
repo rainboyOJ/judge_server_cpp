@@ -39,10 +39,10 @@ inline void __deleter(TestPointResultMemoryPool * pool,testPointResult * p) {
 
 using TestPointResultPtr = std::unique_ptr<testPointResult, std::function<void(testPointResult*)>>;
 
-inline TestPointResultPtr create_testPointResult(TestPointResultMemoryPool * pool) {
+inline TestPointResultPtr create_testPointResult(TestPointResultMemoryPool * pool, testPointResult * resultMem_) {
     // 创建一个 unique_ptr，使用自定义删除器函数 __deleter
     // 这个 unique_ptr 会在超出作用域时自动调用 __deleter 来释放内存
-    return std::unique_ptr<testPointResult, std::function<void(testPointResult*)>>(pool->get(), [pool](testPointResult* p) {
+    return std::unique_ptr<testPointResult, std::function<void(testPointResult*)>>(resultMem_, [pool](testPointResult* p) {
         __deleter(pool, p);
     });
 }
@@ -63,8 +63,8 @@ public:
 
     std::mutex mtx_; // 互斥锁
 
-    // 为了兼容旧代码，保留trp链表指针
-    testPointResult * trp;
+    // 不在兼容旧代码
+    // testPointResult * trp;
 
 public:
     testResult()
@@ -73,23 +73,42 @@ public:
           err_type(testError::succ),
           data_size(0),
           finish_cnt(0), readDone_cnt(0),
-          TPR(100), // 初始化 TPR 数组大小为 100
-          trp(nullptr)
+          TPR(100) // 初始化 TPR 数组大小为 100
     {
         // 初始化互斥锁
     }
 
     // 添加测试点结果
-    void addTestPointResult(int idx,TestPointResultPtr && trp) {
+    bool addTestPointResult(int idx,TestPointResultPtr && trp) {
         std::lock_guard<std::mutex> lock(mtx_);
         TPR[idx] = std::move(trp);
+        ++finish_cnt;
+        return finish_cnt >= data_size; // 返回是否所有测试点都已完成
     }
+
+
+    // 序列化测试结果
+    json serialize() const;
 
     // 清空并初始化测试数据
     void clear();
 
-    // 序列化测试结果
-    json serialize() const;
+    void init_by_test_id(int testBoxId, int data_size) {
+        std::lock_guard<std::mutex> lock(mtx_);
+        this->testBoxId = testBoxId;
+        this->data_size = data_size;
+        this->finish_cnt = 0;
+        this->readDone_cnt = 0;
+        // this->TPR.resize(data_size); // 调整 TPR 数组大小
+        for (auto &trp : TPR)
+        {
+            if (trp)
+            {
+                // 调用自定义删除器释放内存
+                trp.reset();
+            }
+        }
+    }
 };
 
 class resultContainer {
@@ -142,28 +161,9 @@ public:
     bool writeResult(int testBoxId, int test_point_seq_id, Pointer p) {
         if (testBoxId < 0 || testBoxId >= vec_.size()) return false;
         
-        std::lock_guard<std::mutex> lock(vec_[testBoxId].mtx_);
+        // std::lock_guard<std::mutex> lock(vec_[testBoxId].mtx_);
         auto & result = vec_[testBoxId];
-
-        // 遍历链表找到对应的测试点
-        testPointResult * current = result.trp;
-        while (current) {
-            if (current->seq_id == test_point_seq_id) {
-                // 复制结果数据
-                current->cpu_time = p->cpu_time;
-                current->real_time = p->real_time;
-                current->memory = p->memory;
-                current->signal = p->signal;
-                current->exit_code = p->exit_code;
-                current->error = p->error;
-                current->result = p->result;
-
-                ++result.finish_cnt;
-                return result.finish_cnt >= result.data_size;
-            }
-            current = current->nxt;
-        }
-        return false;
+        return result.addTestPointResult(test_point_seq_id, create_testPointResult(&mem_,p));
     }
         
 
@@ -181,56 +181,42 @@ public:
     ~resultContainer() {
         std::lock_guard<std::mutex> lck(mtx_);
         for(auto &result : vec_) {
-            // 清理链表
-            while(result.trp != nullptr) {
-                auto temp = result.trp;
-                result.trp = result.trp->nxt;
-                mem_.del(temp);
+            for( auto & t : result.TPR) {
+                if( t) t.reset();
             }
         }
     }
 
     //返回头部地址
-    Pointer init_by_test_id(int testId, int data_size) {
+    void init_by_test_id(int testId, int data_size) {
         if (testId < 0 || testId >= vec_.size()) {
             throw std::out_of_range("testId out of range");
         }
 
-        std::lock_guard<std::mutex> lck(mtx_);
+        // std::lock_guard<std::mutex> lck(mtx_);
         auto & result = vec_[testId];
-        
-        result.data_size = data_size;
-        result.finish_cnt = 0;
-        result.readDone_cnt = 0;
-        result.testBoxId = testId;
+        result.init_by_test_id(testId, data_size);
 
-        if (result.trp != nullptr)
-            throw std::runtime_error("init_by_test_id vec[testId].trp not null");
+        // if (result.trp != nullptr)
+        //     throw std::runtime_error("init_by_test_id vec[testId].trp not null");
 
         // 一口气申请所有的需要写结果的内存
-        for(int i = 0; i < data_size; i++) {
-            auto t = mem_.get();
-            t->testBoxId = testId;
-            t->seq_id = i;
-            t->nxt = result.trp;
-            result.trp = t;
-        }
+        // for(int i = 0; i < data_size; i++) {
+        //     auto t = mem_.get();
+        //     t->testBoxId = testId;
+        //     t->seq_id = i;
+        //     t->nxt = result.trp;
+        //     result.trp = t;
+        // }
 
-        return result.trp;
+        // return result.trp;
     }
 
-    //得到一个数据内存
-    // Pointer get(int id) {
-    //     std::lock_guard lck(mtx_);
-    //     Pointer t = mem_.get();
-    //     t -> testBoxId = id;
-    //
-    //     //加入数据
-    //     t -> nxt = vec_[id].head;
-    //     vec_[id].head = t;
-    //
-    //     return t;
-    // }
+    //得到一个数据内存,
+    TestPointResultPtr get(int testBoxId) {
+        std::lock_guard lck(mtx_);
+        return create_testPointResult(&mem_,mem_.get()); // 使用自定义删除器创建智能指针
+    }
 
     /**
      * 清空指定测试箱的所有评测结果并释放相关资源
@@ -315,12 +301,55 @@ public:
 
         return result.serialize();
     }
+public:
 
+    /**
+     * @brief 从内存池中分配一个新的测试点结果对象
+     * 
+     * 该函数从内存池中获取一个 testPointResult 对象，并将其包装在智能指针中。
+     * 智能指针使用自定义删除器，确保对象在超出作用域时自动归还给内存池。
+     * 
+     * @param testBoxId 测试箱ID，用于标识该测试点结果属于哪个测试实例
+     *                  (注意：当前实现中此参数未被使用，但保留用于未来扩展)
+     * 
+     * @return TestPointResultPtr 指向新分配的 testPointResult 对象的智能指针
+     *                           该智能指针会在析构时自动将内存归还给内存池
+     * 
+     * @note 此函数是线程安全的，使用互斥锁保护内存池的并发访问
+     * @note 返回的智能指针使用 RAII 模式，无需手动释放内存
+     * @note 如果内存池无法分配新对象，底层的 mem_.get() 可能返回 nullptr
+     * 
+     * @see create_testPointResult() 创建智能指针的工厂函数
+     * @see TestPointResultPtr 测试点结果的智能指针类型别名
+     * 
+     * @example
+     * auto result_ptr = container.allocateTestPointResult(testBoxId);
+     * if (result_ptr) {
+     *     result_ptr->seq_id = 1;
+     *     result_ptr->cpu_time = 100;
+     *     // 智能指针会自动管理内存
+     * }
+     */
+    TestPointResultPtr allocateTestPointResult(int testBoxId) {
+        std::lock_guard<std::mutex> lck(mtx_);
+        return create_testPointResult(&mem_,mem_.get()); // 使用自定义删除器创建智能指针
+    }
 
+    // 连续申请 n 个内存
+    testPointResult * allocateTestPointResult_of_N(int n) {
+        std::lock_guard<std::mutex> lck(mtx_);
+        testPointResult *head = nullptr;
+        for (int i = 0; i < n; ++i)
+        {
+            testPointResult *  result = mem_.get();
+            result -> nxt = head;
+            head = result;
+        }
+        return head;
+    }
 
 private:
     std::mutex mtx_;
-    memoryPool<testPointResult> mem_; //内存池
-    std::vector<testResult> vec_; // 维护一个testBoxId 对应的 testResult 的数组
-
+    memoryPool<testPointResult> mem_; // 内存池
+    std::vector<testResult> vec_;     // 维护一个testBoxId 对应的 testResult 的数组
 };

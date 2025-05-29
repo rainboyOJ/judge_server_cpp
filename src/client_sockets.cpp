@@ -9,6 +9,7 @@
 #include "Logger.h"
 #include "judgeInfo.h"
 #include "client_sockets.h"
+#include "utils.h"
 
 
 // 构造函数
@@ -248,18 +249,40 @@ std::unique_ptr<testProblem> FdInfo::read(int &tot_read)
     // 到这里, 已经读取了完整的数据
     status_ = SocketStatus::testing;
 
-    // 2. 把数据转成 protobuf 数据
-    // TODO 数据置换
-    // judge_message_for_transport::recTestInfo rec_test_info;
-    // rec_test_info.ParseFromString(read_data);
+    // 智能检测数据格式并解析数据
+    std::unique_ptr<testProblem> tp = nullptr;
+    
+    // 检测是否为JSON格式：查看第一个字符是否为 '{'
+    if (read_data.size() > 0 && read_data[0] == '{') {
+        // JSON格式处理
+        LOG_DEBUG("Detected JSON format data\n");
+        try {
+            std::string json_str(read_data.begin(), read_data.end());
+            LOG_DEBUG("JSON string: %s\n", json_str.c_str());
+            
+            tp = deserializeTestProblemFromJsonString(json_str);
+            if (!tp) {
+                LOG_ERROR("Failed to deserialize JSON data\n");
+                return nullptr;
+            }
+            LOG_DEBUG("JSON deserializeTestProblem success\n");
+        } catch (const std::exception& e) {
+            LOG_ERROR("JSON parsing exception: %s\n", e.what());
+            return nullptr;
+        }
+    } else {
+        // 二进制格式处理（保持向后兼容）
+        LOG_DEBUG("Using binary format deserialization\n");
+        tp = std::make_unique<testProblem>();
+        try {
+            deserializeTestProblem(read_data.data(), *tp.get());
+            LOG_DEBUG("Binary deserializeTestProblem success\n");
+        } catch (const std::exception& e) {
+            LOG_ERROR("Binary deserialization exception: %s\n", e.what());
+            return nullptr;
+        }
+    }
 
-    // 解析 数据进行测试
-    std::unique_ptr<testProblem> tp = std::make_unique<testProblem>();
-    // std::cout << tp.get() << std::endl;
-    deserializeTestProblem( read_data.data(), *tp.get());
-    LOG_DEBUG("deserializeTestProblem over\n");
-    // std::cout << tp.get() << std::endl;
-    // LOG_DEBUG("pid : %s \nuuid : %s \nlang : %d \n code : %s \n ",tp->pid,tp->uuid,tp->lang,tp->code);
     return std::move(tp);
     // deserializeTestProblem( read_data.data(), *tp.get());
 

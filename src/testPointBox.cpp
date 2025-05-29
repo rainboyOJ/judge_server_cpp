@@ -79,8 +79,9 @@ void testPointBox::test(const testPoint * val) {
     resultPtr ->testBoxId = val-> testBoxId;
     // 3. 解析评测结果,将结果写入到对应的地址里
 
-    auto new_testPointResult_p = std::make_unique<testPointResult>();
-    resultPtr = new_testPointResult_p.get();
+    // auto new_testPointResult_p = std::make_unique<testPointResult>();
+    // resultPtr = new_testPointResult_p.get();
+    // 转成 unique_ptr
     if (!resultPtr) {
         LOG_ERROR("Failed to create testPointResult");
         return;

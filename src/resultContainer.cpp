@@ -49,20 +49,20 @@ json testResult::serialize() const {
     }
 
     // 序列化测试点结果
-    testPointResult * current = trp;
-    while (current) {
-        j["results"].push_back({
-            {"seq_id", current->seq_id},
-            {"cpu_time", current->cpu_time},
-            {"real_time", current->real_time},
-            {"memory", current->memory},
-            {"signal", current->signal},
-            {"exit_code", current->exit_code},
-            {"error", current->error},
-            {"result", current->result}
-        });
-        current = current->nxt;
+    for( const auto & t : TPR) {
+        if( t) {
+            j["results"].push_back({
+                {"testBoxId", t->testBoxId},
+                {"seq_id", t->seq_id},
+                {"cpu_time", t->cpu_time},
+                {"real_time", t->real_time},
+                {"memory", t->memory},
+                {"signal", t->signal},
+                {"exit_code", t->exit_code},
+                {"error", t->error},
+                {"result", t->result}
+            });
+        }
     }
-
     return j;
 }

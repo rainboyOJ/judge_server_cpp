@@ -30,7 +30,7 @@ async function main() {
         const testProblem = {
             uuid: options.uuid,
             pid: options.problemId,
-            language: options.language,
+            lang: options.language,
             code: options.code
         };
         
@@ -40,7 +40,7 @@ async function main() {
         
         // 输出摘要信息
         console.log('🎉 评测完成!');
-        console.log(result);
+        // console.log(result);
         
     } catch (error) {
         console.error('💥 程序异常:', error.message);

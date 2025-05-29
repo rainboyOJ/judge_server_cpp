@@ -89,6 +89,11 @@ class DataCodec {
         return { uuid, pid, language, code };
     }
 
+    static serializeTestProblemToJsonString(json) {
+        return JSON.stringify(json);
+    }
+
+
     /**
      * 反序列化testResult结构
      * 对应C++的deserializeTestPointResult函数
