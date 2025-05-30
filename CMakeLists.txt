@@ -13,11 +13,6 @@ add_definitions(-DPROJECT_ROOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 # 添加头文件目
 include_directories(include)
 
-#  from this https://github.com/protocolbuffers/protobuf/issues/14500
-# 解决 protobuf 链接的问题
-# set(CMAKE_MODULE_LINKER_FLAGS "-Wl,--copy-dt-needed-entries")
-# set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--copy-dt-needed-entries")
-# set(CMAKE_STATIC_LINKER_FLAGS "-Wl,--copy-dt-needed-entries")
 set(CMAKE_EXE_LINKER_FLAGS "-Wl,--copy-dt-needed-entries")
 
 # 检查是否是 Debug 模式
@@ -28,9 +23,8 @@ endif()
 
 
 # 查找源文件并添加可执行文件
-file(GLOB SOURCES "src/*.cpp")
+file(GLOB SOURCES "src/*.cpp" "src/common/*.cpp")
 add_library(${CMAKE_PROJECT_NAME} STATIC ${SOURCES})
-# target_link_libraries(${CMAKE_PROJECT_NAME} "protobuf")
 
 # 编译主代码
 
