@@ -1,6 +1,6 @@
 #include <iostream>
 #include "testPointBox.h"
-#include "Logger.h"
+#include "common/Logger.h"
 #include "utils.h"
 #include "testBox.h"
 

@@ -6,7 +6,7 @@
 #include <utility>
 
 #include "testBox.h"
-#include "Logger.h"
+#include "common/Logger.h"
 #include "json.hpp"
 using json = nlohmann::json;
 
@@ -39,7 +39,7 @@ void testBox::putBackTestBoxId(int id) {
     testBoxIdQue_ -> push(id); 
 }
 
-testBox_err testBox::add(
+TestBoxVoidResult testBox::add(
     const int testBoxId,
     std::unique_ptr<testProblem> test_problem)
 {
@@ -55,11 +55,11 @@ testBox_err testBox::add(
 #endif
     fs::path pid_path = this->problem_path / pid;
     if( !fs::exists(pid_path))
-        return testBox_err::PROBLEM_NOT_EXIST;
+        return TestBoxVoidResult::failure(TestBoxError_PROBLEM_NOT_EXIST);
 
     fs::path data_path = pid_path / "data"sv;
     if( !fs::exists(data_path))
-        return testBox_err::DATA_NOT_EXIST;
+        return TestBoxVoidResult::failure(TestBoxError_DATA_NOT_EXIST);
 
     Data_list_t filePairs= scan_data_list(data_path);
 
@@ -101,7 +101,7 @@ testBox_err testBox::add(
         pointBox_->push_link(testPointList); // 把链表放入队列,等待评测,一次评测多个点
     }
 
-    return testBox_err::SUCC;
+    return TestBoxVoidResult::success({});
 }
 
 void testBox::test_problem_info_deal(const testProblem *tp_) {

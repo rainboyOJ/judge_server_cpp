@@ -3,11 +3,13 @@
 #pragma once
 #include <functional>
 #include <filesystem>
+#include <string_view>
 #include "testPointBox.h"
 // #include "minheap.hpp" //不再使用这个heap, 因为用队列更快
 #include "static_loop_queue.h"
 #include "resultContainer.h"
 #include "json.hpp"
+#include "common/Result.h"
 using json = nlohmann::json;
 
 /*
@@ -27,14 +29,12 @@ testBox设计的思路:
 
 namespace fs = std::filesystem;
 
-enum class testBox_err {
-    SUCC,
-    PROBLEM_NOT_EXIST,
-    DATA_NOT_EXIST,
-    COMPILE_FAIL,
-    BUSY,
-};
-
+// 使用新的Result类型替代原有的枚举错误码
+// enum class testBox_err 已被 TestBoxError 和 Result<T, TestBoxError> 替代
+using TestBoxError = std::string_view;
+const std::string_view TestBoxError_PROBLEM_NOT_EXIST = "PROBLEM_NOT_EXIST";
+const std::string_view TestBoxError_DATA_NOT_EXIST = "DATA_NOT_EXIST";
+using TestBoxVoidResult = Result<Unit, TestBoxError>;
 
 //题目的测试数据的名字列表
 using Data_list_t = std::vector< std::pair<std::string,std::string> >;
@@ -118,7 +118,7 @@ public:
     // TODO
     // 这里不应该有testBox_id,因为由内部分配,外部看不到这个东西,
     // 根据返回值来确定是否添加成功
-    testBox_err add(
+    TestBoxVoidResult add(
         const int testBox_id, // testBox 可以用的空位置
         std::unique_ptr<testProblem> test_problem
     );

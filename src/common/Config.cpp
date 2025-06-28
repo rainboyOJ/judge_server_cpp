@@ -1,61 +1,74 @@
-#include "common/Config.h"
+#include "common/Config.h" // 调整后的路径
+#include "common/Logger.h" // 用于在配置加载期间记录错误
 #include <fstream>
-#include <iostream>
-#include <stdexcept>
+#include <stdexcept> // 用于std::runtime_error
 
-void Config::loadFromFile(const std::string& config_file) {
-    try {
-        std::ifstream file(config_file);
-        if (!file.is_open()) {
-            std::cerr << "Warning: Cannot open config file: " << config_file 
-                      << ", using default values" << std::endl;
-            return;
-        }
-        
-        json config_json;
-        file >> config_json;
-        
-        // 加载服务器配置
-        if (config_json.contains("server")) {
-            const auto& server = config_json["server"];
-            if (server.contains("port")) {
-                server_port_ = server["port"].get<int>();
-            }
-            if (server.contains("connection_timeout_ms")) {
-                connection_timeout_ms_ = server["connection_timeout_ms"].get<int>();
-            }
-        }
-        
-        // 加载测试配置
-        if (config_json.contains("testing")) {
-            const auto& testing = config_json["testing"];
-            if (testing.contains("worker_thread_count")) {
-                worker_thread_count_ = testing["worker_thread_count"].get<int>();
-            }
-            if (testing.contains("max_concurrent_tests")) {
-                max_concurrent_tests_ = testing["max_concurrent_tests"].get<int>();
-            }
-            if (testing.contains("test_data_path")) {
-                test_data_path_ = testing["test_data_path"].get<std::string>();
-            }
-        }
-        
-        // 加载性能配置
-        if (config_json.contains("performance")) {
-            const auto& performance = config_json["performance"];
-            if (performance.contains("buffer_size")) {
-                buffer_size_ = performance["buffer_size"].get<size_t>();
-            }
-        }
-        
-        std::cout << "Config loaded successfully from: " << config_file << std::endl;
-        std::cout << "Server port: " << server_port_ << std::endl;
-        std::cout << "Worker threads: " << worker_thread_count_ << std::endl;
-        std::cout << "Max concurrent tests: " << max_concurrent_tests_ << std::endl;
-        std::cout << "Test data path: " << test_data_path_ << std::endl;
-        
-    } catch (const std::exception& e) {
-        std::cerr << "Error loading config file " << config_file 
-                  << ": " << e.what() << ", using default values" << std::endl;
+Config& Config::getInstance() {
+    static Config instance;
+    return instance;
+}
+
+Config::Config() {
+    // 用默认值初始化或保持空直到调用loadFromFile
+    // 如果配置文件是可选的，在这里设置一些合理的默认值是好习惯
+    // 例如：
+    // config_data_["server"]["host"] = "0.0.0.0";
+    // config_data_["server"]["port"] = 8080;
+    // config_data_["logging"]["level"] = "INFO";
+}
+
+bool Config::loadFromFile(const std::string& configFilepath) {
+    std::lock_guard<std::mutex> lock(config_mutex_); // 保护config_data_
+    std::ifstream ifs(configFilepath);
+    if (!ifs.is_open()) {
+        LOG_ERROR("Failed to open config file: %s", configFilepath.c_str());
+        return false;
     }
+
+    try {
+        ifs >> config_data_;
+        LOG_INFO("Configuration loaded successfully from: %s", configFilepath.c_str());
+        return true;
+    } catch (const json::exception& e) {
+        config_data_ = json{}; // 出错时重置为空或默认值
+        LOG_ERROR("Failed to parse config file '%s': %s", configFilepath.c_str(), e.what());
+        return false;
+    }
+}
+
+// 访问器实现
+std::string Config::getServerHost() const {
+    return get<std::string>(config_data_["server"], "host", "0.0.0.0");
+}
+
+int Config::getServerPort() const {
+    return get<int>(config_data_["server"], "port", 8080);
+}
+
+int Config::getConnectionTimeoutMs() const {
+    return get<int>(config_data_["server"], "connection_timeout_ms", 30000);
+}
+
+int Config::getWorkerThreadCount() const {
+    return get<int>(config_data_["testing"], "worker_thread_count", 4);
+}
+
+int Config::getMaxConcurrentTests() const {
+    return get<int>(config_data_["testing"], "max_concurrent_tests", 4);
+}
+
+std::string Config::getTestDataPath() const {
+    return get<std::string>(config_data_["testing"], "test_data_path", "./testData");
+}
+
+size_t Config::getBufferSize() const {
+    return get<size_t>(config_data_["performance"], "buffer_size", 8192);
+}
+
+std::string Config::getLogFilePath() const {
+    return get<std::string>(config_data_["logging"], "file_path", "application.log");
+}
+
+std::string Config::getLogLevel() const {
+    return get<std::string>(config_data_["logging"], "level", "INFO");
 }

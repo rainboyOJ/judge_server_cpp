@@ -1,3 +1,4 @@
 build/
 sjudge/
 .vscode/
+.cache/

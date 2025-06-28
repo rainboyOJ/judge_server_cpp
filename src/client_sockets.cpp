@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "Logger.h"
+#include "common/Logger.h"
 #include "judgeInfo.h"
 #include "client_sockets.h"
 #include "utils.h"
@@ -141,23 +141,19 @@ void ClientSockets::deal_events(const fd_set &read_sets, const fd_set &write_set
 
                 // 传递给testBox
 
-                testBox_err err = test_box_->add(
+                TestBoxVoidResult result = test_box_->add(
                     i, // testBoxId
                     std::move(tp));
                 // TODO 处理错误,需要发送错误的信息给客户端
-                if (err == testBox_err::PROBLEM_NOT_EXIST)
+                if (result.isFailure())
                 {
-                    LOG_ERROR("problem not exist");
+                    TestBoxError error = result.error();
+                    LOG_ERROR("TestBox add failed: %s", error.data());  
                 }
-                else if (err == testBox_err::DATA_NOT_EXIST)
+                else
                 {
-                    LOG_ERROR("DATA_NOT_EXIST");
+                    LOG_INFO("add testProblem to testBox SUCCESS\n");
                 }
-                else if (err == testBox_err::SUCC)
-                {
-                    LOG_INFO("add testProblem to testBox SUCC\n");
-                }
-                // else if( err == testBox_err::FULL)
             }//没有读取发生错误else end
             else {
                 LOG_DEBUG("read bytes_read = %d, but not get All testProblem data", bytes_read);
