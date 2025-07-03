@@ -42,3 +42,38 @@ using EntityId = uint64_t;
 // 这个文件旨在成为非常通用的类型和可能的常量的集合。
 // 避免在这里放置复杂的类定义。保持简单。
 
+
+//-------------- 评测相关类型 --------------
+
+// TODO: 需要根据 simple_judge 的返回值修改
+enum enum_testStatus {
+    INIT = -1, // 初始状态,未开始评测
+    AC = 0,
+    WA,
+    TLE,
+    MLE,
+    RE,
+    CE,
+    SE,
+    OLE,
+    PE,
+    UNKNOWN,
+};
+
+struct TestCaseResult {
+    int testBoxId; // 唯一评测TextBoxId
+    int seq_id; // 评测的测试点编号
+
+    int cpu_time; // ms
+    int real_time; // ms
+    unsigned long long  memory; //kb
+    int signal;
+    int exit_code;
+    int error;
+    enum_testStatus result;
+    TestCaseResult * nxt;
+
+    // char msg[128]; //评测结果的信息 或 错误信息
+};
+
+//-------------- 评测相关类型 END --------------
