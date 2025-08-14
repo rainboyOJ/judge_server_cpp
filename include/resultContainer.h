@@ -4,8 +4,6 @@
 #include <vector>
 #include <mutex>
 #include <memory>
-#include <functional>
-#include <exception>
 
 #include "judgeInfo.h"
 #include "memPool.h"
@@ -24,7 +22,7 @@ enum class readResultStatus {
 };
 
 // ============= 前向声明 =============
-class testSession;
+class resultContainer;
 
 /**
  * @brief 测试会话类 - 管理单个完整测试任务的所有信息和状态
@@ -45,6 +43,7 @@ class testSession;
  */
 class testSession {
 public:
+    friend class resultContainer;
     // ============= 核心标识信息 =============
     int testBoxId;    // 测试盒子ID，用于标识不同的评测实例
     int uuid;         // 全局唯一评测ID
@@ -53,8 +52,9 @@ public:
     // ============= 评测内容 =============
     std::unique_ptr<testProblem> test_problem_p; // 题目信息（代码、语言等）
     std::vector<TestCaseResult> TCR;             // 测试用例结果数组
+    std::vector<TestCaseInfo> TCI;             // 测试用例信息数组,用于评测限制
 
-private:
+protected:
     // ============= 进度跟踪 =============
     int data_size;      // 总测试用例数量
     int finish_cnt;     // 已完成的测试用例数量
@@ -125,7 +125,7 @@ public:
 class resultContainer {
 public:
     // 类型别名
-    using Pointer = typename memoryPool<testPointResult>::Pointer;
+    using Pointer = typename memoryPool<TestCaseResult>::Pointer;
 
     /**
      * @brief 构造函数
@@ -137,6 +137,18 @@ public:
      * @brief 析构函数 - 清理所有资源
      */
     ~resultContainer();
+
+    // ========= 得到一些相关信息 =====
+
+    language getLanguage(int testBoxId)  {
+        std::lock_guard<std::mutex> lck(mtx_);
+        return sessions_[testBoxId].test_problem_p->lang;
+    }
+
+    std::string_view getCode(int testBoxId) {
+        std::lock_guard<std::mutex> lck(mtx_);
+        return sessions_[testBoxId].test_problem_p->code;
+    }
 
     // ============= 会话管理接口 =============
 
@@ -155,15 +167,6 @@ public:
     bool isJudgeFinished(int testBoxId) const;
 
     /**
-     * @brief 写入测试用例结果（兼容旧接口）
-     * @param testBoxId 测试盒子ID
-     * @param test_point_seq_id 测试用例序号
-     * @param p 测试结果指针
-     * @return bool 是否所有测试用例都已完成
-     */
-    bool writeResult(int testBoxId, int test_point_seq_id, Pointer p);
-
-    /**
      * @brief 直接写入测试用例结果（推荐接口）
      * @param testBoxId 测试盒子ID
      * @param caseIndex 测试用例索引
@@ -179,7 +182,7 @@ public:
      * @param testBoxId 测试盒子ID
      * @param test_problem 题目信息（包含代码、语言等）
      */
-    void push_testProblem(int testBoxId, std::unique_ptr<testProblem> test_problem);
+    void init_testProblem(int testBoxId, std::unique_ptr<testProblem> test_problem);
 
     /**
      * @brief 设置错误类型
@@ -196,14 +199,8 @@ public:
      * @param status 返回的读取状态
      * @return json 测试结果的JSON格式
      */
-    json readResultAsJson(int idx, readResultStatus& status);
+    json GetResultAsJson(int idx, readResultStatus& status);
 
-    /**
-     * @brief 获取测试会话的引用
-     * @param testBoxId 测试盒子ID
-     * @return testSession& 会话引用
-     */
-    testSession& getTestSession(int testBoxId);
 
     // ============= 资源管理接口 =============
 
@@ -211,17 +208,17 @@ public:
      * @brief 重置指定会话的所有数据
      * @param idx 会话索引
      */
-    void resetTestBoxById(int idx);
+    void ResetTestSessionById(int idx);
 
     /**
      * @brief 从内存池分配测试结果对象（兼容旧接口）
      * @param n 分配数量
      * @return testPointResult* 链表头指针
      */
-    testPointResult* allocateTestPointResult_of_N(int n);
+    TestCaseResult* AllocateTestCaseResult_of_N(int n);
 
 private:
     std::mutex mtx_;                              // 全局互斥锁
-    memoryPool<testPointResult> mem_;             // 内存池
+    memoryPool<TestCaseResult> mem_;              // 内存池
     std::vector<testSession> sessions_;           // 测试会话数组
 };

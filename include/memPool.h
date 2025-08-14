@@ -3,6 +3,7 @@
 #include <vector>
 #include <memory>
 #include <functional>
+#include <stdexcept>
 
 // size 表示一次申请的内存块大小
 template<typename T,int size=1024>

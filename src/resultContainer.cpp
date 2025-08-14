@@ -209,27 +209,6 @@ bool resultContainer::isJudgeFinished(int testBoxId) const {
     return sessions_[testBoxId].isFinished();
 }
 
-bool resultContainer::writeResult(int testBoxId, int test_point_seq_id, Pointer p) {
-    if (testBoxId < 0 || testBoxId >= static_cast<int>(sessions_.size()) || !p) {
-        return false;
-    }
-    
-    // 将旧格式的testPointResult转换为新格式的TestCaseResult
-    TestCaseResult tcr;
-    tcr.testBoxId = p->testBoxId;
-    tcr.seq_id = p->seq_id;
-    tcr.cpu_time = p->cpu_time;
-    tcr.real_time = p->real_time;
-    tcr.memory = p->memory;
-    tcr.signal = p->signal;
-    tcr.exit_code = p->exit_code;
-    tcr.error = p->error;
-    tcr.result = static_cast<enum_testStatus>(p->result);
-    tcr.nxt = nullptr;
-    
-    auto& session = sessions_[testBoxId];
-    return session.writeResult(test_point_seq_id, tcr);
-}
 
 bool resultContainer::writeCaseResult(int testBoxId, int caseIndex, const TestCaseResult& result) {
     if (testBoxId < 0 || testBoxId >= static_cast<int>(sessions_.size())) {
@@ -240,7 +219,7 @@ bool resultContainer::writeCaseResult(int testBoxId, int caseIndex, const TestCa
     return session.writeResult(caseIndex, result);
 }
 
-void resultContainer::push_testProblem(int testBoxId, std::unique_ptr<testProblem> test_problem) {
+void resultContainer::init_testProblem(int testBoxId, std::unique_ptr<testProblem> test_problem) {
     if (testBoxId < 0 || testBoxId >= static_cast<int>(sessions_.size()) || !test_problem) {
         return;
     }
@@ -265,7 +244,7 @@ void resultContainer::setErrorType(int testBoxId, testError err_type) {
     session.err_type = err_type;
 }
 
-json resultContainer::readResultAsJson(int idx, readResultStatus& status) {
+json resultContainer::GetResultAsJson(int idx, readResultStatus& status) {
     if (idx < 0 || idx >= static_cast<int>(sessions_.size())) {
         status = readResultStatus::EXCEED_TESTBOX_ID;
         return json{};
@@ -299,14 +278,8 @@ json resultContainer::readResultAsJson(int idx, readResultStatus& status) {
     return session.serialize();
 }
 
-testSession& resultContainer::getTestSession(int testBoxId) {
-    if (testBoxId < 0 || testBoxId >= static_cast<int>(sessions_.size())) {
-        throw std::out_of_range("testBoxId out of range");
-    }
-    return sessions_[testBoxId];
-}
 
-void resultContainer::resetTestBoxById(int idx) {
+void resultContainer::ResetTestSessionById(int idx) {
     if (idx < 0 || idx >= static_cast<int>(sessions_.size())) {
         return;
     }
@@ -315,14 +288,14 @@ void resultContainer::resetTestBoxById(int idx) {
     session.clear();
 }
 
-testPointResult* resultContainer::allocateTestPointResult_of_N(int n) {
+TestCaseResult* resultContainer::AllocateTestCaseResult_of_N(int n) {
     if (n <= 0) return nullptr;
     
     std::lock_guard<std::mutex> lck(mtx_);
-    testPointResult* head = nullptr;
+    TestCaseResult* head = nullptr;
     
     for (int i = 0; i < n; ++i) {
-        testPointResult* result = mem_.get();
+        TestCaseResult* result = mem_.get();
         if (!result) break; // 内存池耗尽
         
         result->nxt = head;

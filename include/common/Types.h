@@ -60,6 +60,22 @@ enum enum_testStatus {
     UNKNOWN,
 };
 
+typedef char char_str[1024];
+
+struct TestCaseInfo {
+    int testBoxId; // 唯一评测TextBoxId
+    int seq_id; // 评测的测试点编号
+    int cpu_time_limit; // ms
+    int real_time_limit; // ms
+    int memory_limit; //kb
+
+    char_str exe; //评测程序的路径
+    char_str cwd; //运行路径
+    char_str input_path; // 输入数据
+    char_str output_path; // 正确的输出数据
+};
+
+// 一个测试点的结果
 struct TestCaseResult {
     int testBoxId; // 唯一评测TextBoxId
     int seq_id; // 评测的测试点编号
