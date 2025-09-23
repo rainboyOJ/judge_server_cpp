@@ -4,6 +4,8 @@
 #include <functional>
 #include <filesystem>
 #include <string_view>
+#include <mutex>
+#include <vector>
 #include "testPointBox.h"
 // #include "minheap.hpp" //不再使用这个heap, 因为用队列更快
 #include "static_loop_queue.h"
@@ -60,6 +62,7 @@ public:
     :
         dataSizeLimit_(dataSizeLimit),
         testBoxIdQue_(std::make_unique<StaticLoopQueue<int>>(dataSizeLimit) ) ,
+        availableTestBoxIds_(dataSizeLimit, true),  // 初始化所有ID为可用状态
         problem_path(problem_path_),
         pointBox_(std::make_unique<testPointBox>(workNum,this)),
         resultContainer_(dataSizeLimit), //设计可以现时进行的测试的题目的多少
@@ -136,7 +139,7 @@ protected:
     // @param testBoxId  测试箱ID,用于标识不同的测试实例
     // @param seq_id     测试点的序号
     // @param trp        测试点结果的指针,包含该测试点的详细评测信息
-    void writeResult(int testBoxId,int seq_id,testPointResult * trp);
+    void writeResult(int testBoxId,int seq_id,const  TestCaseResult & trp);
 
 private:
 
@@ -158,6 +161,9 @@ private:
     
     //存有可用testBoxId的队列
     std::unique_ptr<StaticLoopQueue<int>> testBoxIdQue_ = nullptr;
+    
+    // 用于testBoxId管理的变量
+    std::vector<bool> availableTestBoxIds_;  // true表示ID可用，false表示ID已被使用
 
     const fs::path problem_path; //题目路径
 

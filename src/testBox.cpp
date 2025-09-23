@@ -4,6 +4,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <stdexcept>
 
 #include "testBox.h"
 #include "common/Logger.h"
@@ -24,19 +25,44 @@ bool hasEnding (std::string const &fullString, std::string_view const &ending) {
 }
 
 int testBox::getTestBoxId() {
-    int testBoxId = -1;
-    {
-        std::lock_guard lck(mtx_);
-        if( !testBoxIdQue_ -> empty() )
-            testBoxId = testBoxIdQue_->pop();
+    // 使用新的简化版ID选择器
+    std::lock_guard<std::mutex> lock(mtx_);
+    
+    // 查找第一个可用的ID
+    for (int i = 0; i < static_cast<int>(availableTestBoxIds_.size()); ++i) {
+        if (availableTestBoxIds_[i]) {
+            availableTestBoxIds_[i] = false;  // 标记为已使用
+            return i;
+        }
     }
-    return testBoxId;
+    
+    // 没有可用的ID
+    return -1;
+    
+    // 原有实现保留作为备选
+    // int testBoxId = -1;
+    // {
+    //     std::lock_guard lck(mtx_);
+    //     if( !testBoxIdQue_ -> empty() )
+    //         testBoxId = testBoxIdQue_->pop();
+    // }
+    // return testBoxId;
 }
 
 void testBox::putBackTestBoxId(int id) {
-    std::lock_guard lck(mtx_);
-    //因为放的元素都是从队列中取出来的,所以这里不用担心会超过队列的大小
-    testBoxIdQue_ -> push(id); 
+    // 检查ID是否有效
+    if (id < 0 || id >= static_cast<int>(availableTestBoxIds_.size())) {
+        throw std::out_of_range("Invalid testBoxId");
+    }
+    
+    // 使用新的简化版ID选择器
+    std::lock_guard<std::mutex> lock(mtx_);
+    availableTestBoxIds_[id] = true;  // 标记为可用
+    
+    // 原有实现保留作为备选
+    // std::lock_guard lck(mtx_);
+    // //因为放的元素都是从队列中取出来的,所以这里不用担心会超过队列的大小
+    // testBoxIdQue_ -> push(id); 
 }
 
 TestBoxVoidResult testBox::add(
@@ -73,6 +99,8 @@ TestBoxVoidResult testBox::add(
     resultContainer_.init_by_test_id(testBoxId, filePairs.size());
 
     // 连续申请 n 个内存
+    /*
+    // TODO 删除这里,使用新的方式来添加评测数据
     testPointResult  * head =  resultContainer_.allocateTestPointResult_of_N(filePairs.size());
 
     // 得到 一串 testPoint * 内存的链表
@@ -100,6 +128,7 @@ TestBoxVoidResult testBox::add(
         resultContainer_.push_testProblem(testBoxId, std::move(test_problem));
         pointBox_->push_link(testPointList); // 把链表放入队列,等待评测,一次评测多个点
     }
+    */
 
     return TestBoxVoidResult::success({});
 }
@@ -185,7 +214,7 @@ void testBox::deal_testPoint_singlePointComplete(testPointResult * resultPtr) {
 }
 
 void testBox::clearResultByTestBoxId(int testBoxId) {
-    resultContainer_.resetTestBoxById(testBoxId);
+    // resultContainer_.resetTestBoxById(testBoxId);
 }
 
 
@@ -196,7 +225,7 @@ std::string testBox::getResult(const int testBoxId) {
     // TODO
     readResultStatus status = readResultStatus::NOT_DATA;
     // std::vector<uint8_t> result = this->resultContainer_.readResult(testBoxId,status);
-    json ResultJSON = resultContainer_.readResultAsJson(testBoxId, status);
+    json ResultJSON = resultContainer_.GetResultAsJson(testBoxId, status);
     LOG_DEBUG("getResult: testBoxId %d, status %d\n", testBoxId, static_cast<int>(status));
     if( status == readResultStatus::EXCEED_TESTBOX_ID){
         return R"({"code": -1, "msg": "testBoxId exceed"})";
@@ -218,10 +247,10 @@ std::string testBox::getResult(const int testBoxId) {
     return R"({"code": -1, "msg": "unknown error"})";
 }
 
-void testBox::writeResult(int testBoxId, int seq_id, testPointResult * trp) {
+void testBox::writeResult(int testBoxId, int seq_id, const TestCaseResult &trp) {
     // 这里不需要加锁,因为 resultContainer 本身就有锁
     // std::lock_guard lck(mtx_);
-    bool finishAllTestPoint = resultContainer_.writeResult(testBoxId, seq_id, trp);
+    bool finishAllTestPoint = resultContainer_.writeCaseResult(testBoxId, seq_id, trp);
     LOG_DEBUG("writeResult: testBoxId %d, seq_id %d, finishAllTestPoint %d\n", testBoxId, seq_id, finishAllTestPoint);
     if( finishAllTestPoint && allPointCompleteCallback_ != nullptr) {
         // TODO 把结果链 转成对应的信息
