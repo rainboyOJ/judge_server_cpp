@@ -94,14 +94,10 @@ public:
 
     //添加一个测试某个题目的测试数据
 
-    //得到一个可以用的空位置,-1表示没有空位置了
-    int getTestBoxId();
 
     // 更好的名字
     // int getTestBoxIdNoWorking();
 
-    // 放回testBoxId
-    void putBackTestBoxId(int id);
 
 
     //得到结果,返回的为JSON格式的字符串
@@ -142,6 +138,10 @@ protected:
     void writeResult(int testBoxId,int seq_id,const  TestCaseResult & trp);
 
 private:
+    // 得到一个可以用的空位置,-1表示没有空位置了
+    int getTestBoxId();
+    // 放回testBoxId
+    void putBackTestBoxId(int id);
 
     //处理testPointBox传递过来的评测结果
     void deal_testPoint_singlePointComplete(testPointResult *);
@@ -157,14 +157,9 @@ private:
     UniquePtrQueue<testProblem> que_; // 感觉不需要这个队列
     std::unique_ptr<testPointBox > pointBox_ = nullptr;
 
-    // MinHeap heap_;
-    
     //存有可用testBoxId的队列
     std::unique_ptr<StaticLoopQueue<int>> testBoxIdQue_ = nullptr;
     
-    // 用于testBoxId管理的变量
-    std::vector<bool> availableTestBoxIds_;  // true表示ID可用，false表示ID已被使用
-
     const fs::path problem_path; //题目路径
 
     std::mutex mtx_; //锁

@@ -27,26 +27,13 @@ bool hasEnding (std::string const &fullString, std::string_view const &ending) {
 int testBox::getTestBoxId() {
     // 使用新的简化版ID选择器
     std::lock_guard<std::mutex> lock(mtx_);
-    
-    // 查找第一个可用的ID
-    for (int i = 0; i < static_cast<int>(availableTestBoxIds_.size()); ++i) {
-        if (availableTestBoxIds_[i]) {
-            availableTestBoxIds_[i] = false;  // 标记为已使用
-            return i;
-        }
+    int testBoxId = -1;
+    {
+        std::lock_guard lck(mtx_);
+        if( !testBoxIdQue_ -> empty() )
+            testBoxId = testBoxIdQue_->pop();
     }
-    
-    // 没有可用的ID
-    return -1;
-    
-    // 原有实现保留作为备选
-    // int testBoxId = -1;
-    // {
-    //     std::lock_guard lck(mtx_);
-    //     if( !testBoxIdQue_ -> empty() )
-    //         testBoxId = testBoxIdQue_->pop();
-    // }
-    // return testBoxId;
+    return testBoxId;
 }
 
 void testBox::putBackTestBoxId(int id) {
@@ -55,14 +42,9 @@ void testBox::putBackTestBoxId(int id) {
         throw std::out_of_range("Invalid testBoxId");
     }
     
-    // 使用新的简化版ID选择器
-    std::lock_guard<std::mutex> lock(mtx_);
-    availableTestBoxIds_[id] = true;  // 标记为可用
-    
-    // 原有实现保留作为备选
-    // std::lock_guard lck(mtx_);
-    // //因为放的元素都是从队列中取出来的,所以这里不用担心会超过队列的大小
-    // testBoxIdQue_ -> push(id); 
+    std::lock_guard lck(mtx_);
+    //因为放的元素都是从队列中取出来的,所以这里不用担心会超过队列的大小
+    testBoxIdQue_ -> push(id); 
 }
 
 TestBoxVoidResult testBox::add(
