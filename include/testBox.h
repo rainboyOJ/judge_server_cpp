@@ -62,7 +62,6 @@ public:
     :
         dataSizeLimit_(dataSizeLimit),
         testBoxIdQue_(std::make_unique<StaticLoopQueue<int>>(dataSizeLimit) ) ,
-        availableTestBoxIds_(dataSizeLimit, true),  // 初始化所有ID为可用状态
         problem_path(problem_path_),
         pointBox_(std::make_unique<testPointBox>(workNum,this)),
         resultContainer_(dataSizeLimit), //设计可以现时进行的测试的题目的多少
