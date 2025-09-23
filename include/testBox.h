@@ -117,8 +117,10 @@ public:
     // 这里不应该有testBox_id,因为由内部分配,外部看不到这个东西,
     // 根据返回值来确定是否添加成功
     TestBoxVoidResult add(
-        const int testBox_id, // testBox 可以用的空位置
-        std::unique_ptr<testProblem> test_problem
+        int uuid,
+        char pid[32],
+        language lang,
+        std::string&& code, //右值引用: 避免不必要的拷贝，提高效率
     );
 
 
