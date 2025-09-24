@@ -9,6 +9,7 @@
 
 #include <arpa/inet.h>
 
+#include "common/Types.h"
 
 //评测结果
 struct judge_result {
@@ -31,7 +32,7 @@ enum language {
 // 评测题目的信息
 struct testProblem {
     int uuid; // 唯一评测id
-    char pid[8]; //题目的id
+    char pid[32]; //题目的id
     language lang; // 语言
     std::string code; //代码
 };
@@ -68,7 +69,7 @@ struct testPointResult {
 
 //传递给testPointBox,进行一个一个的评测
 // 为了能进行内存管理,这里必须使用 trivial 类型的结构体
-using char_str = char[128];
+// using char_str = char[128];
 struct  testPoint
 {
     int testBoxId; // 唯一评测TestBoxId,用于获得在testBox 中需要存结果的位置

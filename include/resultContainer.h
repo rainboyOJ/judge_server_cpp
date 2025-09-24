@@ -184,6 +184,9 @@ public:
      */
     void init_testProblem(int testBoxId, std::unique_ptr<testProblem> test_problem);
 
+    // 重载
+    void init_testProblem(int testBoxId, int uuid, char pid[32], language lang, std::string&& code);
+
     /**
      * @brief 设置错误类型
      * @param testBoxId 测试盒子ID

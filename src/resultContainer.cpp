@@ -234,6 +234,22 @@ void resultContainer::init_testProblem(int testBoxId, std::unique_ptr<testProble
     }
 }
 
+void resultContainer::init_testProblem(int testBoxId, int uuid, char pid[32], language lang, std::string&& code) {
+    if (testBoxId < 0 || testBoxId >= static_cast<int>(sessions_.size())) {
+        return;
+    }
+
+    auto& session = sessions_[testBoxId];
+    std::lock_guard<std::mutex> lock(session.mtx_);
+
+    session.test_problem_p = std::make_unique<testProblem>();
+    session.test_problem_p->uuid = uuid;
+    std::copy(pid, pid + 32, session.test_problem_p->pid);
+    session.test_problem_p->lang = lang;
+    session.test_problem_p->code = std::move(code);
+    session.uuid = uuid;
+}
+
 void resultContainer::setErrorType(int testBoxId, testError err_type) {
     if (testBoxId < 0 || testBoxId >= static_cast<int>(sessions_.size())) {
         return;

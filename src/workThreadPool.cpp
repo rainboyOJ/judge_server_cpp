@@ -133,7 +133,7 @@ void workThreadPool::work() {
         // 简单的阶段流转：PRE_DEAL -> COMPILE -> TEST
         switch (task.testStage) {
             case TestStage::PRE_DEAL: {
-                bool ok = PreDeal();
+                bool ok = PreDeal(task.testBoxId, resultContainerPtr_);
                 if (ok) {
                     PoolNode nxt{task.testBoxId, TestStage::COMPILE, 0};
                     push_task(nxt);
@@ -144,7 +144,7 @@ void workThreadPool::work() {
                 break;
             }
             case TestStage::COMPILE: {
-                bool ok = Compile();
+                bool ok = Compile(task.testBoxId,resultContainerPtr_);
                 if (ok) {
                     PoolNode nxt{task.testBoxId, TestStage::TEST, 0};
                     push_task(nxt);
@@ -156,7 +156,7 @@ void workThreadPool::work() {
             }
             case TestStage::TEST: {
                 // 这里的简单实现只做一次单点测试
-                (void)TestOneSinglePoint();
+                (void)TestOneSinglePoint(task.testBoxId,resultContainerPtr_);
                 break;
             }
             default:

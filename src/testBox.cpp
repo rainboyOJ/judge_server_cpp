@@ -38,7 +38,7 @@ int testBox::getTestBoxId() {
 
 void testBox::putBackTestBoxId(int id) {
     // 检查ID是否有效
-    if (id < 0 || id >= static_cast<int>(availableTestBoxIds_.size())) {
+    if (id < 0 || id >= dataSizeLimit_) {
         throw std::out_of_range("Invalid testBoxId");
     }
     
@@ -47,38 +47,71 @@ void testBox::putBackTestBoxId(int id) {
     testBoxIdQue_ -> push(id); 
 }
 
-TestBoxVoidResult testBox::add(
-    const int testBoxId,
-    std::unique_ptr<testProblem> test_problem)
+
+// 添加一个评测
+bool testBox::add(
+    int uuid,
+    char pid[32],
+    language lang,
+    std::string&& code
+)
 {
     // !! 把test_problem 转移到 resultContainer_ 里
-    testProblem *test_problem_p = test_problem.get();
     // resultContainer_.move_in_testProblem(testBoxId,std::move(test_problem));
     // getpid
-    const std::string pid = test_problem_p->pid;
-
 //TODO
 #if DEBUG
     std::cout << this->problem_path << std::endl;
 #endif
-    fs::path pid_path = this->problem_path / pid;
-    if( !fs::exists(pid_path))
-        return TestBoxVoidResult::failure(TestBoxError_PROBLEM_NOT_EXIST);
+    // comment by rainboy 
+    // 0. 获取一个 testBoxId
+    // 1. 加入到 resultContainer_ 里
+    // 2. 让resultContainer_ 来管理这个test_problem 
+    // 执行workerPool_ 里的线程来处理这个test_problem
+    // 3. 处理完毕后,通知TestBox主线程
 
-    fs::path data_path = pid_path / "data"sv;
-    if( !fs::exists(data_path))
-        return TestBoxVoidResult::failure(TestBoxError_DATA_NOT_EXIST);
 
-    Data_list_t filePairs= scan_data_list(data_path);
+    // step 0
+    int testBoxId = getTestBoxId();
+    if( testBoxId == -1)
+        return false; // 没有空闲的testBoxId
 
-    // 代码编译
-    //TODO
+    // step 1
+    // 创建一个test_problem
+    auto test_problem = std::make_unique<testProblem>();
+    test_problem -> uuid = uuid;
+    strcpy( test_problem -> pid ,pid);
+    test_problem -> lang = lang;
+    test_problem -> code = std::move(code);
 
-    // 输出结果
-    int test_point_idx = 0;
+    // step 2 加入到 resultContainer_ 里
+    // resultContainer_.init_by_test_id(testBoxId, 0); // 嗯，这个函数应该在 testProcess::Predel 里调用
+    resultContainer_.init_testProblem(testBoxId, uuid, pid, lang, std::move(code));
+
+    // 扫描数据
+
+
+
+
+
+    // fs::path pid_path = this->problem_path / pid;
+    // if( !fs::exists(pid_path))
+    //     return TestBoxVoidResult::failure(TestBoxError_PROBLEM_NOT_EXIST);
+
+    // fs::path data_path = pid_path / "data"sv;
+    // if( !fs::exists(data_path))
+    //     return TestBoxVoidResult::failure(TestBoxError_DATA_NOT_EXIST);
+
+    // Data_list_t filePairs= scan_data_list(data_path);
+
+    // // 代码编译
+    // //TODO
+
+    // // 输出结果
+    // int test_point_idx = 0;
 
     // 初始化
-    resultContainer_.init_by_test_id(testBoxId, filePairs.size());
+    // resultContainer_.init_by_test_id(testBoxId, filePairs.size());
 
     // 连续申请 n 个内存
     /*
@@ -112,7 +145,8 @@ TestBoxVoidResult testBox::add(
     }
     */
 
-    return TestBoxVoidResult::success({});
+    // return TestBoxVoidResult::success({});
+    return true;
 }
 
 void testBox::test_problem_info_deal(const testProblem *tp_) {
