@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <string>
 #include <iostream>
+#include <filesystem>
 #include <iomanip>
 #include <cstdint>
 #include <type_traits>
@@ -15,6 +16,8 @@
 #include "judgeInfo.h"
 #include "json.hpp"
 using json = nlohmann::json;
+
+namespace fs = std::filesystem;
 
 // 前向声明
 class testResult;
@@ -114,3 +117,8 @@ void deserializeTestPointResult(const uint8_t* s, testResultWithVecotr &tpr);
 
 // 调试用的函数,打印出uint8_t 数组
 void debug_print_uint8_t_vector(const std::vector<uint8_t> &vec);
+
+
+// 扫描目录下的数据列表
+using Data_list_t = std::vector< std::pair<std::string,std::string> >;
+Data_list_t scan_data_list(const fs::path & directoryPath);

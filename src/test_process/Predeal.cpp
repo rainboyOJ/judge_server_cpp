@@ -34,7 +34,7 @@ bool PreDeal(const int testBoxId, resultContainer *resultContainerPtr){
     LOG_DEBUG("pid_path: %s\n", pid_path.c_str());
     LOG_DEBUG("data_path: %s\n", data_path.c_str());
 
-    // Data_list_t filePairs= scan_data_list(data_path);
+    Data_list_t filePairs= scan_data_list(data_path);
     // fs::path pid_path = this->problem_path / pid;
     // if( !fs::exists(pid_path))
     //     return TestBoxVoidResult::failure(TestBoxError_PROBLEM_NOT_EXIST);

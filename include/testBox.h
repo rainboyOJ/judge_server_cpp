@@ -31,7 +31,6 @@ testBox设计的思路:
 */
 
 
-namespace fs = std::filesystem;
 
 // 使用新的Result类型替代原有的枚举错误码
 // enum class testBox_err 已被 TestBoxError 和 Result<T, TestBoxError> 替代
@@ -39,9 +38,6 @@ using TestBoxError = std::string_view;
 const std::string_view TestBoxError_PROBLEM_NOT_EXIST = "PROBLEM_NOT_EXIST";
 const std::string_view TestBoxError_DATA_NOT_EXIST = "DATA_NOT_EXIST";
 using TestBoxVoidResult = Result<Unit, TestBoxError>;
-
-//题目的测试数据的名字列表
-using Data_list_t = std::vector< std::pair<std::string,std::string> >;
 
 using singPointCompleteCallback = std::function<void(const testPointResult *)>;
 using allPointCompleteCallback = std::function<void(int)>;
@@ -155,8 +151,6 @@ private:
 
     //处理testProblem 信息,转成 testPoint信息,传递给testPointBox
     void test_problem_info_deal(const testProblem *);
-
-    Data_list_t scan_data_list(const fs::path & data_path);
 
     singPointCompleteCallback singPointCompleteCallback_;
     allPointCompleteCallback allPointCompleteCallback_;

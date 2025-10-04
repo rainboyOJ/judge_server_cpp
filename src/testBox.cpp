@@ -13,18 +13,6 @@
 using json = nlohmann::json;
 
 
-namespace fs = std::filesystem;
-using namespace std::literals;
-
-
-bool hasEnding (std::string const &fullString, std::string_view const &ending) {
-    if (fullString.length() >= ending.length()) {
-        return (0 == fullString.compare (fullString.length() - ending.length(), ending.length(), ending));
-    } else {
-        return false;
-    }
-}
-
 int testBox::getTestBoxId() {
     // 使用新的简化版ID选择器
     int testBoxId = -1;
@@ -149,47 +137,6 @@ bool testBox::add(
 
 void testBox::test_problem_info_deal(const testProblem *tp_) {
 
-}
-
-
-
-Data_list_t
-    testBox::scan_data_list(const fs::path & directoryPath){
-    Data_list_t filePairs;
-    // const std::string directoryPath = "/path/to/your/directory"; // 替换为你的目录路径
-
-    using namespace std::literals;
-    try {
-        // 遍历指定目录
-        for (const auto& entry : fs::directory_iterator(directoryPath)) {
-            if (entry.is_regular_file()) {
-                std::string fileName = entry.path().filename().string();
-
-                // 检查文件扩展名
-                // if (fileName.ends_with(".in")) {
-                if (hasEnding(fileName,".in"sv)) {
-                    std::string outFileName = fileName;
-                    outFileName.replace(outFileName.end() - 3, outFileName.end(), ".out"); // 替换 .in 为 .out
-                    // 检查对应的 .out 文件是否存在
-                    if (fs::exists(entry.path().parent_path() / outFileName)) {
-                        filePairs.emplace_back(fileName, outFileName);
-                    }
-                }
-            }
-        }
-
-        // 输出结果
-        for (const auto& pair : filePairs) {
-            std::cout << pair.first << " <-> " << pair.second << std::endl;
-        }
-
-    } catch (const fs::filesystem_error& e) {
-        std::cerr << "Filesystem error: " << e.what() << std::endl;
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-    }
-
-    return filePairs;
 }
 
 
