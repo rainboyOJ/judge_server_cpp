@@ -20,8 +20,10 @@ bool Compile(const int testBoxId, resultContainer *resultContainerPtr,workThread
         LOG_DEBUG("Code: %s", code.data());
         
         // 创建临时目录用于编译
-        fs::path tempDir = resultContainerPtr->getWorkDir(testBoxId) ;
-        LOG_DEBUG("Temp dir: %s", tempDir.c_str());
+        fs::path tempDir = resultContainerPtr->work_dir(testBoxId);
+        fs::path sourceFile = resultContainerPtr->source_path(testBoxId);
+        fs::path executableFile = resultContainerPtr->exe_path(testBoxId);
+
         std::error_code ec;
         if( !fs::exists(tempDir))
             fs::create_directory(tempDir,ec);
@@ -29,7 +31,6 @@ bool Compile(const int testBoxId, resultContainer *resultContainerPtr,workThread
             fs::remove_all(tempDir,ec);
         
         // 将代码写入临时文件
-        fs::path sourceFile = tempDir / "solution.cpp";
         std::ofstream sourceStream(sourceFile);
         if (!sourceStream) {
             LOG_ERROR("Failed to create source file: %s", sourceFile.c_str());
@@ -39,9 +40,6 @@ bool Compile(const int testBoxId, resultContainer *resultContainerPtr,workThread
         sourceStream << code;
         sourceStream.close();
         
-        // 构建编译命令
-        auto exeName = resultContainerPtr->getExeName(testBoxId);
-        fs::path executableFile = tempDir / exeName;
         std::string compileCmd = "g++ -std=c++17 -O2 -DONLINE_JUDGE  -o " + executableFile.string() + " " + sourceFile.string() + " 2>&1";
         
         // 执行编译命令
