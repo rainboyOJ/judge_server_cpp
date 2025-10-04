@@ -44,7 +44,7 @@ int main (int argc, char *argv[]) {
 
     // int testBoxId =  TB.getTestBoxId();
 
-    std::string code = "#include <iostream>\nint main() {\n\tstd::cout << \"Hello World!\" << std::endl;\n\treturn 0;\n}\n";
+    std::string code = "#include <iostream>\nint main() {\n\tint a,b; std::cin >> a >> b; std::cout << a+b << std::endl;\n\treturn 0;\n}\n";
 
     std::cout << "code = " << code << std::endl;
     auto res = TB.add(
