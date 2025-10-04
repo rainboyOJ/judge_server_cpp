@@ -156,6 +156,10 @@ public:
         return sessions_[testBoxId].test_problem_p->code;
     }
 
+    const testBox * getTestBoxPtr() const {
+        return testBoxPtr_;
+    }
+
     // ============= 会话管理接口 =============
 
     /**

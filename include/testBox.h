@@ -133,6 +133,9 @@ public:
 
     void clearResultByTestBoxId(int testBoxId); //清空resultContainer_里的结果
 
+    //=== 得到一些信息
+    const fs::path getProbelmPath() const { return problem_path; }
+
 protected:
 
     // 向 resultContainer 写入测试结果
