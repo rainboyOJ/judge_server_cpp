@@ -9,6 +9,7 @@
 #include "testBox.h"
 #include "common/Logger.h"
 #include "json.hpp"
+#include "common/Logger.h"
 using json = nlohmann::json;
 
 
@@ -26,10 +27,9 @@ bool hasEnding (std::string const &fullString, std::string_view const &ending) {
 
 int testBox::getTestBoxId() {
     // 使用新的简化版ID选择器
-    std::lock_guard<std::mutex> lock(mtx_);
     int testBoxId = -1;
     {
-        std::lock_guard lck(mtx_);
+        std::lock_guard<std::mutex> lock(mtx_);
         if( !testBoxIdQue_ -> empty() )
             testBoxId = testBoxIdQue_->pop();
     }
@@ -60,9 +60,7 @@ bool testBox::add(
     // resultContainer_.move_in_testProblem(testBoxId,std::move(test_problem));
     // getpid
 //TODO
-#if DEBUG
-    std::cout << this->problem_path << std::endl;
-#endif
+    LOG_DEBUG("testBox::add() start");
     // comment by rainboy 
     // 0. 获取一个 testBoxId
     // 1. 加入到 resultContainer_ 里
@@ -73,6 +71,7 @@ bool testBox::add(
 
     // step 0
     int testBoxId = getTestBoxId();
+    LOG_DEBUG("testBoxId = %d", testBoxId);
     if( testBoxId == -1)
         return false; // 没有空闲的testBoxId
 
@@ -85,14 +84,9 @@ bool testBox::add(
     test_problem -> code = std::move(code);
 
     // step 2 加入到 resultContainer_ 里
-    // resultContainer_.init_by_test_id(testBoxId, 0); // 嗯，这个函数应该在 testProcess::Predel 里调用
     resultContainer_.init_testProblem(testBoxId, uuid, pid, lang, std::move(code));
 
     // 扫描数据
-
-
-
-
 
     // fs::path pid_path = this->problem_path / pid;
     // if( !fs::exists(pid_path))

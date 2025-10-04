@@ -41,6 +41,7 @@ int main (int argc, char *argv[]) {
 
     std::string code = "#include <iostream>\nint main() {\n\tstd::cout << \"Hello World!\" << std::endl;\n\treturn 0;\n}\n";
 
+    std::cout << "code = " << code << std::endl;
     auto res = TB.add(
         9527, // uuid
         id_, // problem id
@@ -49,10 +50,10 @@ int main (int argc, char *argv[]) {
     );
     if(  res == true)
     {
-        std::cout << "testBox add Fail!" << "\n";
+        std::cout << "testBox add SUCC!" << "\n";
     }
     else {
-        std::cout << "testBox add SUCC!" << "\n";
+        std::cout << "testBox add FAIL!" << "\n";
     }
     // 添加任务
 

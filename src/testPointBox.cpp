@@ -91,7 +91,7 @@ void testPointBox::test(const testPoint * val) {
     parse_test_point_result(resultStr,resultPtr);
 
     // 调用 testBox 的函数,将结果写入到对应的地址
-    testBox_ -> writeResult(val->testBoxId,test_point_seq_id,resultPtr);
+    // testBox_ -> writeResult(val->testBoxId,test_point_seq_id,resultPtr);
 
 
     if( val -> testPointResult_p != nullptr) {
