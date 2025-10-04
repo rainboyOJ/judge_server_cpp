@@ -1,6 +1,7 @@
 #include "workThreadPool.h"
 #include <mutex>
 #include <cstddef> // offsetof
+#include "common/Logger.h"
 
 template <typename T>
 void workThreadPoolQueue<T>::MemPoolDeleter::operator()(T* p) const noexcept {
@@ -103,6 +104,7 @@ auto workThreadPool::pop_task() -> workThreadPoolQueue<PoolNode>::Ptr {
 
 void workThreadPool::work() {
     for (;;) {
+        LOG_DEBUG("workThreadPool::work() start");
        
         workThreadPoolQueue<PoolNode>::Ptr  taskPtr  = nullptr;
         // 等待任务

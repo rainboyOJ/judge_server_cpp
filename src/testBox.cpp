@@ -87,6 +87,7 @@ bool testBox::add(
     resultContainer_.init_testProblem(testBoxId, uuid, pid, lang, std::move(code));
 
     // step3 通知 workTheadPool 工作: 
+    workThreadPool_.submitCompileAndTest(testBoxId);
 
 
     // 扫描数据
