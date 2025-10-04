@@ -36,6 +36,11 @@ int main (int argc, char *argv[]) {
 
     // 创建一个评测线程为4个, 评测队列大小为20,基础题目地址为problem_path的testBox
     testBox TB(4,20, problem_path);
+    TB.setallPointCompleteCallback([&TB](int testBoxId){
+        std::cout << "allPointCompleteCallback testBoxId = " << testBoxId << "\n";
+        auto result_str = TB.getResult(testBoxId);
+        std::cout << result_str;
+    });
 
     // int testBoxId =  TB.getTestBoxId();
 

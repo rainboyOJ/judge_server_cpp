@@ -39,7 +39,8 @@ bool testSession::writeResult(int idx, const TestCaseResult& tcr) {
 }
 
 json testSession::serialize() const {
-    std::lock_guard<std::mutex> lock(mtx_);
+    // 和 上层函数 GetResultAsJson 的lock 死锁了
+    // std::lock_guard<std::mutex> lock(mtx_);
     
     json j;
     j["testBoxId"] = testBoxId;
@@ -85,7 +86,7 @@ json testSession::serialize() const {
             {"uuid", test_problem_p->uuid},
             {"pid", std::string(test_problem_p->pid)},
             {"lang", static_cast<int>(test_problem_p->lang)},
-            {"code", test_problem_p->code}
+            // {"code", test_problem_p->code} // 代码太长了,就不返回代码了
         };
     }
 
