@@ -66,7 +66,7 @@ public:
         testBoxIdQue_(std::make_unique<StaticLoopQueue<int>>(dataSizeLimit) ) ,
         problem_path(problem_path_),
         // pointBox_(std::make_unique<testPointBox>(workNum,this)),
-        resultContainer_(dataSizeLimit), //设计可以现时进行的测试的题目的多少
+        resultContainer_(dataSizeLimit,this), //设计可以现时进行的测试的题目的多少
         workThreadPool_(workNum, &resultContainer_),
         allPointCompleteCallback_(nullptr),
         singPointCompleteCallback_(nullptr)

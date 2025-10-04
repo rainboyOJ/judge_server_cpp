@@ -173,7 +173,10 @@ double testSession::getProgress() const {
 
 // ============= resultContainer 类实现 =============
 
-resultContainer::resultContainer(int size) : mem_() {
+resultContainer::resultContainer(int size,const testBox* testBoxPtr) 
+    : mem_(),
+        testBoxPtr_(testBoxPtr)
+    {
     // 创建足够的测试会话
     sessions_ = std::vector<testSession>(size + 5);
     

@@ -22,6 +22,7 @@ enum class readResultStatus {
 };
 
 // ============= 前向声明 =============
+class testBox;
 class resultContainer;
 
 /**
@@ -131,7 +132,7 @@ public:
      * @brief 构造函数
      * @param size 支持的最大并发测试会话数量
      */
-    explicit resultContainer(int size);
+    explicit resultContainer(int size, const testBox* testBoxPtr);
 
     /**
      * @brief 析构函数 - 清理所有资源
@@ -143,6 +144,11 @@ public:
     language getLanguage(int testBoxId)  {
         std::lock_guard<std::mutex> lck(mtx_);
         return sessions_[testBoxId].test_problem_p->lang;
+    }
+
+    auto getPid(int testBoxId)  {
+        std::lock_guard<std::mutex> lck(mtx_);
+        return sessions_[testBoxId].test_problem_p->pid;
     }
 
     std::string_view getCode(int testBoxId) {
@@ -224,4 +230,5 @@ private:
     std::mutex mtx_;                              // 全局互斥锁
     memoryPool<TestCaseResult> mem_;              // 内存池
     std::vector<testSession> sessions_;           // 测试会话数组
+    const testBox* testBoxPtr_;                    // 测试盒子指针（用于回调）
 };
