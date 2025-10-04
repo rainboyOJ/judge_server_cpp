@@ -39,7 +39,7 @@ bool PreDeal(const int testBoxId, resultContainer *resultContainerPtr,workThread
 
     // 把数据加入到 resultContainer_ 里
     int seq_id = 0;
-    const std::string work_dir = "/tmp/" + std::to_string(testBoxId);
+    const std::string work_dir = fs::temp_directory_path() / std::to_string(testBoxId);
     if( !fs::exists(work_dir))
         fs::create_directory(work_dir);
     else
