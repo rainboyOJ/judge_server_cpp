@@ -25,7 +25,7 @@ bool PreDeal(const int testBoxId, resultContainer *resultContainerPtr,workThread
         //TODO : add error message to resultContainer
         return false;
     }
-    
+
 
     fs::path data_path = pid_path / "data";
     if( !fs::exists(data_path)){
@@ -39,7 +39,7 @@ bool PreDeal(const int testBoxId, resultContainer *resultContainerPtr,workThread
 
     // 把数据加入到 resultContainer_ 里
     int seq_id = 0;
-    const std::string work_dir = fs::temp_directory_path() / std::to_string(testBoxId);
+    fs::path work_dir = resultContainerPtr->work_dir(testBoxId);
     if( !fs::exists(work_dir))
         fs::create_directory(work_dir);
     else
