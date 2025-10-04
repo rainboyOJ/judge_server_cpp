@@ -1,4 +1,5 @@
 //队列的实现 
+#pragma once
 #include <mutex>
 #include <vector>
 #include <queue>

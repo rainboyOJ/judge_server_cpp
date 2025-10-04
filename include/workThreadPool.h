@@ -9,7 +9,7 @@
 #include "judgeInfo.h"
 #include "memPool.h" //内存池,从中取出testPoint
 #include "resultContainer.h"
-#include "testQueue.h"
+// #include "testQueue.h"  // 这个队列不再使用
 
 /**
  * 实现单个点的测试
@@ -35,9 +35,9 @@ enum class TestStage {
     TEST,
 };
 
-bool PreDeal(const int testBoxId, const resultContainer *resultContainerPtr);
+bool PreDeal(const int testBoxId, resultContainer *resultContainerPtr);
 // 函数声明: 编译阶段
-bool Compile(const int testBoxId, const resultContainer *resultContainerPtr);
+bool Compile(const int testBoxId, resultContainer *resultContainerPtr);
 // 函数声明: 评测阶段,评测一个单独的测试点
 bool TestOneSinglePoint(const int testBoxId, const resultContainer *resultContainerPtr);
 

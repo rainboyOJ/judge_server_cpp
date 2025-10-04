@@ -86,6 +86,9 @@ bool testBox::add(
     // step 2 加入到 resultContainer_ 里
     resultContainer_.init_testProblem(testBoxId, uuid, pid, lang, std::move(code));
 
+    // step3 通知 workTheadPool 工作: 
+
+
     // 扫描数据
 
     // fs::path pid_path = this->problem_path / pid;

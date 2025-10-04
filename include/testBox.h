@@ -10,8 +10,10 @@
 // #include "minheap.hpp" //不再使用这个heap, 因为用队列更快
 #include "static_loop_queue.h"
 #include "resultContainer.h"
-#include "json.hpp"
+#include "workThreadPool.h"
 #include "common/Result.h"
+
+#include "json.hpp"
 using json = nlohmann::json;
 
 /*
@@ -63,8 +65,9 @@ public:
         dataSizeLimit_(dataSizeLimit),
         testBoxIdQue_(std::make_unique<StaticLoopQueue<int>>(dataSizeLimit) ) ,
         problem_path(problem_path_),
-        pointBox_(std::make_unique<testPointBox>(workNum,this)),
+        // pointBox_(std::make_unique<testPointBox>(workNum,this)),
         resultContainer_(dataSizeLimit), //设计可以现时进行的测试的题目的多少
+        workThreadPool_(workNum, &resultContainer_),
         allPointCompleteCallback_(nullptr),
         singPointCompleteCallback_(nullptr)
     {
@@ -156,7 +159,7 @@ private:
     allPointCompleteCallback allPointCompleteCallback_;
 
     UniquePtrQueue<testProblem> que_; // 感觉不需要这个队列
-    std::unique_ptr<testPointBox > pointBox_ = nullptr;
+    // std::unique_ptr<testPointBox > pointBox_ = nullptr;
 
     //存有可用testBoxId的队列
     std::unique_ptr<StaticLoopQueue<int>> testBoxIdQue_ = nullptr;
@@ -166,6 +169,7 @@ private:
     std::mutex mtx_; //锁
 
     resultContainer resultContainer_;
+    workThreadPool workThreadPool_;
     const int dataSizeLimit_; //同时处理的数据的数量
 
 
