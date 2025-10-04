@@ -5,6 +5,7 @@
 #include "common/Logger.h"
 #include "testBox.h"
 #include "utils.h"
+using namespace std::literals;
 
 
 bool PreDeal(const int testBoxId, resultContainer *resultContainerPtr){
@@ -36,13 +37,38 @@ bool PreDeal(const int testBoxId, resultContainer *resultContainerPtr){
 
     Data_list_t filePairs= scan_data_list(data_path);
 
-    #ifdef MUDEBUG 
-    std::cout << "scan_data_list result:" << std::endl;
+    // 把数据加入到 resultContainer_ 里
+    int seq_id = 0;
+    const std::string work_dir = "/tmp/" + std::to_string(testBoxId);
+    if( !fs::exists(work_dir))
+        fs::create_directory(work_dir);
+    else
+        // 清空目录
+        fs::remove_all(work_dir);
     for (const auto &pair : filePairs)
     {
-        std::cout << pair.first << " <-> " << pair.second << std::endl;
+        // std::cout << pair.first << " <-> " << pair.second << std::endl;
+        // 这里的pair.first 是输入数据的文件名, pair.second 是输出数据的文件名
+        LOG_DEBUG("pair.first: %s, pair.second: %s", pair.first.c_str(), pair.second.c_str());
+
+        TestCaseInfo info;
+        // TODO 这里的信息应该从题目配置文件里读取 resultContainer.problem 里面
+        info.testBoxId = testBoxId;
+        info.seq_id = ++seq_id; //  TODO seq_id 应该从 文件名里读取
+        info.cpu_time_limit = 1000; // ms
+        info.real_time_limit = 1000 * 10; // ms
+        info.memory_limit = 1024 * 1024; //kb
+        strcpy(info.exe, "main");
+        strcpy(info.cwd, work_dir.c_str());
+        strcpy(info.input_path, (data_path / pair.first).c_str());
+        strcpy(info.output_path, (data_path / pair.second).c_str());
+        strcpy(info.user_output_path, (data_path / ("user_"s + pair.second)).c_str());
+
+        resultContainerPtr->setTestCaseInfo(testBoxId, info.seq_id, info);
     }
-    #endif
+
+    // 结束 preDeal
+    return true;
 
 
     // // 代码编译

@@ -73,6 +73,7 @@ struct TestCaseInfo {
     char_str cwd; //运行路径
     char_str input_path; // 输入数据
     char_str output_path; // 正确的输出数据
+    char_str user_output_path; // 用户的输出数据
 };
 
 // 一个测试点的结果

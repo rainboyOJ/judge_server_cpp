@@ -230,9 +230,11 @@ public:
      */
     TestCaseResult* AllocateTestCaseResult_of_N(int n);
 
+    void setTestCaseInfo(int testBoxId, int testCaseId, const TestCaseInfo& info);
+
 private:
     std::mutex mtx_;                              // 全局互斥锁
     memoryPool<TestCaseResult> mem_;              // 内存池
     std::vector<testSession> sessions_;           // 测试会话数组
-    const testBox* testBoxPtr_;                    // 测试盒子指针（用于回调）
+    const testBox* testBoxPtr_;                   // 测试盒子指针（用于回调）
 };

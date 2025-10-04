@@ -323,3 +323,19 @@ TestCaseResult* resultContainer::AllocateTestCaseResult_of_N(int n) {
     
     return head;
 }
+
+
+void resultContainer::setTestCaseInfo(int testBoxId, int testCaseId, const TestCaseInfo& info) {
+    if (testBoxId < 0 || testBoxId >= static_cast<int>(sessions_.size())) {
+        return;
+    }
+
+    auto& session = sessions_[testBoxId];
+    std::lock_guard<std::mutex> lock(session.mtx_);
+
+    if (testCaseId < 0 || testCaseId >= static_cast<int>(session.TCI.size())) {
+        session.TCI.resize(testCaseId + 1);
+    }
+
+    session.TCI[testCaseId] = info;
+}
