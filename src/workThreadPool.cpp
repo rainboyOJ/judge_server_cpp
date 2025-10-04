@@ -2,6 +2,7 @@
 #include <mutex>
 #include <cstddef> // offsetof
 #include "resultContainer.h"
+#include "testBox.h"
 #include "common/Logger.h"
 
 template <typename T>
@@ -171,7 +172,10 @@ void workThreadPool::work() {
                 if( resultContainerPtr_ -> isJudgeFinished(task.testBoxId) ) {
                     LOG_DEBUG("All Test Finished");
                     // 通知上层评测完成
-                    // TODO
+                    auto testBoxPtr = resultContainerPtr_->getTestBoxPtr();
+                    if (testBoxPtr) {
+                        testBoxPtr->notifyAllPointComplete(task.testBoxId);
+                    }
                 }
                 break;
             }

@@ -123,14 +123,17 @@ public:
     );
 
 
-    //通过testBoxId 得到resultContainer_里的结果
-    // 并返回testResult 序列化后的结果
-    std::string getResultByTestBoxId(int testBoxId);
-
     void clearResultByTestBoxId(int testBoxId); //清空resultContainer_里的结果
 
     //=== 得到一些信息
     const fs::path getProbelmPath() const { return problem_path; }
+
+    // 通知所有测试点完成
+    void notifyAllPointComplete(int testBoxId) const {
+        if (allPointCompleteCallback_) {
+            allPointCompleteCallback_(testBoxId);
+        }
+    }
 
 public:
 
