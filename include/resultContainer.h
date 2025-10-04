@@ -245,6 +245,11 @@ public:
         return work_dir(testBoxId) / source_name;
     }
 
+    int getTestPointCount(int testBoxId) {
+        std::lock_guard<std::mutex> lck(sessions_[testBoxId].mtx_);
+        return sessions_[testBoxId].data_size;
+    }
+
     // ============= 资源管理接口 =============
 
     /**

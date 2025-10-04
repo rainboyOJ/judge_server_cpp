@@ -1,6 +1,7 @@
 #include "workThreadPool.h"
 #include <mutex>
 #include <cstddef> // offsetof
+#include "resultContainer.h"
 #include "common/Logger.h"
 
 template <typename T>
@@ -149,8 +150,12 @@ void workThreadPool::work() {
             case TestStage::COMPILE: {
                 bool ok = Compile(task.testBoxId,resultContainerPtr_,this);
                 if (ok) {
-                    PoolNode nxt{task.testBoxId, TestStage::TEST, 0};
-                    push_task(nxt);
+                    // 添加测试任务
+                    const int testPointCount = resultContainerPtr_ -> getTestPointCount(task.testBoxId);
+                    for( int i = 0 ; i < testPointCount ; ++i) {
+                        PoolNode nxt{task.testBoxId, TestStage::TEST, i};
+                        push_task(nxt);
+                    }
                     cond_.notify_all();
                 } else {
                     // 编译失败，保守处理
@@ -159,7 +164,8 @@ void workThreadPool::work() {
             }
             case TestStage::TEST: {
                 // 这里的简单实现只做一次单点测试
-                (void)TestOneSinglePoint(task.testBoxId, task.seq_id, resultContainerPtr_);
+                bool ret = TestOneSinglePoint(task.testBoxId, task.seq_id, resultContainerPtr_);
+                LOG_DEBUG("TestOneSinglePoint seq %d ret = %d",task.seq_id ,ret);
                 break;
             }
             default:
