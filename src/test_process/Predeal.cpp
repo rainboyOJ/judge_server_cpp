@@ -62,11 +62,13 @@ bool PreDeal(const int testBoxId, resultContainer *resultContainerPtr,workThread
         info.cpu_time_limit = 1000; // ms
         info.real_time_limit = 1000 * 10; // ms
         info.memory_limit = 1024 * 1024; //kb
+
+        const std::string user_output_path = work_dir/ ("user_"s + pair.second);
         strcpy(info.exe, "main");
         strcpy(info.cwd, work_dir.c_str());
         strcpy(info.input_path, (data_path / pair.first).c_str());
         strcpy(info.output_path, (data_path / pair.second).c_str());
-        strcpy(info.user_output_path, (data_path / ("user_"s + pair.second)).c_str());
+        strcpy(info.user_output_path, user_output_path.c_str());
 
         resultContainerPtr->setTestCaseInfo(testBoxId, info.seq_id, info);
     }

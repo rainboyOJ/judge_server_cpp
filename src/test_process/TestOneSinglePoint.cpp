@@ -43,7 +43,7 @@ bool TestOneSinglePoint(const int testBoxId, int seq_id, resultContainer *result
     config.max_memory = testCaseInfo.memory_limit;
     config.exe_path = executableFile.string();
     config.input_path = testCaseInfo.input_path;
-    config.output_path = testCaseInfo.output_path;
+    config.output_path = testCaseInfo.user_output_path;
     config.cwd = testCaseInfo.cwd;
     
     // 调用sjudge进行评测
