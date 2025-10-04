@@ -3,7 +3,7 @@
 #include "common/Logger.h"
 
 // 编译阶段
-bool Compile(const int testBoxId, resultContainer *resultContainerPtr) {
+bool Compile(const int testBoxId, resultContainer *resultContainerPtr,workThreadPool * workThreadPoolPtr) {
     LOG_DEBUG("Compile testBoxId %d", testBoxId);
     language lang = resultContainerPtr->getLanguage(testBoxId);
     if (lang == language::cpp ){

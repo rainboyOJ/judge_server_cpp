@@ -147,7 +147,7 @@ void workThreadPool::work() {
                 break;
             }
             case TestStage::COMPILE: {
-                bool ok = Compile(task.testBoxId,resultContainerPtr_);
+                bool ok = Compile(task.testBoxId,resultContainerPtr_,this);
                 if (ok) {
                     PoolNode nxt{task.testBoxId, TestStage::TEST, 0};
                     push_task(nxt);
