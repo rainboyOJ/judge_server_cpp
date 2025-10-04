@@ -132,7 +132,7 @@ public:
     //=== 得到一些信息
     const fs::path getProbelmPath() const { return problem_path; }
 
-protected:
+public:
 
     // 向 resultContainer 写入测试结果
     // @param testBoxId  测试箱ID,用于标识不同的测试实例

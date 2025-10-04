@@ -39,7 +39,7 @@ bool PreDeal(const int testBoxId, resultContainer *resultContainerPtr ,workThrea
 // 函数声明: 编译阶段
 bool Compile(const int testBoxId, resultContainer *resultContainerPtr,workThreadPool * workThreadPoolPtr);
 // 函数声明: 评测阶段,评测一个单独的测试点
-bool TestOneSinglePoint(const int testBoxId, const resultContainer *resultContainerPtr);
+bool TestOneSinglePoint(const int testBoxId, int seq_id, resultContainer *resultContainerPtr);
 
 // 一个队列,用于存储需要评测的数据,workThreadPool会从这里取数据,根据返回值,
 //  进行不同的行为 1. compile 2. test

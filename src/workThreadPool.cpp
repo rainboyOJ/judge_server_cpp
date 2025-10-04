@@ -159,7 +159,7 @@ void workThreadPool::work() {
             }
             case TestStage::TEST: {
                 // 这里的简单实现只做一次单点测试
-                (void)TestOneSinglePoint(task.testBoxId,resultContainerPtr_);
+                (void)TestOneSinglePoint(task.testBoxId, task.seq_id, resultContainerPtr_);
                 break;
             }
             default:
@@ -174,6 +174,3 @@ bool Compile() {
     return  true;
 }
 
-bool TestOneSinglePoint() {
-    return  true;
-}
