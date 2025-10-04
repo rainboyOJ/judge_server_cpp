@@ -7,6 +7,7 @@ bool Compile(const int testBoxId, resultContainer *resultContainerPtr,workThread
     LOG_DEBUG("Compile testBoxId %d", testBoxId);
     language lang = resultContainerPtr->getLanguage(testBoxId);
     if (lang == language::cpp ){
+        LOG_DEBUG("Compile cpp");
         // compile
     }
     else { // 

@@ -67,12 +67,6 @@ bool PreDeal(const int testBoxId, resultContainer *resultContainerPtr,workThread
         resultContainerPtr->setTestCaseInfo(testBoxId, info.seq_id, info);
     }
 
-    // 加入到 workThreadPool 里面
-    PoolNode node;
-    node.testBoxId = testBoxId;
-    node.testStage = TestStage::COMPILE;
-    node.seq_id = 0;
-    workThreadPoolPtr->push_task(node);
     // 结束 preDeal
     return true;
 

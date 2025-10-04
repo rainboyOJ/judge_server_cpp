@@ -151,7 +151,7 @@ void workThreadPool::work() {
                 if (ok) {
                     PoolNode nxt{task.testBoxId, TestStage::TEST, 0};
                     push_task(nxt);
-                    cond_.notify_one();
+                    cond_.notify_all();
                 } else {
                     // 编译失败，保守处理
                 }
