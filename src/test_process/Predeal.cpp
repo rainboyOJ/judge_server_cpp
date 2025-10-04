@@ -45,6 +45,10 @@ bool PreDeal(const int testBoxId, resultContainer *resultContainerPtr,workThread
     else
         // 清空目录
         fs::remove_all(work_dir);
+
+    // 初始化: 增加并清空 testCaseInfo
+    resultContainerPtr->init_by_test_id(testBoxId, filePairs.size());
+
     for (const auto &pair : filePairs)
     {
         // std::cout << pair.first << " <-> " << pair.second << std::endl;
