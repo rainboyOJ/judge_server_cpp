@@ -23,7 +23,7 @@ endif()
 
 
 # 查找源文件并添加可执行文件
-file(GLOB SOURCES "src/*.cpp" "src/common/*.cpp")
+file(GLOB SOURCES "src/*.cpp" "src/common/*.cpp" "src/test_process/*.cpp")
 add_library(${CMAKE_PROJECT_NAME} STATIC ${SOURCES})
 
 # 编译主代码
