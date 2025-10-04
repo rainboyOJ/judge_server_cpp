@@ -64,12 +64,6 @@ bool testBox::add(
         return false; // 没有空闲的testBoxId
 
     // step 1
-    // 创建一个test_problem
-    auto test_problem = std::make_unique<testProblem>();
-    test_problem -> uuid = uuid;
-    strcpy( test_problem -> pid ,pid);
-    test_problem -> lang = lang;
-    test_problem -> code = std::move(code);
 
     // step 2 加入到 resultContainer_ 里
     resultContainer_.init_testProblem(testBoxId, uuid, pid, lang, std::move(code));
