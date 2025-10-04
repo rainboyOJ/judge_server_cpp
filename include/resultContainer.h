@@ -156,6 +156,16 @@ public:
         return sessions_[testBoxId].test_problem_p->code;
     }
 
+    std::string_view getWorkDir(int testBoxId) {
+        std::lock_guard<std::mutex> lck(mtx_);
+        return sessions_[testBoxId].TCI[0].cwd;
+    }
+
+    std::string_view getExeName(int testBoxId) {
+        std::lock_guard<std::mutex> lck(mtx_);
+        return sessions_[testBoxId].TCI[0].exe;
+    }
+
     const testBox * getTestBoxPtr() const {
         return testBoxPtr_;
     }

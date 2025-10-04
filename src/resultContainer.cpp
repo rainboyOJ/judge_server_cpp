@@ -2,6 +2,7 @@
 #include "judgeInfo.h"
 #include <algorithm>
 #include <stdexcept>
+#include "common/Logger.h"
 
 // ============= testSession 类实现 =============
 
@@ -338,4 +339,5 @@ void resultContainer::setTestCaseInfo(int testBoxId, int testCaseId, const TestC
     }
 
     session.TCI[testCaseId] = info;
+    LOG_DEBUG("sesion[0] cwd: %s",session.TCI[testCaseId].cwd);
 }

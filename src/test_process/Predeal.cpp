@@ -58,7 +58,7 @@ bool PreDeal(const int testBoxId, resultContainer *resultContainerPtr,workThread
         TestCaseInfo info;
         // TODO 这里的信息应该从题目配置文件里读取 resultContainer.problem 里面
         info.testBoxId = testBoxId;
-        info.seq_id = ++seq_id; //  TODO seq_id 应该从 文件名里读取
+        info.seq_id = seq_id++; //  TODO seq_id 应该从 文件名里读取
         info.cpu_time_limit = 1000; // ms
         info.real_time_limit = 1000 * 10; // ms
         info.memory_limit = 1024 * 1024; //kb
