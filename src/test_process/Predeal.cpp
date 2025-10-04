@@ -35,15 +35,15 @@ bool PreDeal(const int testBoxId, resultContainer *resultContainerPtr){
     LOG_DEBUG("data_path: %s\n", data_path.c_str());
 
     Data_list_t filePairs= scan_data_list(data_path);
-    // fs::path pid_path = this->problem_path / pid;
-    // if( !fs::exists(pid_path))
-    //     return TestBoxVoidResult::failure(TestBoxError_PROBLEM_NOT_EXIST);
 
-    // fs::path data_path = pid_path / "data"sv;
-    // if( !fs::exists(data_path))
-    //     return TestBoxVoidResult::failure(TestBoxError_DATA_NOT_EXIST);
+    #ifdef MUDEBUG 
+    std::cout << "scan_data_list result:" << std::endl;
+    for (const auto &pair : filePairs)
+    {
+        std::cout << pair.first << " <-> " << pair.second << std::endl;
+    }
+    #endif
 
-    // Data_list_t filePairs= scan_data_list(data_path);
 
     // // 代码编译
     // //TODO
