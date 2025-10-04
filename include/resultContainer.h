@@ -4,6 +4,8 @@
 #include <vector>
 #include <mutex>
 #include <memory>
+#include <filesystem>
+
 
 #include "judgeInfo.h"
 #include "memPool.h"
@@ -11,6 +13,7 @@
 #include "json.hpp"
 #include "common/Types.h"
 
+using namespace std::filesystem;
 using json = nlohmann::json;
 
 enum class readResultStatus {
@@ -156,11 +159,6 @@ public:
         return sessions_[testBoxId].test_problem_p->code;
     }
 
-    std::string_view getWorkDir(int testBoxId) {
-        std::lock_guard<std::mutex> lck(sessions_[testBoxId].mtx_);
-        return sessions_[testBoxId].TCI[0].cwd;
-    }
-
     std::string_view getExeName(int testBoxId) {
         std::lock_guard<std::mutex> lck(sessions_[testBoxId].mtx_);
         return sessions_[testBoxId].TCI[0].exe;
@@ -224,6 +222,28 @@ public:
      */
     json GetResultAsJson(int idx, readResultStatus& status);
 
+    
+    // 获取 testBoxId 对应工作目录(编译,测试)
+    fs::path work_dir(int testBoxId) const {
+        return fs::temp_directory_path() /
+                           ("oj_compile_" + std::to_string(testBoxId));
+    }
+
+    // 获取 testBoxId 对应的可执行文件路径
+    fs::path exe_path(int testBoxId) const {
+        return work_dir(testBoxId) / "solution";
+    }
+
+    fs::path source_path(int testBoxId) {
+        std::string source_name = "solution";
+        auto lang = getLanguage(testBoxId);
+        if (lang == language::cpp) {
+            source_name += ".cpp";
+        } else if (lang == language::python) {
+            source_name += ".py";
+        }
+        return work_dir(testBoxId) / source_name;
+    }
 
     // ============= 资源管理接口 =============
 
