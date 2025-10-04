@@ -85,8 +85,9 @@ void workThreadPool::submitCompileAndTest(int testBoxId) {
     node.seq_id = 0;
     {
         // 用 work_mtx 保护队列
-        std::lock_guard<std::mutex> lk(work_mtx);
-        task_queue_.push(node);
+        // std::lock_guard<std::mutex> lk(work_mtx);
+        // task_queue_.push(node);
+        this->push_task(node);
     }
     cond_.notify_one();
 }
@@ -135,7 +136,7 @@ void workThreadPool::work() {
         // 简单的阶段流转：PRE_DEAL -> COMPILE -> TEST
         switch (task.testStage) {
             case TestStage::PRE_DEAL: {
-                bool ok = PreDeal(task.testBoxId, resultContainerPtr_);
+                bool ok = PreDeal(task.testBoxId, resultContainerPtr_, this);
                 if (ok) {
                     PoolNode nxt{task.testBoxId, TestStage::COMPILE, 0};
                     push_task(nxt);

@@ -26,7 +26,7 @@
  *  2. result_container: 用于存储评测结果
  *  3. memoryPool: 内存池
  */
-// class testBox;
+class workThreadPool;
 
 // 函数声明: 预处理阶段,对测试点进行预处理,比如读取数据,读取配置文件等
 enum class TestStage {
@@ -35,7 +35,7 @@ enum class TestStage {
     TEST,
 };
 
-bool PreDeal(const int testBoxId, resultContainer *resultContainerPtr);
+bool PreDeal(const int testBoxId, resultContainer *resultContainerPtr ,workThreadPool * workThreadPoolPtr);
 // 函数声明: 编译阶段
 bool Compile(const int testBoxId, resultContainer *resultContainerPtr);
 // 函数声明: 评测阶段,评测一个单独的测试点
@@ -81,6 +81,9 @@ template <typename T = PoolNode> class workThreadPoolQueue {
 class workThreadPool {
 
   public:
+    friend bool PreDeal(const int testBoxId, resultContainer *resultContainerPtr, workThreadPool *workThreadPoolPtr);
+    friend bool Compile(const int testBoxId, resultContainer *resultContainerPtr);
+    friend bool TestOneSinglePoint(const int testBoxId, const resultContainer *resultContainerPtr);
     // 单点的评测
     //  using valPtr = UniquePtrQueue<testPoint>::Ptr;
 
@@ -90,7 +93,7 @@ class workThreadPool {
     // 加入队列里面一个 TestStage = PRE_DEAL ,让work线程去执行编译和测试
     void submitCompileAndTest(int testBoxId);
 
-  private:
+  protected:
     // Wrap task_queue_
 
     void push_task(const PoolNode &task);

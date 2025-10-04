@@ -8,7 +8,7 @@
 using namespace std::literals;
 
 
-bool PreDeal(const int testBoxId, resultContainer *resultContainerPtr){
+bool PreDeal(const int testBoxId, resultContainer *resultContainerPtr,workThreadPool * workThreadPoolPtr){
     LOG_DEBUG("PreDeal Start, testBoxId %d", testBoxId);
 
     // 扫描数据
@@ -67,6 +67,12 @@ bool PreDeal(const int testBoxId, resultContainer *resultContainerPtr){
         resultContainerPtr->setTestCaseInfo(testBoxId, info.seq_id, info);
     }
 
+    // 加入到 workThreadPool 里面
+    PoolNode node;
+    node.testBoxId = testBoxId;
+    node.testStage = TestStage::COMPILE;
+    node.seq_id = 0;
+    workThreadPoolPtr->push_task(node);
     // 结束 preDeal
     return true;
 
