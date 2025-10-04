@@ -1,7 +1,11 @@
+#include <string_view>
+
+
 #include "workThreadPool.h"
 #include "common/Logger.h"
 #include "testBox.h"
 #include "utils.h"
+
 
 bool PreDeal(const int testBoxId, resultContainer *resultContainerPtr){
     LOG_DEBUG("PreDeal Start, testBoxId %d", testBoxId);
@@ -9,19 +13,28 @@ bool PreDeal(const int testBoxId, resultContainer *resultContainerPtr){
     // 扫描数据
     // pid type : char [32];
     auto pid = resultContainerPtr->getPid(testBoxId);
-    LOG_DEBUG("pid: %s\n", pid);
+    LOG_DEBUG("pid: %s", pid);
+
     auto testBoxPtr = resultContainerPtr->getTestBoxPtr();
+
     auto problem_path = testBoxPtr->getProbelmPath();
     fs::path pid_path = problem_path / pid;
-    if( !fs::exists(pid_path))
+    if( !fs::exists(pid_path)){
+        LOG_DEBUG("pid_path: %s not exist\n", pid_path.c_str());
+        //TODO : add error message to resultContainer
         return false;
+    }
+    
 
-    // fs::path data_path = pid_path / "data"sv;
-    // if( !fs::exists(data_path))
-    //     return false;
+    fs::path data_path = pid_path / "data";
+    if( !fs::exists(data_path)){
+        //TODO : add error message to resultContainer
+        return false;
+    }
+    LOG_DEBUG("pid_path: %s\n", pid_path.c_str());
+    LOG_DEBUG("data_path: %s\n", data_path.c_str());
 
     // Data_list_t filePairs= scan_data_list(data_path);
-
     // fs::path pid_path = this->problem_path / pid;
     // if( !fs::exists(pid_path))
     //     return TestBoxVoidResult::failure(TestBoxError_PROBLEM_NOT_EXIST);
