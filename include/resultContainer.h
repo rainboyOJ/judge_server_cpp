@@ -142,27 +142,27 @@ public:
     // ========= 得到一些相关信息 =====
 
     language getLanguage(int testBoxId)  {
-        std::lock_guard<std::mutex> lck(mtx_);
+        std::lock_guard<std::mutex> lck(sessions_[testBoxId].mtx_);
         return sessions_[testBoxId].test_problem_p->lang;
     }
 
     auto getPid(int testBoxId)  {
-        std::lock_guard<std::mutex> lck(mtx_);
+        std::lock_guard<std::mutex> lck(sessions_[testBoxId].mtx_);
         return sessions_[testBoxId].test_problem_p->pid;
     }
 
     std::string_view getCode(int testBoxId) {
-        std::lock_guard<std::mutex> lck(mtx_);
+        std::lock_guard<std::mutex> lck(sessions_[testBoxId].mtx_);
         return sessions_[testBoxId].test_problem_p->code;
     }
 
     std::string_view getWorkDir(int testBoxId) {
-        std::lock_guard<std::mutex> lck(mtx_);
+        std::lock_guard<std::mutex> lck(sessions_[testBoxId].mtx_);
         return sessions_[testBoxId].TCI[0].cwd;
     }
 
     std::string_view getExeName(int testBoxId) {
-        std::lock_guard<std::mutex> lck(mtx_);
+        std::lock_guard<std::mutex> lck(sessions_[testBoxId].mtx_);
         return sessions_[testBoxId].TCI[0].exe;
     }
 
@@ -241,6 +241,9 @@ public:
     TestCaseResult* AllocateTestCaseResult_of_N(int n);
 
     void setTestCaseInfo(int testBoxId, int testCaseId, const TestCaseInfo& info);
+    
+    // 获取测试用例信息
+    bool getTestCaseInfo(int testBoxId, int testCaseId, TestCaseInfo& info) const;
 
 private:
     std::mutex mtx_;                              // 全局互斥锁

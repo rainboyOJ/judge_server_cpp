@@ -340,3 +340,19 @@ void resultContainer::setTestCaseInfo(int testBoxId, int testCaseId, const TestC
 
     session.TCI[testCaseId] = info;
 }
+
+bool resultContainer::getTestCaseInfo(int testBoxId, int testCaseId, TestCaseInfo& info) const {
+    if (testBoxId < 0 || testBoxId >= static_cast<int>(sessions_.size())) {
+        return false;
+    }
+
+    std::lock_guard<std::mutex> lck(sessions_[testBoxId].mtx_);
+    const auto& session = sessions_[testBoxId];
+
+    if (testCaseId < 0 || testCaseId >= static_cast<int>(session.TCI.size())) {
+        return false;
+    }
+
+    info = session.TCI[testCaseId];
+    return true;
+}
