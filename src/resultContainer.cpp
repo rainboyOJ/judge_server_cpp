@@ -339,5 +339,4 @@ void resultContainer::setTestCaseInfo(int testBoxId, int testCaseId, const TestC
     }
 
     session.TCI[testCaseId] = info;
-    LOG_DEBUG("sesion[0] cwd: %s",session.TCI[testCaseId].cwd);
 }

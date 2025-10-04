@@ -43,7 +43,6 @@ bool Compile(const int testBoxId, resultContainer *resultContainerPtr,workThread
         auto exeName = resultContainerPtr->getExeName(testBoxId);
         fs::path executableFile = tempDir / exeName;
         std::string compileCmd = "g++ -std=c++17 -O2 -DONLINE_JUDGE  -o " + executableFile.string() + " " + sourceFile.string() + " 2>&1";
-        LOG_DEBUG("Compile command: %s", compileCmd.c_str());
         
         // 执行编译命令
         try {
