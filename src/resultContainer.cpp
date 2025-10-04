@@ -205,11 +205,10 @@ void resultContainer::init_by_test_id(int testId, int data_size) {
     session.init_by_test_id(testId, data_size);
 }
 
-bool resultContainer::isJudgeFinished(int testBoxId) const {
+bool resultContainer::isJudgeFinished(int testBoxId) {
     if (testBoxId < 0 || testBoxId >= static_cast<int>(sessions_.size())) {
         return false;
     }
-    
     return sessions_[testBoxId].isFinished();
 }
 

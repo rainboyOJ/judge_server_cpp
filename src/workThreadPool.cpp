@@ -165,7 +165,14 @@ void workThreadPool::work() {
             case TestStage::TEST: {
                 // 这里的简单实现只做一次单点测试
                 bool ret = TestOneSinglePoint(task.testBoxId, task.seq_id, resultContainerPtr_);
+                
+
                 LOG_DEBUG("TestOneSinglePoint seq %d ret = %d",task.seq_id ,ret);
+                if( resultContainerPtr_ -> isJudgeFinished(task.testBoxId) ) {
+                    LOG_DEBUG("All Test Finished");
+                    // 通知上层评测完成
+                    // TODO
+                }
                 break;
             }
             default:

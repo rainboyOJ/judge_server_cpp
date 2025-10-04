@@ -88,8 +88,9 @@ bool TestOneSinglePoint(const int testBoxId, int seq_id, resultContainer *result
         }
         
         // 写入结果到resultContainer
+        // TODO : 完善 ,比如是否 超时, 输入输出是否一致等
         // 通过testBoxPtr来写入结果
-        const_cast<testBox*>(testBoxPtr)->writeResult(testBoxId, seq_id, testCaseResult);
+        resultContainerPtr->writeCaseResult(testBoxId, seq_id, testCaseResult);
         
         // 根据评测结果判断是否成功
         return (result.result == 0); // 假设0表示成功

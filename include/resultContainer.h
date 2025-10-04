@@ -182,7 +182,7 @@ public:
      * @param testBoxId 测试盒子ID
      * @return bool 是否已完成所有测试用例
      */
-    bool isJudgeFinished(int testBoxId) const;
+    bool isJudgeFinished(int testBoxId) ;
 
     /**
      * @brief 直接写入测试用例结果（推荐接口）
