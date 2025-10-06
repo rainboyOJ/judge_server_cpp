@@ -48,16 +48,15 @@ using EntityId = uint64_t;
 // TODO: 需要根据 simple_judge 的返回值修改
 enum enum_testStatus {
     INIT = -1, // 初始状态,未开始评测
-    AC = 0,
-    WA,
-    TLE,
-    MLE,
-    RE,
-    CE,
-    SE,
-    OLE,
-    PE,
-    UNKNOWN,
+    AC = 0, // accept 通过
+    WA,  // wrong answer 错误答案
+    TLE, // time limit exceeded 超时
+    MLE, // memory limit exceeded 内存超限
+    RE, // runtime error 运行时错误
+    OLE, // output limit exceeded 输出超限
+    PE, // presentation error 格式错误
+    CE, // compile error 编译错误
+    UNKNOWN, // 未知错误
 };
 
 typedef char char_str[1024];
