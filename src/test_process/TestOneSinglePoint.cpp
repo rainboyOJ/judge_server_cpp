@@ -89,6 +89,27 @@ bool TestOneSinglePoint(const int testBoxId, int seq_id, resultContainer *result
         
         // 写入结果到resultContainer
         // TODO : 完善 ,比如是否 超时, 输入输出是否一致等
+
+
+        // 检查时间和内存是否超限
+        if (result.cpu_time > testCaseInfo.cpu_time_limit) {
+            testCaseResult.result = enum_testStatus::TLE;
+        }
+        if (result.memory > testCaseInfo.memory_limit) {
+            testCaseResult.result = enum_testStatus::MLE;
+        }
+
+        // 调用 /judge/checker/fcmp2 检查输出是否一致
+        if( testCaseResult.result == enum_testStatus::AC ) {
+            const std::string checkerCmd = "/judge/checker/fcmp2 " + std::string(testCaseInfo.input_path) + " " + std::string(testCaseInfo.output_path) + " " + std::string(testCaseInfo.user_output_path);
+            int checkerResult = system(checkerCmd.c_str());
+            if (checkerResult != 0) {
+                testCaseResult.result = enum_testStatus::WA;
+            } else {
+                testCaseResult.result = enum_testStatus::AC;
+            }
+        }
+
         // 通过testBoxPtr来写入结果
         resultContainerPtr->writeCaseResult(testBoxId, seq_id, testCaseResult);
         
