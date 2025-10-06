@@ -2,7 +2,10 @@
 #include "judgeInfo.h"
 #include <algorithm>
 #include <stdexcept>
+#include <filesystem>
+
 #include "common/Logger.h"
+
 
 // ============= testSession 类实现 =============
 
@@ -104,7 +107,11 @@ json testSession::serialize() const {
                 {"signal", tcr.signal},
                 {"exit_code", tcr.exit_code},
                 {"error", tcr.error},
-                {"result", static_cast<int>(tcr.result)}
+                {"result", static_cast<int>(tcr.result)},
+
+                // input name ,output name,
+                {"input_name",std::filesystem::path(TCI[tcr.seq_id].input_path).filename()},
+                {"output_name",std::filesystem::path( TCI[tcr.seq_id].output_path).filename()},
             });
         }
     }
