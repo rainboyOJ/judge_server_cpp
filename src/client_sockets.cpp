@@ -81,18 +81,18 @@ void ClientSockets::add_socket(int client_socket)
     // 先得到
     // client_sockets_.push_back(client_socket);
 
-    // comment by rainboy
-    // 这里 用到了 private testbox::getTestBoxId() ,后面需要修改,先注释掉
-    // int testBoxId = test_box_->getTestBoxId();
-    // if( testBoxId == -1) {
-    //     LOG_DEBUG("testBox is FULL,disconnect socket %d",client_socket);
-    //     // TODO 发送评测已经满的信息
-    //     //  并关闭连接
-    // }
-    // else {
-    //     LOG_DEBUG("add socket %d to testBox as textBoxId %d", client_socket, testBoxId);
-    //     client_sockets_[testBoxId]->init(client_socket);
-    // }
+    // 使用新的公共接口获取testBoxId
+    int testBoxId = test_box_->getTestBoxIdPublic();
+    if( testBoxId == -1) {
+        LOG_DEBUG("testBox is FULL,disconnect socket %d",client_socket);
+        // TODO 发送评测已经满的信息
+        //  并关闭连接
+        close(client_socket);
+    }
+    else {
+        LOG_DEBUG("add socket %d to testBox as textBoxId %d", client_socket, testBoxId);
+        client_sockets_[testBoxId]->init(client_socket);
+    }
 }
 
 void ClientSockets::del_socket(int testBoxId)
@@ -101,9 +101,8 @@ void ClientSockets::del_socket(int testBoxId)
     client_sockets_[testBoxId]->clear();
 
     //放回去
-    // comment by rainboy
-    // 这里 用到了 private testbox::putBackTestBoxId() ,后面需要修改,先注释掉
-    // test_box_->putBackTestBoxId(testBoxId);
+    // 使用新的公共接口放回testBoxId
+    test_box_->putBackTestBoxIdPublic(testBoxId);
     // TODO 是不是还有其它的需要处理?
 }
 
@@ -146,21 +145,22 @@ void ClientSockets::deal_events(const fd_set &read_sets, const fd_set &write_set
 
                 // 传递给testBox
 
-                // comment by rainboy
-                // 这里 用到了 修改后的 testbox::add() ,后面需要修改,先注释掉
-                // TestBoxVoidResult result = test_box_->add(
-                //     i, // testBoxId
-                //     std::move(tp));
-                // // TODO 处理错误,需要发送错误的信息给客户端
-                // if (result.isFailure())
-                // {
-                //     TestBoxError error = result.error();
-                //     LOG_ERROR("TestBox add failed: %s", error.data());  
-                // }
-                // else
-                // {
-                //     LOG_INFO("add testProblem to testBox SUCCESS\n");
-                // }
+                // 使用testBox的add方法添加评测任务
+                bool result = test_box_->add(
+                    tp->uuid,
+                    tp->pid,
+                    tp->lang,
+                    std::move(tp->code)
+                );
+                // TODO 处理错误,需要发送错误的信息给客户端
+                if (!result)
+                {
+                    LOG_ERROR("TestBox add failed");
+                }
+                else
+                {
+                    LOG_INFO("add testProblem to testBox SUCCESS\n");
+                }
             }//没有读取发生错误else end
             else {
                 LOG_DEBUG("read bytes_read = %d, but not get All testProblem data", bytes_read);

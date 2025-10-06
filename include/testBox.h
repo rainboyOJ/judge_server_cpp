@@ -6,6 +6,7 @@
 #include <string_view>
 #include <mutex>
 #include <vector>
+#include <memory>
 #include "testPointBox.h"
 // #include "minheap.hpp" //不再使用这个heap, 因为用队列更快
 #include "static_loop_queue.h"
@@ -15,6 +16,9 @@
 
 #include "json.hpp"
 using json = nlohmann::json;
+
+// 前向声明
+class ClientSockets;
 
 /*
 testBox设计的思路:
@@ -30,7 +34,12 @@ testBox设计的思路:
 4. 等待回调的发生
 */
 
+// 全局testBox对象声明
+extern std::unique_ptr<testBox> g_testBox;
 
+// 全局初始化函数
+void initializeGlobalTestBox(int workNum, int dataSizeLimit, const std::string& problem_path);
+void destroyGlobalTestBox();
 
 // 使用新的Result类型替代原有的枚举错误码
 // enum class testBox_err 已被 TestBoxError 和 Result<T, TestBoxError> 替代
@@ -46,6 +55,7 @@ class testBox {
 public:
 
     friend class testPointBox;
+    friend class ClientSockets; // 允许ClientSockets访问私有成员
 
     using beginTestCallback = std::function<void(int testBoxId)>;
     using singPointCompleteCallback = std::function<void(int testBoxId)>;
@@ -133,6 +143,29 @@ public:
         if (allPointCompleteCallback_) {
             allPointCompleteCallback_(testBoxId);
         }
+    }
+
+    // 公共接口，供socket模块调用
+public:
+    // 得到一个可以用的空位置,-1表示没有空位置了
+    int getTestBoxIdPublic() {
+        std::lock_guard<std::mutex> lock(mtx_);
+        if (!testBoxIdQue_->empty()) {
+            return testBoxIdQue_->pop();
+        }
+        return -1;
+    }
+    
+    // 放回testBoxId
+    void putBackTestBoxIdPublic(int id) {
+        // 检查ID是否有效
+        if (id < 0 || id >= dataSizeLimit_) {
+            return;
+        }
+        
+        std::lock_guard<std::mutex> lock(mtx_);
+        //因为放的元素都是从队列中取出来的,所以这里不用担心会超过队列的大小
+        testBoxIdQue_->push(id);
     }
 
 public:
