@@ -97,12 +97,7 @@ class FdInfo {
 
     void set_pending_response(std::string response) {
         std::lock_guard<std::mutex> lock(mtx_);
-        const uint32_t body_size =
-            htonl(static_cast<uint32_t>(response.size()));
-        pending_response_.assign(reinterpret_cast<const char *>(&body_size),
-                                 sizeof(body_size));
-        pending_response_ += response;
-        pending_write_offset_ = 0;
+        queue_response_locked(std::move(response));
     }
 
     bool set_pending_response_if_fd(int expected_fd, std::string response) {
@@ -111,12 +106,7 @@ class FdInfo {
             return false;
         }
 
-        const uint32_t body_size =
-            htonl(static_cast<uint32_t>(response.size()));
-        pending_response_.assign(reinterpret_cast<const char *>(&body_size),
-                                 sizeof(body_size));
-        pending_response_ += response;
-        pending_write_offset_ = 0;
+        queue_response_locked(std::move(response));
         status = FdInfoStatus::WRITABLE;
         return true;
     }
@@ -150,6 +140,15 @@ class FdInfo {
     FdInfoStatus status;
     std::string pending_response_;
     size_t pending_write_offset_{0};
+
+    void queue_response_locked(std::string response) {
+        const uint32_t body_size =
+            htonl(static_cast<uint32_t>(response.size()));
+        pending_response_.assign(reinterpret_cast<const char *>(&body_size),
+                                 sizeof(body_size));
+        pending_response_ += response;
+        pending_write_offset_ = 0;
+    }
 };
 
 class ClientSockets {
