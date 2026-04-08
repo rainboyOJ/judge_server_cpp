@@ -23,7 +23,17 @@ endif()
 
 
 # 查找源文件并添加可执行文件
-file(GLOB SOURCES "src/*.cpp" "src/common/*.cpp" "src/test_process/*.cpp" "sjudge/sjudge_call.cpp")
+file(GLOB SOURCES "src/*.cpp" "src/common/*.cpp" "src/test_process/*.cpp")
+list(APPEND SOURCES
+    "sjudge/sjudge_call.cpp"
+    "src/protocol/JudgeProtocol.cpp"
+    "src/runner/CppRunner.cpp"
+    "src/runner/PythonRunner.cpp"
+    "src/service/SubmissionService.cpp"
+    "src/runner/RunnerFactory.cpp"
+    "src/judge/JudgeCore.cpp"
+    "src/store/ResultStore.cpp"
+)
 add_library(${CMAKE_PROJECT_NAME} STATIC ${SOURCES})
 
 # 编译主代码
@@ -36,4 +46,3 @@ target_link_libraries(judge_server ${CMAKE_PROJECT_NAME})
 enable_testing()
 # 添加测试目标
 add_subdirectory(test)
-

@@ -5,9 +5,9 @@
   "main": "lib/index.js",
   "type": "commonjs",
   "scripts": {
-    "test": "node test_codec_new.js",
-    "demo": "node demo_new.js",
-    "judge": "node send_one_judge_new.js"
+    "test": "node test_codec.js",
+    "demo": "node demo.js",
+    "judge": "node send_one_judge.js"
   },
   "keywords": [
     "RainboyOJ",
