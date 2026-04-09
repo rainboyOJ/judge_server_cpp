@@ -2,19 +2,20 @@
 
 ## 传输层 framing
 
-当前 TCP 协议非常简单：
+当前 TCP 协议继续使用统一 framing：
 
 1. 前 `4` 字节：消息体长度，`uint32_t`，网络字节序（big-endian）。
 2. 后续 N 字节：UTF-8 JSON 字符串。
 
-服务端和客户端的请求、响应都遵循同一个 framing。
+客户端请求和服务端响应都遵循这个 framing。
 
-## 请求 JSON
+## 请求类型
 
-当前服务端实际接受的字段：
+### 1. `submit`
 
 ```json
 {
+  "type": "submit",
   "uuid": 94001,
   "pid": "1000",
   "lang": 2,
@@ -24,7 +25,8 @@
 
 字段说明：
 
-- `uuid`：客户端提交编号。服务端会接收它，但执行阶段实际改用服务端生成的 `submission_id` 作为工作目录键，避免不同客户端重复 `uuid` 时相互覆盖。
+- `type`：固定为 `submit`。
+- `uuid`：客户端侧提交编号。服务端会接收它，但执行阶段改用服务端生成的 `submission_id` 作为工作目录键。
 - `pid`：题目 ID，对应 `testData/<pid>/data/`。
 - `lang`：语言枚举。
   - `0`：C++
@@ -34,19 +36,58 @@
 
 注意：
 
-- 当前协议枚举里保留了 `C=1`，但服务端实现还不支持，提交会返回 `FAILED + SYSTEM_ERROR`。
-- 缺字段、类型错误、非法语言值都会被视为 bad request。
+- `lang=1` 当前仍未实现，会在后续评测阶段写成 `FAILED + SYSTEM_ERROR`。
+- 缺字段、类型错误、非法语言值、错误 `type` 都会被视为 bad request。
 
-## 成功响应 JSON
+### 2. `query_result`
 
 ```json
 {
+  "type": "query_result",
+  "submission_id": 77
+}
+```
+
+字段说明：
+
+- `type`：固定为 `query_result`。
+- `submission_id`：服务端创建的真实提交号。
+
+该请求只做一次快照查询，不会阻塞等待状态变化。
+
+## 响应类型
+
+### 1. `submission_ack`
+
+`submit` 请求创建成功且任务成功入队后，服务端立即返回：
+
+```json
+{
+  "type": "submission_ack",
   "submission_id": 7,
-  "status": "FINISHED",
-  "verdict": "AC",
-  "message": "accepted",
-  "code": 0,
-  "msg": "accepted",
+  "status": "QUEUED",
+  "verdict": "PENDING",
+  "message": "queued",
+  "case_results": []
+}
+```
+
+语义：
+
+- 表示 submission 已在 `ResultStore` 创建，并且 `SubmissionQueue::push()` 成功。
+- 它不表示编译或运行已经开始。
+
+### 2. `submission_update`
+
+用于表达非终态快照；当前最常见来源是 `query_result` 查询到运行中记录：
+
+```json
+{
+  "type": "submission_update",
+  "submission_id": 7,
+  "status": "RUNNING",
+  "verdict": "PENDING",
+  "message": "",
   "case_results": [
     {
       "seq_id": 1,
@@ -62,16 +103,46 @@
 }
 ```
 
-字段说明：
+语义：
 
-- `submission_id`：服务端创建的真实提交号。
-- `status`：当前提交状态。
-- `verdict`：最终或当前汇总结论。
-- `message`：主消息字段。
-- `code` / `msg`：为兼容旧调用方保留的别名字段；正常结果 `code=0`，协议错误包 `code=-1`。
-- `case_results`：每个测试点的结果快照数组。
+- `status` 可能是 `PREPARING`、`COMPILING`、`RUNNING`。
+- `case_results` 表示查询时已经写入 `ResultStore` 的测试点快照。
 
-## 错误响应 JSON
+### 3. `submission_finished`
+
+用于终态快照；既可能是原连接上的 worker 完成推送，也可能是 `query_result` 查询终态结果：
+
+```json
+{
+  "type": "submission_finished",
+  "submission_id": 7,
+  "status": "FINISHED",
+  "verdict": "AC",
+  "message": "accepted",
+  "case_results": [
+    {
+      "seq_id": 1,
+      "verdict": "AC",
+      "cpu_time_ms": 12,
+      "real_time_ms": 15,
+      "memory_kb": 256,
+      "signal": 0,
+      "exit_code": 0,
+      "error_code": 0
+    }
+  ]
+}
+```
+
+语义：
+
+- `status` 为 `FINISHED` 或 `FAILED`。
+- `verdict` 为最终归并结果。
+- `case_results` 为截至终态时保留的完整测试点结果数组。
+
+### 4. 错误响应
+
+当前错误包仍保留兼容格式，不带 `type` 字段：
 
 ```json
 {
@@ -85,6 +156,14 @@
 }
 ```
 
+常见错误场景：
+
+- JSON 结构不合法
+- `submit` / `query_result` 请求字段缺失
+- `submission_id` 不存在
+- 提交创建失败
+- 队列已关闭导致无法入队
+
 ## 状态值
 
 - `QUEUED`
@@ -94,7 +173,14 @@
 - `FINISHED`
 - `FAILED`
 
-当前 TCP 一次请求只返回一次最终响应，所以客户端通常只会直接看到 `FINISHED` 或 `FAILED`。中间状态主要存在于服务内部和单元测试里。
+状态由 `ResultStore` 维护，只允许按如下方向前进：
+
+- `QUEUED -> PREPARING | FAILED`
+- `PREPARING -> COMPILING | FAILED`
+- `COMPILING -> RUNNING | FINISHED | FAILED`
+- `RUNNING -> FINISHED | FAILED`
+
+终态后不允许回退或再次更新。
 
 ## verdict 值
 
@@ -113,6 +199,32 @@
 `JudgeCore` 当前采用固定优先级归并：
 
 `CE > SYSTEM_ERROR > TLE > RE/MLE/OLE > WA/PE > UNKNOWN > AC > PENDING`
+
+## 当前实际交互模式
+
+### 提交后原连接仍在线
+
+典型顺序是：
+
+1. client 发送 `submit`
+2. server 返回 `submission_ack`
+3. worker 后台处理
+4. server 在同一连接推送 `submission_finished`
+
+### 提交后原连接断开
+
+典型顺序是：
+
+1. client 发送 `submit`
+2. server 返回 `submission_ack`
+3. 原连接断开
+4. worker 继续处理并把结果写入 `ResultStore`
+5. 新连接发送 `query_result`
+6. server 返回 `submission_finished`
+
+### 查询运行中任务
+
+如果 `query_result` 命中非终态 submission，响应是 `submission_update`，不是 `submission_finished`。
 
 ## 输出比较规则
 
@@ -144,4 +256,8 @@
 - `memory_kb` 基本不会得到真实值。
 - 不提供真正的沙箱隔离。
 
-这部分限制需要在生产部署文档和对外说明里明确告知，不应被误认为“完整 OJ 沙箱”。
+## 当前限制
+
+- 协议层已经支持 `submission_update`，但当前主动推送路径几乎只会推 `submission_finished`；更细粒度的进度推送还没有接到 notifier 生命周期上。
+- `query_result` 只支持按单个 `submission_id` 查询最新快照，没有批量查询或 wait/subscribe 语义。
+- 错误包仍使用旧兼容格式，因此成功包和错误包的 JSON 形状暂时不完全统一。

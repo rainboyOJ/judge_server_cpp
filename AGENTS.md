@@ -6,8 +6,8 @@ Scope: `/home/rainboy/mycode/boxtest-opencode-dev`.
 - Language/toolchain: C++17 + CMake.
 - Main binary: `judge_server`.
 - Core target: static lib `boxTest`.
-- Current architecture is transitional: legacy TCP/event loop shell with a new judge pipeline behind it.
-- New judge pipeline layers: `protocol -> service -> runner -> judge -> store`.
+- Current architecture is transitional: legacy TCP/event loop shell with an async queue/worker judge backend.
+- Async backend layers: `protocol -> dispatch -> service -> runner -> judge -> store`.
 - Tests: executable-style C++ tests under `test/`, registered via CTest.
 - Extra modules:
   - `checker/` (independent CMake project for checkers).
@@ -18,6 +18,7 @@ Scope: `/home/rainboy/mycode/boxtest-opencode-dev`.
 - `include/` headers
 - `src/common/`, `include/common/` shared components (logger/config/result/types)
 - `src/protocol/`, `include/protocol/` JSON protocol codec
+- `src/dispatch/`, `include/dispatch/` async submission queue / worker pool / notifier
 - `src/service/`, `include/service/` submission orchestration
 - `src/runner/`, `include/runner/` language runners (`C++`, `Python`)
 - `src/judge/`, `include/judge/` verdict aggregation
@@ -176,7 +177,10 @@ Notes:
 
 ### Judge pipeline notes
 - `JudgeProtocol` handles JSON decode/encode only.
-- `SubmissionService` orchestrates `prepare -> compile/check -> run cases -> aggregate`.
+- `SubmissionService` is split between `createSubmission()` for record creation and `processSubmission()` for worker-side execution.
+- `SubmissionQueue` owns in-memory pending tasks; `JudgeWorkerPool` consumes them on background threads.
+- `SubmissionNotifier` lets the worker pool notify socket-facing code about lifecycle events.
+- `SubmissionService` worker path orchestrates `prepare -> compile/check -> run cases -> aggregate`.
 - `RunnerFactory` currently supports `C++` and `Python`; `C` remains unsupported.
 - `JudgeCore` decides final verdict from case results.
 - `ResultStore` persists forward-only state transitions.
@@ -185,13 +189,15 @@ Notes:
 - For behavior changes, add or update focused tests under `test/` when feasible.
 - Run targeted test(s) first, then broader suite as needed.
 - For bug fixes, add a regression test when practical.
-- For protocol or TCP changes, run `test_protocol_codec`, `test_submission_service`, and `test_integration_tcp_cpp_python`.
+- For protocol or TCP changes, run `test_protocol_codec`, `test_submission_service`, `test_async_submission_flow`, and `test_integration_tcp_cpp_python`.
+- For async dispatch changes, run `test_judge_worker_pool` and `test_async_submission_flow`.
 - For runner changes, run `test_cpp_runner` and/or `test_python_runner`.
 
 ## Current limitations to respect
 - Fallback execution path (when `/usr/bin/sjudge` is absent) only has basic real-time timeout handling; it is not a full sandbox.
 - Checker fallback compares normalized text and is less powerful than production checker semantics.
-- Socket layer is transitionary: JSON requests use the new pipeline, legacy result path still exists for old flow.
+- Socket layer is transitionary: JSON requests now use the async queue/worker pipeline, while legacy socket/result plumbing still exists for old flow.
+- `submission_update` is fully queryable through `query_result`, but push delivery is still effectively `submission_ack` followed by final `submission_finished` in most real runs.
 - Node scripts are partially integration helpers; some require a separately running server.
 
 ## Cursor/Copilot rule files
