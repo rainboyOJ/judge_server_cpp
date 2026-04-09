@@ -1,6 +1,7 @@
 build/
 .vscode/
 .cache/
+.worktrees/
 
 # sjudge 源码需要纳入版本控制，下面只忽略其构建产物
 sjudge/sjudge
