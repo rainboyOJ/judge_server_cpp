@@ -25,6 +25,8 @@ public:
     int getWorkerThreadCount() const;
     int getMaxConcurrentTests() const;
     std::string getTestDataPath() const;
+    int getResultRetentionSeconds() const;
+    int getMaxStoredResults() const;
 
     // 性能设置
     size_t getBufferSize() const;

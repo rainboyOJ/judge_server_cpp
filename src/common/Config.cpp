@@ -38,37 +38,78 @@ bool Config::loadFromFile(const std::string& configFilepath) {
 
 // 访问器实现
 std::string Config::getServerHost() const {
-    return get<std::string>(config_data_["server"], "host", "0.0.0.0");
+    const json server = config_data_.contains("server") && config_data_["server"].is_object()
+                            ? config_data_["server"]
+                            : json::object();
+    return get<std::string>(server, "host", "0.0.0.0");
 }
 
 int Config::getServerPort() const {
-    return get<int>(config_data_["server"], "port", 8080);
+    const json server = config_data_.contains("server") && config_data_["server"].is_object()
+                            ? config_data_["server"]
+                            : json::object();
+    return get<int>(server, "port", 8080);
 }
 
 int Config::getConnectionTimeoutMs() const {
-    return get<int>(config_data_["server"], "connection_timeout_ms", 30000);
+    const json server = config_data_.contains("server") && config_data_["server"].is_object()
+                            ? config_data_["server"]
+                            : json::object();
+    return get<int>(server, "connection_timeout_ms", 30000);
 }
 
 int Config::getWorkerThreadCount() const {
-    return get<int>(config_data_["testing"], "worker_thread_count", 4);
+    const json testing = config_data_.contains("testing") && config_data_["testing"].is_object()
+                             ? config_data_["testing"]
+                             : json::object();
+    return get<int>(testing, "worker_thread_count", 4);
 }
 
 int Config::getMaxConcurrentTests() const {
-    return get<int>(config_data_["testing"], "max_concurrent_tests", 4);
+    const json testing = config_data_.contains("testing") && config_data_["testing"].is_object()
+                             ? config_data_["testing"]
+                             : json::object();
+    return get<int>(testing, "max_concurrent_tests", 4);
 }
 
 std::string Config::getTestDataPath() const {
-    return get<std::string>(config_data_["testing"], "test_data_path", "./testData");
+    const json testing = config_data_.contains("testing") && config_data_["testing"].is_object()
+                             ? config_data_["testing"]
+                             : json::object();
+    return get<std::string>(testing, "test_data_path", "./testData");
+}
+
+int Config::getResultRetentionSeconds() const {
+    const json testing = config_data_.contains("testing") && config_data_["testing"].is_object()
+                             ? config_data_["testing"]
+                             : json::object();
+    return get<int>(testing, "result_retention_seconds", 600);
+}
+
+int Config::getMaxStoredResults() const {
+    const json testing = config_data_.contains("testing") && config_data_["testing"].is_object()
+                             ? config_data_["testing"]
+                             : json::object();
+    return get<int>(testing, "max_stored_results", 1000);
 }
 
 size_t Config::getBufferSize() const {
-    return get<size_t>(config_data_["performance"], "buffer_size", 8192);
+    const json performance = config_data_.contains("performance") && config_data_["performance"].is_object()
+                                 ? config_data_["performance"]
+                                 : json::object();
+    return get<size_t>(performance, "buffer_size", 8192);
 }
 
 std::string Config::getLogFilePath() const {
-    return get<std::string>(config_data_["logging"], "file_path", "application.log");
+    const json logging = config_data_.contains("logging") && config_data_["logging"].is_object()
+                             ? config_data_["logging"]
+                             : json::object();
+    return get<std::string>(logging, "file_path", "application.log");
 }
 
 std::string Config::getLogLevel() const {
-    return get<std::string>(config_data_["logging"], "level", "INFO");
+    const json logging = config_data_.contains("logging") && config_data_["logging"].is_object()
+                             ? config_data_["logging"]
+                             : json::object();
+    return get<std::string>(logging, "level", "INFO");
 }

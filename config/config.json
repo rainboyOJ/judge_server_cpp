@@ -6,7 +6,9 @@
   "testing": {
     "worker_thread_count": 4,
     "max_concurrent_tests": 4,
-    "test_data_path": "../testData"
+    "test_data_path": "../testData",
+    "result_retention_seconds": 600,
+    "max_stored_results": 1000
   },
   "performance": {
     "buffer_size": 8192

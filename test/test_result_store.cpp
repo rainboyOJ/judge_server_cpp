@@ -2,6 +2,8 @@
 #include <cassert>
 #include <thread>
 
+#include "common/Config.h"
+
 #include "store/ResultStore.h"
 
 namespace {
@@ -233,6 +235,105 @@ void test_concurrent_read_and_update_keeps_snapshots_valid() {
   assert(final_result.case_results.front().cpu_time_ms == 128);
 }
 
+void test_expired_finished_results_are_removed_when_creating_new_submission() {
+  ResultStore store;
+  store.debugConfigureCleanupForTest(1, 1000);
+
+  SubmissionRequest request{};
+  const int first_submission_id = store.createSubmission(request);
+  assert(store.updateResult(
+      first_submission_id,
+      make_result(first_submission_id, SubmissionStatus::PREPARING)));
+  assert(store.updateResult(
+      first_submission_id,
+      make_result(first_submission_id, SubmissionStatus::COMPILING)));
+  assert(store.updateResult(
+      first_submission_id,
+      make_result(first_submission_id, SubmissionStatus::RUNNING)));
+
+  SubmissionResult finished =
+      make_result(first_submission_id, SubmissionStatus::FINISHED, "done");
+  finished.verdict = SubmissionVerdict::AC;
+  assert(store.updateResult(first_submission_id, finished));
+
+  store.debugForceAgingForTest(first_submission_id, 1000);
+
+  const int second_submission_id = store.createSubmission(request);
+  assert(second_submission_id > first_submission_id);
+
+  SubmissionResult stale{};
+  assert(!store.getResult(first_submission_id, stale));
+
+  SubmissionResult live{};
+  assert(store.getResult(second_submission_id, live));
+  assert(live.status == SubmissionStatus::QUEUED);
+}
+
+void test_running_results_are_not_removed_even_if_forced_old() {
+  ResultStore store;
+  store.debugConfigureCleanupForTest(1, 1000);
+
+  SubmissionRequest request{};
+  const int submission_id = store.createSubmission(request);
+  assert(store.updateResult(
+      submission_id, make_result(submission_id, SubmissionStatus::PREPARING)));
+  assert(store.updateResult(
+      submission_id, make_result(submission_id, SubmissionStatus::COMPILING)));
+  assert(store.updateResult(
+      submission_id, make_result(submission_id, SubmissionStatus::RUNNING)));
+
+  store.debugForceAgingForTest(submission_id, 1000);
+
+  const int second_submission_id = store.createSubmission(request);
+  assert(second_submission_id > submission_id);
+
+  SubmissionResult running{};
+  assert(store.getResult(submission_id, running));
+  assert(running.status == SubmissionStatus::RUNNING);
+}
+
+void test_capacity_cleanup_keeps_newest_finished_results() {
+  ResultStore store;
+  store.debugConfigureCleanupForTest(3600, 3);
+
+  SubmissionRequest request{};
+  const int first = store.createSubmission(request);
+  const int second = store.createSubmission(request);
+  const int third = store.createSubmission(request);
+
+  const auto finish_submission = [&](int submission_id, const char *message) {
+    assert(store.updateResult(
+        submission_id,
+        make_result(submission_id, SubmissionStatus::PREPARING, message)));
+    assert(store.updateResult(
+        submission_id,
+        make_result(submission_id, SubmissionStatus::COMPILING, message)));
+    assert(store.updateResult(
+        submission_id,
+        make_result(submission_id, SubmissionStatus::RUNNING, message)));
+    SubmissionResult finished =
+        make_result(submission_id, SubmissionStatus::FINISHED, message);
+    finished.verdict = SubmissionVerdict::AC;
+    assert(store.updateResult(submission_id, finished));
+  };
+
+  finish_submission(first, "first");
+  finish_submission(second, "second");
+  finish_submission(third, "third");
+
+  store.debugForceAgingForTest(first, 3);
+  store.debugForceAgingForTest(second, 2);
+  store.debugForceAgingForTest(third, 1);
+
+  const int fourth = store.createSubmission(request);
+  assert(fourth > third);
+
+  SubmissionResult result{};
+  assert(!store.getResult(first, result));
+  assert(store.getResult(second, result));
+  assert(store.getResult(third, result));
+}
+
 } // namespace
 
 int main() {
@@ -244,5 +345,8 @@ int main() {
   test_get_result_returns_newest_running_snapshot();
   test_get_result_keeps_final_snapshot_after_failed_delivery();
   test_concurrent_read_and_update_keeps_snapshots_valid();
+  test_expired_finished_results_are_removed_when_creating_new_submission();
+  test_running_results_are_not_removed_even_if_forced_old();
+  test_capacity_cleanup_keeps_newest_finished_results();
   return 0;
 }
