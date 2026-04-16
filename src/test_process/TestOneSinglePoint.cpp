@@ -1,3 +1,8 @@
+/**
+ * @file TestOneSinglePoint.cpp
+ * @brief 旧链路单点执行与新 runner 共用执行 helper 的实现。
+ */
+
 #include "common/Logger.h"
 #include "judgeInfo.h"
 #include "resultContainer.h"
@@ -21,6 +26,7 @@ namespace fs = std::filesystem;
 
 namespace {
 
+/** @brief 去掉一行右侧多余空白字符。 */
 std::string trim_line_right(const std::string &line) {
     size_t end = line.size();
     while (end > 0 && (line[end - 1] == ' ' || line[end - 1] == '\t' ||
@@ -30,6 +36,7 @@ std::string trim_line_right(const std::string &line) {
     return line.substr(0, end);
 }
 
+/** @brief 归一化输出文件为按行比较的形式。 */
 std::vector<std::string> normalize_output_lines(const fs::path &path) {
     std::ifstream stream(path);
     std::vector<std::string> lines;
@@ -43,6 +50,7 @@ std::vector<std::string> normalize_output_lines(const fs::path &path) {
     return lines;
 }
 
+/** @brief 等待子进程结束并提取 signal/exit_code。 */
 int wait_and_capture_status(pid_t pid, int &signal, int &exit_code) {
     int status = 0;
     if (waitpid(pid, &status, 0) < 0) {
@@ -58,6 +66,9 @@ int wait_and_capture_status(pid_t pid, int &signal, int &exit_code) {
     return status;
 }
 
+/**
+ * @brief 带真实时间上限地等待子进程结束。
+ */
 int wait_and_capture_status_with_timeout(pid_t pid, int real_time_limit_ms,
                                          int &signal, int &exit_code,
                                          bool &timed_out) {
@@ -100,6 +111,7 @@ int wait_and_capture_status_with_timeout(pid_t pid, int real_time_limit_ms,
     }
 }
 
+/** @brief 以重定向 stdin/stdout 的方式启动子进程。 */
 bool spawn_with_redirects(const fs::path &program_path,
                           const fs::path &stdin_path,
                           const fs::path &stdout_path, pid_t &child_pid) {
@@ -137,6 +149,7 @@ bool spawn_with_redirects(const fs::path &program_path,
     return spawn_rc == 0;
 }
 
+/** @brief 把 sjudge 的 result code 映射成内部 verdict。 */
 SubmissionVerdict map_judge_result_to_verdict(int result_code) {
     switch (result_code) {
     case 0:
@@ -153,6 +166,7 @@ SubmissionVerdict map_judge_result_to_verdict(int result_code) {
     }
 }
 
+/** @brief 把新 verdict 映射回旧链路使用的 enum_testStatus。 */
 enum_testStatus to_legacy_status(SubmissionVerdict verdict) {
     switch (verdict) {
     case SubmissionVerdict::AC:
@@ -175,6 +189,7 @@ enum_testStatus to_legacy_status(SubmissionVerdict verdict) {
 
 } // namespace
 
+/** @copydoc compare_case_output */
 SubmissionVerdict compare_case_output(const fs::path &input_path,
                                       const fs::path &expected_output,
                                       const fs::path &user_output) {
@@ -193,6 +208,7 @@ SubmissionVerdict compare_case_output(const fs::path &input_path,
                : SubmissionVerdict::WA;
 }
 
+/** @copydoc run_executable_case */
 RunnerCaseResult run_executable_case(const fs::path &executable_path,
                                      const RunnerCaseInput &test_case,
                                      const fs::path &user_output_path) {
@@ -301,6 +317,12 @@ RunnerCaseResult run_executable_case(const fs::path &executable_path,
     return case_result;
 }
 
+/**
+ * @brief 旧链路中的单点测试入口。
+ *
+ * @note 当前异步主链路优先通过 runner + run_executable_case 执行，
+ *       本函数主要保留给旧 testBox/workThreadPool 路径。
+ */
 bool TestOneSinglePoint(const int testBoxId, int seq_id,
                         resultContainer *resultContainerPtr) {
     LOG_DEBUG("TestOneSinglePoint Start, testBoxId %d, seq_id %d", testBoxId,

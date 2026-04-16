@@ -6,10 +6,15 @@
 
 class ILanguageRunner;
 
+/**
+ * @brief 根据提交语言创建对应 runner 的工厂。
+ */
 class RunnerFactory {
   public:
-    // 中文注释：MVP
-    // 阶段先固定语言到实现类的映射，后续任务再补充真实编译运行逻辑。
+    /**
+     * @brief 创建与给定语言匹配的 runner。
+     * @return std::shared_ptr<ILanguageRunner> 若语言不支持则返回 nullptr。
+     */
     std::shared_ptr<ILanguageRunner>
     createRunner(SubmissionLanguage language) const;
 };

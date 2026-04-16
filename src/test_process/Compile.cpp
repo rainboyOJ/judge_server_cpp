@@ -1,3 +1,8 @@
+/**
+ * @file Compile.cpp
+ * @brief 旧 test_process 流程中的编译能力实现，同时对新 runner 提供兼容 helper。
+ */
+
 #include "common/Logger.h"
 #include "judgeInfo.h"
 #include "test_process/RunnerCompat.h"
@@ -9,6 +14,7 @@
 
 namespace fs = std::filesystem;
 
+/** @copydoc compile_cpp_source_file */
 bool compile_cpp_source_file(const fs::path &sourceFile,
                              const fs::path &executableFile,
                              const fs::path &compileLogFile,
@@ -25,7 +31,11 @@ bool compile_cpp_source_file(const fs::path &sourceFile,
     }
 }
 
-// 编译阶段
+/**
+ * @brief 旧链路中的编译阶段入口。
+ *
+ * @note 这是历史兼容流程的一部分，当前异步主链路优先使用 CppRunner。
+ */
 bool Compile(const int testBoxId, resultContainer *resultContainerPtr,
              workThreadPool *workThreadPoolPtr) {
     LOG_DEBUG("Compile testBoxId %d", testBoxId);

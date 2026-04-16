@@ -1,3 +1,8 @@
+/**
+ * @file CppRunner.cpp
+ * @brief C++ 提交执行器实现。
+ */
+
 #include "runner/CppRunner.h"
 
 #include <chrono>
@@ -18,29 +23,35 @@ namespace fs = std::filesystem;
 
 namespace {
 
+/** @brief 根据 submission 计算 C++ runner 的工作目录。 */
 fs::path work_dir_for(const SubmissionRequest &request) {
     return fs::temp_directory_path() /
            ("oj_compile_" + std::to_string(request.uuid));
 }
 
+/** @brief C++ 源文件路径。 */
 fs::path source_path_for(const SubmissionRequest &request) {
     return work_dir_for(request) / "solution.cpp";
 }
 
+/** @brief 编译后的可执行文件路径。 */
 fs::path executable_path_for(const SubmissionRequest &request) {
     return work_dir_for(request) / "solution";
 }
 
+/** @brief 编译日志文件路径。 */
 fs::path compile_log_path_for(const SubmissionRequest &request) {
     return work_dir_for(request) / "compile.log";
 }
 
+/** @brief 单个测试点的用户输出文件路径。 */
 fs::path user_output_path_for(const SubmissionRequest &request,
                               const RunnerCaseInput &test_case) {
     return work_dir_for(request) /
            ("case_" + std::to_string(test_case.seq_id) + ".user.out");
 }
 
+/** @brief 从文件读取完整文本内容。 */
 std::string read_file(const fs::path &path) {
     std::ifstream stream(path);
     if (!stream.good()) {
@@ -51,12 +62,14 @@ std::string read_file(const fs::path &path) {
                        std::istreambuf_iterator<char>());
 }
 
+/** @brief 判断 CppRunner 执行所需的最小请求字段是否齐备。 */
 bool has_basic_request_fields(const SubmissionRequest &request) {
     return request.uuid > 0 && !request.code.empty();
 }
 
 } // namespace
 
+/** @copydoc ILanguageRunner::prepare */
 RunnerPrepareResult CppRunner::prepare(const SubmissionRequest &request) {
     if (!has_basic_request_fields(request)) {
         return RunnerPrepareResult{false, "cpp runner requires uuid and code"};
@@ -87,6 +100,7 @@ RunnerPrepareResult CppRunner::prepare(const SubmissionRequest &request) {
     return RunnerPrepareResult{true, source_path.string()};
 }
 
+/** @copydoc ILanguageRunner::compile */
 RunnerCompileResult CppRunner::compile(const SubmissionRequest &request) {
     if (!has_basic_request_fields(request)) {
         return RunnerCompileResult{false, SubmissionVerdict::SYSTEM_ERROR,
@@ -118,6 +132,7 @@ RunnerCompileResult CppRunner::compile(const SubmissionRequest &request) {
                                                        : compile_message};
 }
 
+/** @copydoc ILanguageRunner::runCase */
 RunnerCaseResult CppRunner::runCase(const SubmissionRequest &request,
                                     const RunnerCaseInput &test_case) {
     RunnerCaseResult case_result{};

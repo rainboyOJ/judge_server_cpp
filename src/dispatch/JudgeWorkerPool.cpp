@@ -1,7 +1,13 @@
+/**
+ * @file JudgeWorkerPool.cpp
+ * @brief 后台异步评测 worker 线程池实现。
+ */
+
 #include "dispatch/JudgeWorkerPool.h"
 
 #include "service/SubmissionService.h"
 
+/** @copydoc JudgeWorkerPool::JudgeWorkerPool */
 JudgeWorkerPool::JudgeWorkerPool(std::size_t worker_count,
                                  SubmissionQueue &queue,
                                  SubmissionService &service,
@@ -13,8 +19,10 @@ JudgeWorkerPool::JudgeWorkerPool(std::size_t worker_count,
   }
 }
 
+/** @copydoc JudgeWorkerPool::~JudgeWorkerPool */
 JudgeWorkerPool::~JudgeWorkerPool() { stop(); }
 
+/** @copydoc JudgeWorkerPool::stop */
 void JudgeWorkerPool::stop() {
   bool expected = false;
   if (!stopped_.compare_exchange_strong(expected, true)) {
@@ -29,6 +37,7 @@ void JudgeWorkerPool::stop() {
   }
 }
 
+/** @copydoc JudgeWorkerPool::workerLoop */
 void JudgeWorkerPool::workerLoop() {
   SubmissionTask task{};
   while (queue_.pop(task)) {

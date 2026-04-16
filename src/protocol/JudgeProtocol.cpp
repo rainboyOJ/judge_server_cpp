@@ -1,3 +1,8 @@
+/**
+ * @file JudgeProtocol.cpp
+ * @brief 异步评测协议 JSON 编解码实现。
+ */
+
 #include "protocol/JudgeProtocol.h"
 
 #include <exception>
@@ -8,6 +13,9 @@ using json = nlohmann::json;
 
 namespace {
 
+/**
+ * @brief 解析任意 JSON object 负载。
+ */
 bool parseObjectPayload(const std::string &payload, json &parsed) {
   try {
     parsed = json::parse(payload);
@@ -18,11 +26,17 @@ bool parseObjectPayload(const std::string &payload, json &parsed) {
   return parsed.is_object();
 }
 
+/**
+ * @brief 判断请求中的 type 字段是否匹配预期值。
+ */
 bool hasType(const json &parsed, const char *expected_type) {
   return parsed.contains("type") && parsed.at("type").is_string() &&
          parsed.at("type").get<std::string>() == expected_type;
 }
 
+/**
+ * @brief 把协议中的整数语言值映射成内部枚举。
+ */
 SubmissionLanguage toSubmissionLanguage(int legacy_language, bool &ok) {
   ok = true;
   switch (legacy_language) {
@@ -38,6 +52,7 @@ SubmissionLanguage toSubmissionLanguage(int legacy_language, bool &ok) {
   return SubmissionLanguage::CPP;
 }
 
+/** @brief 将内部状态枚举编码为协议字符串。 */
 const char *toStatusString(SubmissionStatus status) {
   switch (status) {
   case SubmissionStatus::QUEUED:
@@ -57,6 +72,7 @@ const char *toStatusString(SubmissionStatus status) {
   return "FAILED";
 }
 
+/** @brief 将内部 verdict 枚举编码为协议字符串。 */
 const char *toVerdictString(SubmissionVerdict verdict) {
   switch (verdict) {
   case SubmissionVerdict::PENDING:
@@ -86,6 +102,7 @@ const char *toVerdictString(SubmissionVerdict verdict) {
   return "SYSTEM_ERROR";
 }
 
+/** @brief 把单个测试点结果编码成 JSON 对象。 */
 json encodeCaseResult(const SubmissionCaseResult &case_result) {
   return json{{"seq_id", case_result.seq_id},
               {"verdict", toVerdictString(case_result.verdict)},
@@ -97,6 +114,7 @@ json encodeCaseResult(const SubmissionCaseResult &case_result) {
               {"error_code", case_result.error_code}};
 }
 
+/** @brief 生成异步协议消息的公共外层结构。 */
 json encodeAsyncEnvelope(const char *type, int submission_id,
                          SubmissionStatus status, SubmissionVerdict verdict,
                          const std::string &message) {
@@ -108,6 +126,7 @@ json encodeAsyncEnvelope(const char *type, int submission_id,
               {"case_results", json::array()}};
 }
 
+/** @brief 生成兼容错误响应使用的外层结构。 */
 json encodeLegacyEnvelope(int submission_id, SubmissionStatus status,
                           SubmissionVerdict verdict, const std::string &message,
                           int code) {
@@ -122,6 +141,7 @@ json encodeLegacyEnvelope(int submission_id, SubmissionStatus status,
 
 } // namespace
 
+/** @copydoc JudgeProtocol::decodeRequest */
 bool JudgeProtocol::decodeRequest(const std::string &payload,
                                   SubmissionRequest &request) const {
   json parsed;
@@ -154,6 +174,7 @@ bool JudgeProtocol::decodeRequest(const std::string &payload,
   return true;
 }
 
+/** @copydoc JudgeProtocol::decodeQueryRequest */
 bool JudgeProtocol::decodeQueryRequest(const std::string &payload,
                                        QueryResultRequest &request) const {
   json parsed;
@@ -174,6 +195,7 @@ bool JudgeProtocol::decodeQueryRequest(const std::string &payload,
   return true;
 }
 
+/** @copydoc JudgeProtocol::encodeSubmissionAck */
 std::string JudgeProtocol::encodeSubmissionAck(int submission_id) const {
   return encodeAsyncEnvelope("submission_ack", submission_id,
                              SubmissionStatus::QUEUED,
@@ -181,6 +203,7 @@ std::string JudgeProtocol::encodeSubmissionAck(int submission_id) const {
       .dump();
 }
 
+/** @copydoc JudgeProtocol::encodeSubmissionUpdate */
 std::string
 JudgeProtocol::encodeSubmissionUpdate(const SubmissionResult &result) const {
   json encoded =
@@ -192,6 +215,7 @@ JudgeProtocol::encodeSubmissionUpdate(const SubmissionResult &result) const {
   return encoded.dump();
 }
 
+/** @copydoc JudgeProtocol::encodeSubmissionFinished */
 std::string
 JudgeProtocol::encodeSubmissionFinished(const SubmissionResult &result) const {
   json encoded =
@@ -203,6 +227,7 @@ JudgeProtocol::encodeSubmissionFinished(const SubmissionResult &result) const {
   return encoded.dump();
 }
 
+/** @copydoc JudgeProtocol::encodeResult */
 std::string JudgeProtocol::encodeResult(const SubmissionResult &result) const {
   if (result.status == SubmissionStatus::FINISHED ||
       result.status == SubmissionStatus::FAILED) {
@@ -212,6 +237,7 @@ std::string JudgeProtocol::encodeResult(const SubmissionResult &result) const {
   return encodeSubmissionUpdate(result);
 }
 
+/** @copydoc JudgeProtocol::encodeError */
 std::string JudgeProtocol::encodeError(const std::string &message) const {
   json encoded =
       encodeLegacyEnvelope(-1, SubmissionStatus::FAILED,

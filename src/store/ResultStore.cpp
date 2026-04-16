@@ -1,3 +1,8 @@
+/**
+ * @file ResultStore.cpp
+ * @brief submission 最新结果快照存储与惰性清理实现。
+ */
+
 #include "store/ResultStore.h"
 
 #include <algorithm>
@@ -7,6 +12,9 @@
 
 namespace {
 
+/**
+ * @brief 判断给定状态是否已经进入终态。
+ */
 bool is_terminal_status(SubmissionStatus status) {
   return status == SubmissionStatus::FINISHED ||
          status == SubmissionStatus::FAILED;
@@ -14,6 +22,7 @@ bool is_terminal_status(SubmissionStatus status) {
 
 } // namespace
 
+/** @copydoc ResultStore::isValidTransition */
 bool ResultStore::isValidTransition(SubmissionStatus current,
                                     SubmissionStatus next) {
   if (is_terminal_status(current)) {
@@ -47,6 +56,7 @@ bool ResultStore::isValidTransition(SubmissionStatus current,
   return false;
 }
 
+/** @copydoc ResultStore::resultRetentionSecondsLocked */
 int ResultStore::resultRetentionSecondsLocked() const {
   if (override_retention_seconds_.has_value()) {
     return *override_retention_seconds_;
@@ -54,6 +64,7 @@ int ResultStore::resultRetentionSecondsLocked() const {
   return Config::getInstance().getResultRetentionSeconds();
 }
 
+/** @copydoc ResultStore::maxStoredResultsLocked */
 int ResultStore::maxStoredResultsLocked() const {
   if (override_max_stored_results_.has_value()) {
     return *override_max_stored_results_;
@@ -61,6 +72,7 @@ int ResultStore::maxStoredResultsLocked() const {
   return Config::getInstance().getMaxStoredResults();
 }
 
+/** @copydoc ResultStore::cleanupExpiredResultsLocked */
 void ResultStore::cleanupExpiredResultsLocked(Clock::time_point now) {
   const int retention_seconds = resultRetentionSecondsLocked();
   const int max_stored_results = maxStoredResultsLocked();
@@ -107,6 +119,7 @@ void ResultStore::cleanupExpiredResultsLocked(Clock::time_point now) {
   }
 }
 
+/** @copydoc ResultStore::createSubmission */
 int ResultStore::createSubmission(const SubmissionRequest &request) {
   (void)request;
 
@@ -122,6 +135,7 @@ int ResultStore::createSubmission(const SubmissionRequest &request) {
   return submission_id;
 }
 
+/** @copydoc ResultStore::updateResult */
 bool ResultStore::updateResult(int submission_id,
                                const SubmissionResult &result) {
   std::lock_guard<std::mutex> lock(mutex_);
@@ -148,6 +162,7 @@ bool ResultStore::updateResult(int submission_id,
   return true;
 }
 
+/** @copydoc ResultStore::getResult */
 bool ResultStore::getResult(int submission_id, SubmissionResult &result) const {
   std::lock_guard<std::mutex> lock(mutex_);
   const auto now = Clock::now();
@@ -162,6 +177,7 @@ bool ResultStore::getResult(int submission_id, SubmissionResult &result) const {
   return true;
 }
 
+/** @copydoc ResultStore::debugForceAgingForTest */
 void ResultStore::debugForceAgingForTest(int submission_id, int age_seconds) {
   std::lock_guard<std::mutex> lock(mutex_);
   const auto it = results_.find(submission_id);
@@ -176,6 +192,7 @@ void ResultStore::debugForceAgingForTest(int submission_id, int age_seconds) {
   }
 }
 
+/** @copydoc ResultStore::debugConfigureCleanupForTest */
 void ResultStore::debugConfigureCleanupForTest(int retention_seconds,
                                                int max_stored_results) {
   std::lock_guard<std::mutex> lock(mutex_);

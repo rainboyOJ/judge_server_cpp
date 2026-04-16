@@ -1,3 +1,8 @@
+/**
+ * @file SubmissionService.cpp
+ * @brief 异步评测编排服务实现。
+ */
+
 #include "service/SubmissionService.h"
 
 #include <filesystem>
@@ -14,6 +19,7 @@ namespace fs = std::filesystem;
 
 namespace {
 
+/** @brief 构造某个阶段的 SubmissionResult 快照。 */
 SubmissionResult make_result(int submission_id, SubmissionStatus status,
                              SubmissionVerdict verdict,
                              const std::string &message = {}) {
@@ -25,11 +31,13 @@ SubmissionResult make_result(int submission_id, SubmissionStatus status,
   return result;
 }
 
+/** @brief 将快照持久化到 ResultStore。 */
 bool persist_result(ResultStore &store, int submission_id,
                     const SubmissionResult &result) {
   return store.updateResult(submission_id, result);
 }
 
+/** @brief 解析测试数据根目录。 */
 fs::path resolve_test_data_root() {
   const fs::path project_root_data = fs::path(PROJECT_ROOT_DIR) / "testData";
   if (fs::exists(project_root_data)) {
@@ -56,10 +64,14 @@ fs::path resolve_test_data_root() {
   return {};
 }
 
+/**
+ * @brief SubmissionService 内部使用的测试点描述。
+ */
 struct SubmissionCaseSpec {
   RunnerCaseInput input;
 };
 
+/** @brief 根据 pid 从 testData 目录扫描出当前题目的 case 列表。 */
 std::vector<SubmissionCaseSpec> load_cases_for_problem(const std::string &pid) {
   std::vector<SubmissionCaseSpec> cases;
   const fs::path test_data_root = resolve_test_data_root();
@@ -90,16 +102,19 @@ std::vector<SubmissionCaseSpec> load_cases_for_problem(const std::string &pid) {
 
 } // namespace
 
+/** @copydoc SubmissionService::SubmissionService */
 SubmissionService::SubmissionService(ResultStore &result_store,
                                      RunnerFactory &runner_factory,
                                      JudgeCore &judge_core)
     : result_store_(result_store), runner_factory_(runner_factory),
       judge_core_(judge_core) {}
 
+/** @copydoc SubmissionService::createSubmission */
 int SubmissionService::createSubmission(const SubmissionRequest &request) {
   return result_store_.createSubmission(request);
 }
 
+/** @copydoc SubmissionService::processSubmission */
 void SubmissionService::processSubmission(int submission_id,
                                           const SubmissionRequest &request) {
   if (submission_id <= 0) {
@@ -200,12 +215,14 @@ void SubmissionService::processSubmission(int submission_id,
   }
 }
 
+/** @copydoc SubmissionService::submit */
 int SubmissionService::submit(const SubmissionRequest &request) {
   const int submission_id = createSubmission(request);
   processSubmission(submission_id, request);
   return submission_id;
 }
 
+/** @copydoc SubmissionService::query */
 bool SubmissionService::query(int submission_id,
                               SubmissionResult &result) const {
   return result_store_.getResult(submission_id, result);

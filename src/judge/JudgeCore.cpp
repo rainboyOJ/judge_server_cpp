@@ -1,7 +1,15 @@
+/**
+ * @file JudgeCore.cpp
+ * @brief 最终 verdict 汇总规则实现。
+ */
+
 #include "judge/JudgeCore.h"
 
 namespace {
 
+/**
+ * @brief 为每种 verdict 分配比较用的优先级。
+ */
 int verdict_priority(SubmissionVerdict verdict) {
     switch (verdict) {
     case SubmissionVerdict::CE:
@@ -29,6 +37,7 @@ int verdict_priority(SubmissionVerdict verdict) {
 
 } // namespace
 
+/** @copydoc JudgeCore::summarize */
 SubmissionVerdict
 JudgeCore::summarize(const std::vector<SubmissionCaseResult> &case_results,
                      SubmissionVerdict default_verdict) const {

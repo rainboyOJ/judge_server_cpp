@@ -1,3 +1,8 @@
+/**
+ * @file PythonRunner.cpp
+ * @brief Python 提交执行器实现。
+ */
+
 #include "runner/PythonRunner.h"
 
 #include <filesystem>
@@ -12,33 +17,40 @@ namespace fs = std::filesystem;
 
 namespace {
 
+/** @brief 根据 submission 计算 Python runner 的工作目录。 */
 fs::path work_dir_for(const SubmissionRequest &request) {
     return fs::temp_directory_path() /
            ("oj_compile_" + std::to_string(request.uuid));
 }
 
+/** @brief Python 源文件路径。 */
 fs::path source_path_for(const SubmissionRequest &request) {
     return work_dir_for(request) / "solution.py";
 }
 
+/** @brief Python 语法检查日志路径。 */
 fs::path compile_log_path_for(const SubmissionRequest &request) {
     return work_dir_for(request) / "compile.log";
 }
 
+/** @brief 单个测试点的用户输出文件路径。 */
 fs::path user_output_path_for(const SubmissionRequest &request,
                               const RunnerCaseInput &test_case) {
     return work_dir_for(request) /
            ("case_" + std::to_string(test_case.seq_id) + ".user.out");
 }
 
+/** @brief 用于统一接入 run_executable_case 的 wrapper 脚本路径。 */
 fs::path wrapper_path_for(const SubmissionRequest &request) {
     return work_dir_for(request) / "run_python.sh";
 }
 
+/** @brief 判断 PythonRunner 执行所需的最小请求字段是否齐备。 */
 bool has_basic_request_fields(const SubmissionRequest &request) {
     return request.uuid > 0 && !request.code.empty();
 }
 
+/** @brief 读取文件的完整文本内容。 */
 std::string read_file(const fs::path &path) {
     std::ifstream stream(path);
     if (!stream.good()) {
@@ -49,6 +61,7 @@ std::string read_file(const fs::path &path) {
                        std::istreambuf_iterator<char>());
 }
 
+/** @brief 对单引号做 shell 转义。 */
 std::string shell_escape_single_quotes(const std::string &value) {
     std::string quoted;
     for (char ch : value) {
@@ -63,6 +76,7 @@ std::string shell_escape_single_quotes(const std::string &value) {
 
 } // namespace
 
+/** @copydoc ILanguageRunner::prepare */
 RunnerPrepareResult PythonRunner::prepare(const SubmissionRequest &request) {
     if (!has_basic_request_fields(request)) {
         return RunnerPrepareResult{false,
@@ -91,6 +105,7 @@ RunnerPrepareResult PythonRunner::prepare(const SubmissionRequest &request) {
     return RunnerPrepareResult{true, source_path.string()};
 }
 
+/** @copydoc ILanguageRunner::compile */
 RunnerCompileResult PythonRunner::compile(const SubmissionRequest &request) {
     if (!has_basic_request_fields(request)) {
         return RunnerCompileResult{false, SubmissionVerdict::SYSTEM_ERROR,
@@ -121,6 +136,7 @@ RunnerCompileResult PythonRunner::compile(const SubmissionRequest &request) {
                                read_file(compile_log_path)};
 }
 
+/** @copydoc ILanguageRunner::runCase */
 RunnerCaseResult PythonRunner::runCase(const SubmissionRequest &request,
                                        const RunnerCaseInput &test_case) {
     RunnerCaseResult case_result{};

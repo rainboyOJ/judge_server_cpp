@@ -1,3 +1,8 @@
+/**
+ * @file client_sockets.cpp
+ * @brief TCP 连接管理、协议接入与异步结果回推实现。
+ */
+
 #include <sys/select.h>
 
 #include <errno.h>
@@ -15,6 +20,9 @@
 
 namespace {
 
+/**
+ * @brief 判断快照是否已经进入终态。
+ */
 bool is_terminal_status(SubmissionStatus status) {
   return status == SubmissionStatus::FINISHED ||
          status == SubmissionStatus::FAILED;
@@ -22,7 +30,7 @@ bool is_terminal_status(SubmissionStatus status) {
 
 } // namespace
 
-// 构造函数
+/** @copydoc ClientSockets::ClientSockets */
 ClientSockets::ClientSockets(testBox *test_box,
                              SubmissionQueue &submission_queue)
     : test_box_(test_box), submission_queue_(submission_queue),
@@ -56,6 +64,7 @@ ClientSockets::ClientSockets(testBox *test_box,
   });
 }
 
+/** @copydoc ClientSockets::add_to_sets */
 int ClientSockets::add_to_sets(fd_set &read_sets, fd_set &write_sets) {
   int max_fd = 0;
   for (auto &client_socket : client_sockets_) {
@@ -80,6 +89,7 @@ int ClientSockets::add_to_sets(fd_set &read_sets, fd_set &write_sets) {
   return max_fd;
 }
 
+/** @copydoc ClientSockets::add_socket */
 void ClientSockets::add_socket(int client_socket) {
   // 先得到
   // client_sockets_.push_back(client_socket);
@@ -98,6 +108,7 @@ void ClientSockets::add_socket(int client_socket) {
   }
 }
 
+/** @copydoc ClientSockets::del_socket */
 void ClientSockets::del_socket(int testBoxId) {
   // 内部 close(fd)
   client_sockets_[testBoxId]->clear();
@@ -108,6 +119,7 @@ void ClientSockets::del_socket(int testBoxId) {
   // TODO 是不是还有其它的需要处理?
 }
 
+/** @copydoc ClientSockets::deal_events */
 void ClientSockets::deal_events(const fd_set &read_sets,
                                 const fd_set &write_sets) {
 
@@ -232,6 +244,7 @@ void ClientSockets::deal_events(const fd_set &read_sets,
   }
 }
 
+/** @copydoc FdInfo::read_message */
 bool FdInfo::read_message(int &tot_read, std::string &message_body) {
   // 这里不需要锁,因为read 函数是单线程的
   // std::lock_guard lock(mtx_);
@@ -298,6 +311,7 @@ bool FdInfo::read_message(int &tot_read, std::string &message_body) {
 
 // 发送数据
 //  int ClientSockets::send_socket(int testBoxId, FdInfo& fd_info)
+/** @copydoc FdInfo::send */
 int FdInfo::send(const std::string &result_data) {
   const int send_size = result_data.size();
   LOG_DEBUG("ready to write %d result_data bytes to socket %d", send_size, fd);
@@ -313,6 +327,7 @@ int FdInfo::send(const std::string &result_data) {
   return static_cast<int>(bytes);
 }
 
+/** @copydoc ClientSockets::onSubmissionStarted */
 void ClientSockets::onSubmissionStarted(const SubmissionTask &task) {
   SubmissionResult result{};
   if (!submission_service_.query(task.submission_id, result)) {
@@ -327,6 +342,7 @@ void ClientSockets::onSubmissionStarted(const SubmissionTask &task) {
                                       protocol_.encodeSubmissionUpdate(result));
 }
 
+/** @copydoc ClientSockets::onSubmissionFinished */
 void ClientSockets::onSubmissionFinished(const SubmissionTask &task) {
   SubmissionResult result{};
   if (!submission_service_.query(task.submission_id, result)) {
@@ -339,11 +355,13 @@ void ClientSockets::onSubmissionFinished(const SubmissionTask &task) {
   queue_protocol_response_for_channel(task.reply_channel_id, response);
 }
 
+/** @copydoc ClientSockets::make_reply_channel_id */
 std::string ClientSockets::make_reply_channel_id(int testBoxId,
                                                  uint64_t session_id) const {
   return std::to_string(testBoxId) + ":" + std::to_string(session_id);
 }
 
+/** @copydoc ClientSockets::parse_reply_channel_id */
 bool ClientSockets::parse_reply_channel_id(const std::string &reply_channel_id,
                                            int &testBoxId,
                                            uint64_t &session_id) const {
@@ -364,6 +382,7 @@ bool ClientSockets::parse_reply_channel_id(const std::string &reply_channel_id,
          testBoxId < static_cast<int>(client_sockets_.size()) && session_id > 0;
 }
 
+/** @copydoc ClientSockets::queue_protocol_response_for_channel */
 void ClientSockets::queue_protocol_response_for_channel(
     const std::string &reply_channel_id, std::string response) {
   {
@@ -385,12 +404,14 @@ void ClientSockets::queue_protocol_response_for_channel(
       session_id, std::move(response));
 }
 
+/** @copydoc ClientSockets::mark_channel_waiting_for_ack */
 void ClientSockets::mark_channel_waiting_for_ack(
     const std::string &reply_channel_id) {
   std::lock_guard<std::mutex> lock(notifier_mutex_);
   awaiting_ack_channels_.insert(reply_channel_id);
 }
 
+/** @copydoc ClientSockets::mark_channel_ack_sent */
 void ClientSockets::mark_channel_ack_sent(const std::string &reply_channel_id) {
   std::vector<std::string> deferred_messages;
   {

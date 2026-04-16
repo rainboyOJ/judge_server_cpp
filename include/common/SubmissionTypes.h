@@ -3,7 +3,12 @@
 #include <string>
 #include <vector>
 
-// 统一的提交状态，供协议层、服务层、存储层共享。
+/**
+ * @brief 表示一份 submission 在评测生命周期中的当前阶段。
+ *
+ * 这些状态由 @ref SubmissionService 和 @ref ResultStore 共同维护，
+ * 用来描述“一份提交现在走到哪一步了”。
+ */
 enum class SubmissionStatus {
     QUEUED,
     PREPARING,
@@ -13,14 +18,18 @@ enum class SubmissionStatus {
     FAILED,
 };
 
-// 统一的语言枚举，避免跨模块直接依赖旧结构体中的裸 int。
+/**
+ * @brief 当前系统支持或预留的提交语言类型。
+ */
 enum class SubmissionLanguage {
     CPP = 0,
     C = 1,
     PYTHON = 2,
 };
 
-// 统一的判题结果枚举，供中间结果和最终结果复用。
+/**
+ * @brief 单个测试点或整份 submission 的判题结论。
+ */
 enum class SubmissionVerdict {
     PENDING = -1,
     AC = 0,
@@ -35,7 +44,12 @@ enum class SubmissionVerdict {
     SYSTEM_ERROR = 9,
 };
 
-// 提交请求的最小公共表示。
+/**
+ * @brief 协议层解码后的统一提交请求对象。
+ *
+ * 这个结构表示“用户提交了什么”，会从 TCP/JSON 请求中解析得到，
+ * 然后在调度层、服务层和执行层之间传递。
+ */
 struct SubmissionRequest {
     int uuid{};
     std::string pid;
@@ -43,7 +57,12 @@ struct SubmissionRequest {
     std::string code;
 };
 
-// 单个测试点的标准化结果。
+/**
+ * @brief 单个测试点的标准化执行结果。
+ *
+ * 这是 runner 层对一个 case 执行后的统一表达，
+ * judge 层会基于多个 @ref SubmissionCaseResult 汇总最终 verdict。
+ */
 struct SubmissionCaseResult {
     int seq_id{};
     SubmissionVerdict verdict{SubmissionVerdict::PENDING};
@@ -55,7 +74,15 @@ struct SubmissionCaseResult {
     int error_code{};
 };
 
-// 提交在任意时刻的结果快照。
+/**
+ * @brief 一份 submission 在任意时刻的完整结果快照。
+ *
+ * @note 这是异步系统中的核心状态对象：
+ * - 入队后可表示 QUEUED
+ * - 编译中可表示 COMPILING
+ * - 运行中可携带部分 case_results
+ * - 完成后表示最终 verdict
+ */
 struct SubmissionResult {
     int submission_id{-1};
     SubmissionStatus status{SubmissionStatus::QUEUED};

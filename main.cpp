@@ -1,5 +1,13 @@
-// 主程序，使用socket + select 进行IO复用
-// judge server 连接的client应该是比较少的
+/**
+ * @file main.cpp
+ * @brief 异步评测后端的程序入口。
+ *
+ * 当前主程序负责组装：
+ * - TCP/select 网络外壳
+ * - SubmissionQueue 任务队列
+ * - JudgeWorkerPool 后台 worker
+ * - ClientSockets 协议接入与回包协调
+ */
 
 #include <condition_variable>
 #include <fcntl.h>
