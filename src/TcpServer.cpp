@@ -74,11 +74,14 @@ void TcpServer::start() {
     running_ = true;
     fd_set read_fds, write_fds;
     int max_fd = server_fd_;
-    struct timeval timeout;
-    timeout.tv_sec = 0;
-    timeout.tv_usec = 100000; // 100ms
 
     while (running_) {
+        // select 会修改 timeout，所以下一轮循环前必须重新初始化，
+        // 否则 timeout 很快会变成 0，导致事件循环空转占满一个 CPU 核心。
+        struct timeval timeout;
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 100000; // 100ms
+
         FD_ZERO(&read_fds);
         FD_ZERO(&write_fds);
         FD_SET(server_fd_, &read_fds);
