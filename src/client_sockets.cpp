@@ -32,9 +32,11 @@ bool is_terminal_status(SubmissionStatus status) {
 
 /** @copydoc ClientSockets::ClientSockets */
 ClientSockets::ClientSockets(testBox *test_box,
-                             SubmissionQueue &submission_queue)
+                             SubmissionQueue &submission_queue,
+                             WakeCallback wake_callback)
     : test_box_(test_box), submission_queue_(submission_queue),
-      submission_service_(result_store_, runner_factory_, judge_core_) {
+      submission_service_(result_store_, runner_factory_, judge_core_),
+      wake_callback_(std::move(wake_callback)) {
   // client_sockets_.resize(test_box_->size() + 5);
 
   // 初始化
@@ -60,7 +62,7 @@ ClientSockets::ClientSockets(testBox *test_box,
     LOG_DEBUG("[client_socket recv testBox callback],set all testBoxId %d "
               "completed\n",
               testBoxId);
-    client_sockets_[testBoxId]->set_writable();
+    set_socket_writable_and_wake(testBoxId);
   });
 }
 
@@ -400,8 +402,10 @@ void ClientSockets::queue_protocol_response_for_channel(
     return;
   }
 
-  client_sockets_[testBoxId]->set_pending_response_if_session(
-      session_id, std::move(response));
+  if (client_sockets_[testBoxId]->set_pending_response_if_session(
+          session_id, std::move(response))) {
+    wake_select_loop();
+  }
 }
 
 /** @copydoc ClientSockets::mark_channel_waiting_for_ack */
@@ -426,5 +430,18 @@ void ClientSockets::mark_channel_ack_sent(const std::string &reply_channel_id) {
 
   for (std::string &message : deferred_messages) {
     queue_protocol_response_for_channel(reply_channel_id, std::move(message));
+  }
+}
+
+/** @copydoc ClientSockets::set_socket_writable_and_wake */
+void ClientSockets::set_socket_writable_and_wake(int testBoxId) {
+  client_sockets_[testBoxId]->set_writable();
+  wake_select_loop();
+}
+
+/** @copydoc ClientSockets::wake_select_loop */
+void ClientSockets::wake_select_loop() {
+  if (wake_callback_) {
+    wake_callback_();
   }
 }

@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 
+#include <atomic>
 #include <cassert>
 #include <string>
 #include <sys/select.h>
@@ -43,9 +44,13 @@ void write_framed_message(int fd, const std::string &body) {
 
 class AsyncFlowHarness {
 public:
-  AsyncFlowHarness()
+  explicit AsyncFlowHarness(std::atomic<int> *wake_count = nullptr)
       : box_(1, 4, std::string(PROJECT_ROOT_DIR) + "/testData"),
-        client_sockets_(&box_, submission_queue_),
+        client_sockets_(&box_, submission_queue_, [wake_count]() {
+          if (wake_count != nullptr) {
+            wake_count->fetch_add(1);
+          }
+        }),
         worker_pool_(1, submission_queue_, client_sockets_.submission_service(),
                      &client_sockets_) {
     createConnection();
@@ -188,10 +193,24 @@ void test_query_result_can_recover_final_snapshot_after_push_target_disconnects(
   assert(queried.at("status") == "FINISHED");
 }
 
+void test_async_notifier_wakes_select_loop_when_result_is_queued() {
+  std::atomic<int> wake_count{0};
+  AsyncFlowHarness harness(&wake_count);
+  const json ack = harness.roundTrip(
+      R"({"type":"submit","uuid":95003,"pid":"1000","lang":2,"code":"a, b = map(int, input().split())\nprint(a + b)\n"})");
+
+  assert(ack.at("type") == "submission_ack");
+  const int submission_id = ack.at("submission_id").get<int>();
+
+  assert(harness.waitUntilSubmissionFinished(submission_id));
+  assert(wake_count.load() > 0);
+}
+
 } // namespace
 
 int main() {
   test_query_result_returns_current_or_finished_snapshot_after_async_ack();
   test_query_result_can_recover_final_snapshot_after_push_target_disconnects();
+  test_async_notifier_wakes_select_loop_when_result_is_queued();
   return 0;
 }

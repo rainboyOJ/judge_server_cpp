@@ -1,4 +1,5 @@
 #pragma once
+#include <atomic>
 #include <functional>
 #include <sys/select.h>
 
@@ -22,6 +23,9 @@ public:
 
     // 启动事件循环
     void start();
+
+    // 唤醒阻塞中的 select，让循环重新检查跨线程更新的状态。
+    void wake();
     
     // 停止服务器
     void stop();
@@ -34,11 +38,14 @@ public:
 
 private:
     int server_fd_;
-    bool running_;
+    int wake_fd_;
+    std::atomic<bool> running_;
     AcceptCallback on_accept_;
     ClientEventCallback on_client_event_;
     ReNewSocketSets renew_socket_sets_;
     
     // 创建并配置服务器socket
     bool create_and_bind_socket(int port, bool nonblock, bool reuseaddr);
+    bool create_wake_fd();
+    void drain_wake_fd();
 };

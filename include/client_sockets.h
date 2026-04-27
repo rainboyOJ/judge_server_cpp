@@ -9,6 +9,7 @@
 #include <condition_variable>
 #include <cstdint>
 #include <fcntl.h>
+#include <functional>
 #include <iostream>
 #include <mutex>
 #include <netinet/in.h>
@@ -213,10 +214,13 @@ private:
  */
 class ClientSockets : public SubmissionNotifier {
 public:
+  using WakeCallback = std::function<void()>;
+
   /**
    * @brief 构造连接管理器。
    */
-  ClientSockets(testBox *test_box, SubmissionQueue &submission_queue);
+  ClientSockets(testBox *test_box, SubmissionQueue &submission_queue,
+                WakeCallback wake_callback = nullptr);
   /** @brief 注册一个新的 client socket。 */
   void add_socket(int);
 
@@ -276,4 +280,10 @@ private:
   void mark_channel_waiting_for_ack(const std::string &reply_channel_id);
   /** @brief 解除 ack 屏障，并释放该 channel 暂存的后续消息。 */
   void mark_channel_ack_sent(const std::string &reply_channel_id);
+  /** @brief 跨线程让某个连接可写后，唤醒 select 循环。 */
+  void set_socket_writable_and_wake(int testBoxId);
+  /** @brief 触发外部 select 唤醒回调（若已配置）。 */
+  void wake_select_loop();
+
+  WakeCallback wake_callback_;
 };
