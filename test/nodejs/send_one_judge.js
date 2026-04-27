@@ -63,3 +63,7 @@ process.on('SIGTERM', () => {
 if (require.main === module) {
     main();
 }
+
+module.exports = {
+    main
+};

@@ -13,23 +13,23 @@ console.log('🚀 RainboyOJ Node.js 客户端演示\n');
 const demos = [
     {
         title: '基本使用 - 默认A+B题目',
-        command: 'node send_one_judge_new.js --host 127.0.0.1 --port 8000'
+        command: 'node send_one_judge.js --host 127.0.0.1 --port 8000'
     },
     {
         title: '从文件读取C++代码',
-        command: 'node send_one_judge_new.js --file examples/a_plus_b.cpp --lang cpp --problem 1000'
+        command: 'node send_one_judge.js --file examples/a_plus_b.cpp --lang cpp --problem 1000'
     },
     {
         title: '从文件读取Python代码',
-        command: 'node send_one_judge_new.js --file examples/hello.py --lang python --problem hello'
+        command: 'node send_one_judge.js --file examples/hello.py --lang python --problem hello'
     },
     {
         title: '从文件读取C代码',
-        command: 'node send_one_judge_new.js --file examples/hello.c --lang c --problem hello'
+        command: 'node send_one_judge.js --file examples/hello.c --lang c --problem hello'
     },
     {
         title: '直接指定代码内容',
-        command: 'node send_one_judge_new.js --code "print(\\"Hello from inline code!\\")" --lang python'
+        command: 'node send_one_judge.js --code "print(\\"Hello from inline code!\\")" --lang python'
     }
 ];
 

@@ -55,13 +55,13 @@ client.sendJudgeRequest(testProblem)
 
 ```bash
 # 基本使用
-node send_one_judge_new.js
+node ../send_one_judge.js
 
 # 指定服务器和端口
-node send_one_judge_new.js --host 192.168.1.100 --port 9090
+node ../send_one_judge.js --host 192.168.1.100 --port 9090
 
 # 从文件读取代码
-node send_one_judge_new.js --file ./solution.cpp --lang cpp
+node ../send_one_judge.js --file ./solution.cpp --lang cpp
 ```
 
 ## API 文档
@@ -105,4 +105,4 @@ node send_one_judge_new.js --file ./solution.cpp --lang cpp
 
 ## 示例
 
-参见 `demo_new.js` 和 `test_codec_new.js` 文件。
+参见 `../demo.js` 和 `../test_codec.js` 文件。

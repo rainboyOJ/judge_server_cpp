@@ -19,10 +19,10 @@ nodejs/
   │   ├── hello.c           # C语言示例
   │   ├── lib_usage_example.js # 库使用示例
   │   └── batch_tester.js   # 批量测试工具
-  ├── send_one_judge.js     # 原始客户端实现
-  ├── send_one_judge_new.js # 基于模块化库实现的新版客户端
-  ├── test_codec.js         # 原始编解码测试
-  └── test_codec_new.js     # 基于模块化库的编解码测试
+  ├── send_one_judge.js     # 当前实际维护的模块化客户端入口
+  ├── send_async_judge.js   # 适配当前异步协议的演示脚本
+  ├── test_codec.js         # 当前保留的编解码测试
+  └── demo.js               # 演示脚本
 ```
 
 ## 功能特性
@@ -41,16 +41,16 @@ nodejs/
 
 ```bash
 # 基本使用
-node send_one_judge_new.js
+node send_one_judge.js
 
 # 指定服务器和端口
-node send_one_judge_new.js --host 192.168.1.100 --port 9090
+node send_one_judge.js --host 192.168.1.100 --port 9090
 
 # 提交C++文件
-node send_one_judge_new.js --file examples/a_plus_b.cpp --lang cpp --problem 1000
+node send_one_judge.js --file examples/a_plus_b.cpp --lang cpp --problem 1000
 
 # 提交Python文件
-node send_one_judge_new.js --file examples/hello.py --lang python --problem hello
+node send_one_judge.js --file examples/hello.py --lang python --problem hello
 ```
 
 ### 在代码中使用
