@@ -1,7 +1,7 @@
 //临时测试的
 #include <iostream>
 #include <cstring>
-#include "judgeInfo.h"
+#include "legacy/judgeInfo.h"
 #include "utils.h"
 using namespace std;
 
@@ -49,4 +49,3 @@ int main(int argc, char const *argv[])
 
     return 0;
 }
-

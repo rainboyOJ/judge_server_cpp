@@ -1,7 +1,7 @@
 //使用： 
 // vargrind --tool=memcheck ./test/testMemPool
 #include <iostream>
-#include "memPool.h"
+#include "legacy/memPool.h"
 
 int idx;
 memoryPool<int,4> memp;

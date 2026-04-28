@@ -7,8 +7,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "net/ConnectionRegistry.h"
-#include "net/ConnectionSlot.h"
+#include "network/ConnectionRegistry.h"
+#include "network/ConnectionSlot.h"
 
 namespace {
 

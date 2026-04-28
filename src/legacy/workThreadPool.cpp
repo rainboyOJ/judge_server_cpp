@@ -1,8 +1,8 @@
-#include "workThreadPool.h"
+#include "legacy/workThreadPool.h"
 #include <mutex>
 #include <cstddef> // offsetof
-#include "resultContainer.h"
-#include "testBox.h"
+#include "legacy/resultContainer.h"
+#include "legacy/testBox.h"
 #include "common/Logger.h"
 
 template <typename T>
@@ -190,4 +190,3 @@ void workThreadPool::work() {
 bool Compile() {
     return  true;
 }
-

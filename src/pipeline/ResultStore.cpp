@@ -3,7 +3,7 @@
  * @brief submission 最新结果快照存储与惰性清理实现。
  */
 
-#include "store/ResultStore.h"
+#include "pipeline/ResultStore.h"
 
 #include <algorithm>
 #include <utility>

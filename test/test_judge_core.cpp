@@ -1,7 +1,7 @@
 #include <cassert>
 #include <vector>
 
-#include "judge/JudgeCore.h"
+#include "pipeline/JudgeCore.h"
 
 namespace {
 

@@ -1,5 +1,5 @@
-#include "resultContainer.h"
-#include "judgeInfo.h"
+#include "legacy/resultContainer.h"
+#include "legacy/judgeInfo.h"
 #include <algorithm>
 #include <stdexcept>
 #include <filesystem>

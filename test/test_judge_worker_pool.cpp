@@ -8,10 +8,10 @@
 #include "dispatch/JudgeWorkerPool.h"
 #include "dispatch/SubmissionNotifier.h"
 #include "dispatch/SubmissionQueue.h"
-#include "judge/JudgeCore.h"
+#include "pipeline/JudgeCore.h"
 #include "runner/RunnerFactory.h"
-#include "service/SubmissionService.h"
-#include "store/ResultStore.h"
+#include "pipeline/SubmissionService.h"
+#include "pipeline/ResultStore.h"
 
 namespace {
 

@@ -1,7 +1,7 @@
 //测试 静态数组循环队列
 
 #include <iostream>
-#include "static_loop_queue.h"
+#include "legacy/static_loop_queue.h"
 using namespace std;
 
 int main(int argc, char const *argv[])

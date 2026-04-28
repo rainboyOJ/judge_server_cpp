@@ -4,7 +4,7 @@
 
 #include "common/Config.h"
 
-#include "store/ResultStore.h"
+#include "pipeline/ResultStore.h"
 
 namespace {
 

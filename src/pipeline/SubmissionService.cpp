@@ -3,16 +3,16 @@
  * @brief 异步评测编排服务实现。
  */
 
-#include "service/SubmissionService.h"
+#include "pipeline/SubmissionService.h"
 
 #include <filesystem>
 #include <system_error>
 
 #include "common/Config.h"
-#include "judge/JudgeCore.h"
+#include "pipeline/JudgeCore.h"
 #include "runner/ILanguageRunner.h"
 #include "runner/RunnerFactory.h"
-#include "store/ResultStore.h"
+#include "pipeline/ResultStore.h"
 #include "utils.h"
 
 namespace fs = std::filesystem;

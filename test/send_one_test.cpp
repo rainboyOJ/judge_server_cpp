@@ -9,7 +9,7 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 
-#include "judgeInfo.h"
+#include "legacy/judgeInfo.h"
 #include "utils.h"
 
 int main(int argc, char const *argv[])

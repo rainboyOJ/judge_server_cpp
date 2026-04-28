@@ -4,13 +4,13 @@
  */
 
 #include "common/Logger.h"
-#include "judgeInfo.h"
-#include "resultContainer.h"
+#include "legacy/judgeInfo.h"
+#include "legacy/resultContainer.h"
 #include "sjudge_call.h"
-#include "testBox.h"
+#include "legacy/testBox.h"
 #include "test_process/RunnerCompat.h"
 #include "utils.h"
-#include "workThreadPool.h"
+#include "legacy/workThreadPool.h"
 #include <chrono>
 #include <fcntl.h>
 #include <filesystem>

@@ -1,58 +1,114 @@
-\
 #pragma once
 
-#include <vector>
+#include <algorithm>
 #include <string>
-#include <algorithm> // For std::copy, std::min
-#include <cstddef>   // For size_t
+#include <vector>
 
-namespace boxtest {
-namespace network {
+/// A buffer class modeled after org.jboss.netty.buffer.ChannelBuffer
+///
+/// @code
+/// +-------------------+------------------+------------------+
+/// | prependable bytes |  readable bytes  |  writable bytes  |
+/// |                   |     (CONTENT)    |                  |
+/// +-------------------+------------------+------------------+
+/// |                   |                  |                  |
+/// 0      <=      readerIndex   <=   writerIndex    <=     size
+/// @endcode
 
+// 网络库底层地缓冲器类型定义
 class Buffer {
-public:
-    Buffer(size_t initial_capacity = 1024);
+  public:
+    static const size_t kCheapPrepend = 8;
+    static const size_t kInitialSize = 1024;
 
-    // Appends data to the buffer
-    void append(const char* data, size_t len);
-    void append(const std::string& str);
+    explicit Buffer(size_t initialSize = kInitialSize)
+        : buffer_(kCheapPrepend + initialSize), readerIndex_(kCheapPrepend), writerIndex_(kCheapPrepend) {}
 
-    // Retrieves data from the buffer
-    std::string retrieve_as_string(size_t len);
-    std::vector<char> retrieve_as_vector(size_t len);
-    std::string retrieve_all_as_string();
-    std::vector<char> retrieve_all_as_vector();
+    ~Buffer();
 
-    // Peeks at data without removing it
-    std::string peek_as_string(size_t len) const;
-    std::vector<char> peek_as_vector(size_t len) const;
+    size_t readableBytes() const { return writerIndex_ - readerIndex_; }
 
+    size_t writableBytes() const { return buffer_.size() - writerIndex_; }
 
-    // Consumes (removes) data from the beginning of the buffer
-    void consume(size_t len);
+    size_t prependableBytes() const {  // 前面空闲的缓冲区
+        return readerIndex_;
+    }
 
-    // Returns the number of readable bytes
-    size_t readable_bytes() const;
+    // 返回缓冲区中可读数据的起始地址
+    const char *peek() const { return begin() + readerIndex_; }
 
-    // Returns a pointer to the beginning of the readable data
-    const char* peek() const;
-    char* begin_write();
+    //!NOTE: 相当于更新 readerIndex | writerIndex, onMessage string <-- Buffer
+    void retrieve(size_t len) {
+        if (len < readableBytes()) {
+            readerIndex_ += len;  // 读取一部分
+        } else {
+            retrieveAll();  // 读取全部
+        }
+    }
 
+    void retrieveAll() {
+        readerIndex_ = kCheapPrepend;
+        writerIndex_ = kCheapPrepend;
+    }
 
-    // Ensures the buffer has enough capacity
-    void ensure_writable_bytes(size_t len);
-    
-    void swap(Buffer& rhs) noexcept;
+    // 将 onMessage 函数上报的 Buffer 数据转换成 string 类型的数据返回
+    std::string retrieveAllAsString() {
+        return retrieveAsString(readableBytes());  // 应用可读取数据的长度
+    }
 
+    std::string retrieveAsString(size_t len) {
+        std::string res(peek(), len);
+        retrieve(len);  // 上一句把缓冲区可读的数据已经读取出来，这里需要复位缓冲区
+        return res;
+    }
 
-private:
+    void ensureWritableBytes(size_t len) {
+        if (writableBytes() < len) {
+            makeSpace(len);
+        }
+    }
+
+    // 把 data 写入 writerIndex 开始的地址
+    void append(const char *data, size_t len) {
+        ensureWritableBytes(len);
+        std::copy(data, data + len, beginWrite());
+        writerIndex_ += len;  // 更新 writeIndex
+    }
+
+    char *beginWrite() { return begin() + writerIndex_; }
+
+    const char *beginWrite() const { return begin() + writerIndex_; }
+
+    ssize_t readFd(int fd, int *saveErrno);   // 从 fd 上读取数据
+    ssize_t writeFd(int fd, int *saveErrno);  // 通过 fd 发送数据
+
+  private:
+    char *begin() {
+        return &*buffer_.begin();  // vector 底层数组首元素的地址，也就是数组的起始地址
+    }
+
+    const char *begin() const { return &*buffer_.begin(); }
+
+    void makeSpace(size_t len) {
+        /**
+         *  kCheapPrepend | reader | writer |
+         *  kCheapPrepend   |        len       |
+         */
+        if (writableBytes() + prependableBytes() < len + kCheapPrepend) {
+            buffer_.resize(writerIndex_ + len);
+        } else {
+            size_t readable = readableBytes();
+            // 把已读的部分挪至前面
+            std::copy(begin() + readerIndex_, begin() + writerIndex_, begin() + kCheapPrepend);
+
+            // 更新 readIndex 和 writeIndex
+            readerIndex_ = kCheapPrepend;
+            writerIndex_ = readerIndex_ + readable;
+        }
+    }
+
+  private:
     std::vector<char> buffer_;
-    size_t read_index_;
-    size_t write_index_;
-
-    char* begin();
-    const char* begin() const;
+    size_t readerIndex_;
+    size_t writerIndex_;
 };
-
-} // namespace network
-} // namespace boxtest

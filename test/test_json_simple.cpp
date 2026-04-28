@@ -3,7 +3,7 @@
 #include <cstring>
 #include <string>
 #include "../include/utils.h"
-#include "../include/judgeInfo.h"
+#include "../include/legacy/judgeInfo.h"
 
 using namespace std;
 

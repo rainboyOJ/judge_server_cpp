@@ -6,9 +6,9 @@
 #include <thread>
 #include <vector>
 
-#include "judgeInfo.h"
-#include "memPool.h" //内存池,从中取出testPoint
-#include "resultContainer.h"
+#include "legacy/judgeInfo.h"
+#include "legacy/memPool.h" //内存池,从中取出testPoint
+#include "legacy/resultContainer.h"
 // #include "testQueue.h"  // 这个队列不再使用
 
 /**

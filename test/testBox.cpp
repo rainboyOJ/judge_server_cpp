@@ -4,7 +4,7 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
-#include "testBox.h"
+#include "legacy/testBox.h"
 
 char id_[] = "1000";
 int a[1000000+5];

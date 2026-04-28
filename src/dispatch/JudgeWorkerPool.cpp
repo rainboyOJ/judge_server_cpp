@@ -5,7 +5,7 @@
 
 #include "dispatch/JudgeWorkerPool.h"
 
-#include "service/SubmissionService.h"
+#include "pipeline/SubmissionService.h"
 
 /** @copydoc JudgeWorkerPool::JudgeWorkerPool */
 JudgeWorkerPool::JudgeWorkerPool(std::size_t worker_count,

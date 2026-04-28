@@ -1,4 +1,4 @@
-#include "testPointBox.h"
+#include "legacy/testPointBox.h"
 #include <cstring>
 #include <iostream>
 #include <chrono>

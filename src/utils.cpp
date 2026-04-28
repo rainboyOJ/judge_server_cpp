@@ -1,6 +1,6 @@
 #include "utils.h"
 #include "common/Logger.h"
-#include "resultContainer.h"
+#include "legacy/resultContainer.h"
 
 // ==================== 序列化和反序列化函数 ====================
 

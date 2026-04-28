@@ -3,7 +3,7 @@
  * @brief 最终 verdict 汇总规则实现。
  */
 
-#include "judge/JudgeCore.h"
+#include "pipeline/JudgeCore.h"
 
 namespace {
 

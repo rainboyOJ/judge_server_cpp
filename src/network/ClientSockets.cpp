@@ -12,9 +12,9 @@
 #include <exception>
 #include <memory>
 
-#include "client_sockets.h"
+#include "network/ClientSockets.h"
 #include "common/Logger.h"
-#include "judgeInfo.h"
+#include "legacy/judgeInfo.h"
 #include "protocol/JudgeProtocol.h"
 #include "utils.h"
 

@@ -7,11 +7,11 @@
 #include <mutex>
 #include <vector>
 #include <memory>
-#include "testPointBox.h"
+#include "legacy/testPointBox.h"
 // #include "minheap.hpp" //不再使用这个heap, 因为用队列更快
-#include "static_loop_queue.h"
-#include "resultContainer.h"
-#include "workThreadPool.h"
+#include "legacy/static_loop_queue.h"
+#include "legacy/resultContainer.h"
+#include "legacy/workThreadPool.h"
 #include "common/Result.h"
 
 #include "json.hpp"
@@ -209,4 +209,3 @@ private:
     // 一个存信息的数据池
     // TODO
 };
-

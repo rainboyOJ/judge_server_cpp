@@ -13,7 +13,7 @@
 #include <cstdint>
 #include <type_traits>
 #include <arpa/inet.h>
-#include "judgeInfo.h"
+#include "legacy/judgeInfo.h"
 #include "json.hpp"
 using json = nlohmann::json;
 

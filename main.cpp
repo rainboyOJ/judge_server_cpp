@@ -22,13 +22,13 @@
 #include <unistd.h>
 #include <vector>
 
-#include "TcpServer.h"
-#include "client_sockets.h"
+#include "network/TcpServer.h"
+#include "network/ClientSockets.h"
 #include "common/Config.h"
 #include "common/Logger.h"
 #include "dispatch/JudgeWorkerPool.h"
 #include "dispatch/SubmissionQueue.h"
-#include "testBox.h"
+#include "legacy/testBox.h"
 
 int main(int argc, char *argv[]) {
   // 解析命令行参数

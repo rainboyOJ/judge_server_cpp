@@ -8,7 +8,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 
-#include "Buffer.h"
+#include "network/Buffer.h"
 
 enum class ConnectionSlotStatus {
   READABLE,

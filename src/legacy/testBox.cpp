@@ -6,7 +6,7 @@
 #include <utility>
 #include <stdexcept>
 
-#include "testBox.h"
+#include "legacy/testBox.h"
 #include "common/Logger.h"
 #include "json.hpp"
 #include "common/Logger.h"

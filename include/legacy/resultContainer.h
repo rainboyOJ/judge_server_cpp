@@ -7,8 +7,8 @@
 #include <filesystem>
 
 
-#include "judgeInfo.h"
-#include "memPool.h"
+#include "legacy/judgeInfo.h"
+#include "legacy/memPool.h"
 #include "utils.h"
 #include "json.hpp"
 #include "common/Types.h"

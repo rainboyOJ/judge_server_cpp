@@ -17,7 +17,9 @@ using namespace std;
 int main() {
     int a, b;
     cin >> a >> b;
-    cout << a + b << endl;
+    if( a % 2 == 0)
+        a ++;
+    cout << a + b  << endl;
     return 0;
 }`,
     uuid: Math.floor(Math.random() * 1000000),

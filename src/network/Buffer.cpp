@@ -1,118 +1,48 @@
-\
-#include "network/Buffer.h" // Assuming relative path from src to include
-#include <stdexcept> // For std::out_of_range
-#include <cstring>   // For memcpy
+#include "network/Buffer.h"
 
-namespace boxtest {
-namespace network {
+#include <errno.h>
+#include <sys/uio.h>
+#include <unistd.h>
 
-Buffer::Buffer(size_t initial_capacity)
-    : buffer_(initial_capacity), read_index_(0), write_index_(0) {}
+/**
+ * !NOTE: [TcpConn inputBuffer 视角] 从 fd 读数据，相当于读到 buffer 的写缓冲区
+ * 从 fd 上读数据，Poller 工作在 LT 模式
+ * Buffer 缓冲区是有大小的，但是从 fd 上读取数据的时候却不知道 tcp 数据最终的大小
+ */
+ssize_t Buffer::readFd(int fd, int *saveErrno) {
+    char extrabuf[65536] = {0};  // 栈上分配的内存空间 64K
 
-void Buffer::append(const char* data, size_t len) {
-    ensure_writable_bytes(len);
-    std::copy(data, data + len, begin_write());
-    write_index_ += len;
-}
+    struct iovec vec[2];  // iovec 结构体包含起始地址以及对应长度
 
-void Buffer::append(const std::string& str) {
-    append(str.data(), str.length());
-}
+    const size_t writable = writableBytes();  // buffer 剩余可写空间大小
+    vec[0].iov_base = begin() + writerIndex_;
+    vec[0].iov_len = writable;
 
-std::string Buffer::retrieve_as_string(size_t len) {
-    if (len > readable_bytes()) {
-        throw std::out_of_range("Not enough readable bytes to retrieve");
-    }
-    std::string result(peek(), len);
-    consume(len);
-    return result;
-}
+    vec[1].iov_base = extrabuf;
+    vec[2].iov_len = sizeof(extrabuf);
 
-std::vector<char> Buffer::retrieve_as_vector(size_t len) {
-    if (len > readable_bytes()) {
-        throw std::out_of_range("Not enough readable bytes to retrieve");
-    }
-    std::vector<char> result(peek(), peek() + len);
-    consume(len);
-    return result;
-}
-
-std::string Buffer::retrieve_all_as_string() {
-    return retrieve_as_string(readable_bytes());
-}
-
-std::vector<char> Buffer::retrieve_all_as_vector() {
-    return retrieve_as_vector(readable_bytes());
-}
-
-std::string Buffer::peek_as_string(size_t len) const {
-    if (len > readable_bytes()) {
-        throw std::out_of_range("Not enough readable bytes to peek");
-    }
-    return std::string(peek(), len);
-}
-
-std::vector<char> Buffer::peek_as_vector(size_t len) const {
-     if (len > readable_bytes()) {
-        throw std::out_of_range("Not enough readable bytes to peek");
-    }
-    return std::vector<char>(peek(), peek() + len);
-}
-
-void Buffer::consume(size_t len) {
-    if (len > readable_bytes()) {
-        read_index_ = write_index_ = 0; // Consume all
+    // 相当于一次最多读 64K 的数据
+    const int iovcnt = (writable < sizeof(extrabuf)) ? 2 : 1;
+    const ssize_t n = ::readv(fd, vec, iovcnt);
+    if (n < 0) {
+        *saveErrno = errno;
+    } else if (n <= writable) {  // buffer 可写缓冲区够存放
+        writerIndex_ += n;
     } else {
-        read_index_ += len;
+        // buffer 可写缓冲区不够存放，extrabuf 写入了数据
+        writerIndex_ = buffer_.size();
+        append(extrabuf, n - writable);  // 从 writerIndex_ 开始写剩余的数据
     }
-    if (read_index_ == write_index_) { // Optimization: reset indices if buffer is empty
-        read_index_ = 0;
-        write_index_ = 0;
+    return n;
+}
+
+Buffer::~Buffer() {}
+
+//!NOTE: [TcpConn outputBuffer 视角] 向 fd 写数据，相当于就是从 buffer 读缓存区拿数据
+ssize_t Buffer::writeFd(int fd, int *saveErrno) {
+    ssize_t n = ::write(fd, peek(), readableBytes());
+    if (n < 0) {
+        *saveErrno = errno;
     }
+    return n;
 }
-
-size_t Buffer::readable_bytes() const {
-    return write_index_ - read_index_;
-}
-
-const char* Buffer::peek() const {
-    return begin() + read_index_;
-}
-
-char* Buffer::begin_write() {
-    return begin() + write_index_;
-}
-
-
-void Buffer::ensure_writable_bytes(size_t len) {
-    if (buffer_.size() - write_index_ < len) { // Not enough space at the end
-        if (read_index_ + (buffer_.size() - write_index_) >= len) {
-            // Compact the buffer: move readable data to the front
-            size_t readable = readable_bytes();
-            std::copy(begin() + read_index_, begin() + write_index_, begin());
-            read_index_ = 0;
-            write_index_ = readable;
-        } else {
-            // Resize the buffer
-            buffer_.resize(write_index_ + len);
-        }
-    }
-}
-
-void Buffer::swap(Buffer& rhs) noexcept {
-    buffer_.swap(rhs.buffer_);
-    std::swap(read_index_, rhs.read_index_);
-    std::swap(write_index_, rhs.write_index_);
-}
-
-
-char* Buffer::begin() {
-    return &*buffer_.begin();
-}
-
-const char* Buffer::begin() const {
-    return &*buffer_.begin();
-}
-
-} // namespace network
-} // namespace boxtest

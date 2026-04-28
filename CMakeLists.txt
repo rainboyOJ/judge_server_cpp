@@ -24,17 +24,17 @@ endif()
 
 # 查找源文件并添加可执行文件
 file(GLOB SOURCES "src/*.cpp" "src/common/*.cpp" "src/test_process/*.cpp"
-                  "src/net/*.cpp")
+                  "src/network/*.cpp" "src/legacy/*.cpp")
 list(APPEND SOURCES
     "sjudge/sjudge_call.cpp"
     "src/protocol/JudgeProtocol.cpp"
     "src/dispatch/JudgeWorkerPool.cpp"
     "src/runner/CppRunner.cpp"
     "src/runner/PythonRunner.cpp"
-    "src/service/SubmissionService.cpp"
+    "src/pipeline/SubmissionService.cpp"
     "src/runner/RunnerFactory.cpp"
-    "src/judge/JudgeCore.cpp"
-    "src/store/ResultStore.cpp"
+    "src/pipeline/JudgeCore.cpp"
+    "src/pipeline/ResultStore.cpp"
     "src/dispatch/SubmissionQueue.cpp"
 )
 add_library(${CMAKE_PROJECT_NAME} STATIC ${SOURCES})

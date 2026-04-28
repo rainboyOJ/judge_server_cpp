@@ -1,7 +1,7 @@
 #include <iostream>
 #include <arpa/inet.h>
 
-#include "../include/judgeInfo.h"
+#include "../include/legacy/judgeInfo.h"
 #include "../include/utils.h"
 
 using namespace std;

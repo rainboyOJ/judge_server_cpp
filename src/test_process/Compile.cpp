@@ -4,10 +4,10 @@
  */
 
 #include "common/Logger.h"
-#include "judgeInfo.h"
+#include "legacy/judgeInfo.h"
 #include "test_process/RunnerCompat.h"
 #include "utils.h"
-#include "workThreadPool.h"
+#include "legacy/workThreadPool.h"
 #include <filesystem>
 #include <fstream>
 #include <sstream>

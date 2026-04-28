@@ -17,13 +17,13 @@
 
 #include "dispatch/SubmissionNotifier.h"
 #include "dispatch/SubmissionQueue.h"
-#include "judge/JudgeCore.h"
-#include "net/ConnectionRegistry.h"
+#include "pipeline/JudgeCore.h"
+#include "network/ConnectionRegistry.h"
 #include "protocol/JudgeProtocol.h"
 #include "runner/RunnerFactory.h"
-#include "service/SubmissionService.h"
-#include "store/ResultStore.h"
-#include "testBox.h" //与testBox 建立连接
+#include "pipeline/SubmissionService.h"
+#include "pipeline/ResultStore.h"
+#include "legacy/testBox.h" //与旧 testBox 建立连接
 
 /**
  * @brief TCP 连接管理器，同时也是异步评测结果的 notifier 实现。

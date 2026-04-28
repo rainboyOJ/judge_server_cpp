@@ -7,7 +7,7 @@
 
 #include <sys/select.h>
 
-#include "net/ConnectionSlot.h"
+#include "network/ConnectionSlot.h"
 
 class ConnectionRegistry {
 public:

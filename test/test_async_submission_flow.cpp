@@ -7,7 +7,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "client_sockets.h"
+#include "network/ClientSockets.h"
 #include "dispatch/JudgeWorkerPool.h"
 #include "dispatch/SubmissionQueue.h"
 #include "json.hpp"
