@@ -24,7 +24,7 @@ endif()
 
 # 查找源文件并添加可执行文件
 file(GLOB SOURCES "src/*.cpp" "src/common/*.cpp" "src/test_process/*.cpp"
-                  "src/network/*.cpp" "src/legacy/*.cpp")
+                  "src/network/*.cpp")
 list(APPEND SOURCES
     "sjudge/sjudge_call.cpp"
     "src/protocol/JudgeProtocol.cpp"

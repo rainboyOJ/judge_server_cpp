@@ -1,4 +1,4 @@
-#include "legacy/Timestamp.h"
+#include "common/Timestamp.h"
 
 #include <time.h>
 

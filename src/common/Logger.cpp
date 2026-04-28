@@ -3,7 +3,7 @@
  * @brief 线程安全日志输出实现。
  */
 #include "common/Logger.h"
-#include "legacy/Timestamp.h"
+#include "common/Timestamp.h"
 #include <iostream>
 #include <mutex>
 #include <string>

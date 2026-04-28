@@ -4,13 +4,8 @@
  */
 
 #include "common/Logger.h"
-#include "legacy/judgeInfo.h"
-#include "legacy/resultContainer.h"
 #include "sjudge_call.h"
-#include "legacy/testBox.h"
 #include "test_process/RunnerCompat.h"
-#include "utils.h"
-#include "legacy/workThreadPool.h"
 #include <chrono>
 #include <fcntl.h>
 #include <filesystem>
@@ -166,27 +161,6 @@ SubmissionVerdict map_judge_result_to_verdict(int result_code) {
     }
 }
 
-/** @brief 把新 verdict 映射回旧链路使用的 enum_testStatus。 */
-enum_testStatus to_legacy_status(SubmissionVerdict verdict) {
-    switch (verdict) {
-    case SubmissionVerdict::AC:
-        return enum_testStatus::AC;
-    case SubmissionVerdict::WA:
-    case SubmissionVerdict::PE:
-        return enum_testStatus::WA;
-    case SubmissionVerdict::TLE:
-        return enum_testStatus::TLE;
-    case SubmissionVerdict::MLE:
-        return enum_testStatus::MLE;
-    case SubmissionVerdict::RE:
-        return enum_testStatus::RE;
-    case SubmissionVerdict::CE:
-        return enum_testStatus::CE;
-    default:
-        return enum_testStatus::UNKNOWN;
-    }
-}
-
 } // namespace
 
 /** @copydoc compare_case_output */
@@ -315,69 +289,4 @@ RunnerCaseResult run_executable_case(const fs::path &executable_path,
     }
 
     return case_result;
-}
-
-/**
- * @brief 旧链路中的单点测试入口。
- *
- * @note 当前异步主链路优先通过 runner + run_executable_case 执行，
- *       本函数主要保留给旧 testBox/workThreadPool 路径。
- */
-bool TestOneSinglePoint(const int testBoxId, int seq_id,
-                        resultContainer *resultContainerPtr) {
-    LOG_DEBUG("TestOneSinglePoint Start, testBoxId %d, seq_id %d", testBoxId,
-              seq_id);
-
-    // 获取题目ID
-    char pid[32];
-    strcpy(pid, resultContainerPtr->getPid(testBoxId));
-
-    auto testBoxPtr = resultContainerPtr->getTestBoxPtr();
-    auto problemPath = testBoxPtr->getProbelmPath();
-
-    // 获取可执行文件路径（假设在预处理阶段已编译好）
-    fs::path tempDir = resultContainerPtr->work_dir(testBoxId);
-    fs::path sourceFile = resultContainerPtr->source_path(testBoxId);
-    fs::path executableFile = resultContainerPtr->exe_path(testBoxId);
-
-    if (!fs::exists(executableFile)) {
-        LOG_ERROR("Executable file not found for testBoxId %d", testBoxId);
-        return false;
-    }
-
-    // 获取测试用例信息
-    TestCaseInfo testCaseInfo;
-    if (!resultContainerPtr->getTestCaseInfo(testBoxId, seq_id, testCaseInfo)) {
-        LOG_ERROR("Failed to get test case info for testBoxId %d, seq_id %d",
-                  testBoxId, seq_id);
-        return false;
-    }
-
-    RunnerCaseInput case_input{};
-    case_input.seq_id = seq_id;
-    case_input.input_path = testCaseInfo.input_path;
-    case_input.expected_output_path = testCaseInfo.output_path;
-    case_input.cpu_time_limit_ms = testCaseInfo.cpu_time_limit;
-    case_input.real_time_limit_ms = testCaseInfo.real_time_limit;
-    case_input.memory_limit_kb = testCaseInfo.memory_limit;
-
-    const RunnerCaseResult case_result = run_executable_case(
-        executableFile, case_input, testCaseInfo.user_output_path);
-
-    TestCaseResult testCaseResult;
-    testCaseResult.testBoxId = testBoxId;
-    testCaseResult.seq_id = seq_id;
-    testCaseResult.cpu_time = case_result.result.cpu_time_ms;
-    testCaseResult.real_time = case_result.result.real_time_ms;
-    testCaseResult.memory = case_result.result.memory_kb;
-    testCaseResult.signal = case_result.result.signal;
-    testCaseResult.exit_code = case_result.result.exit_code;
-    testCaseResult.error = case_result.result.error_code;
-    testCaseResult.result = to_legacy_status(case_result.result.verdict);
-
-    resultContainerPtr->writeCaseResult(testBoxId, seq_id, testCaseResult);
-
-    return case_result.result.verdict == SubmissionVerdict::AC;
-
-    return true;
 }
