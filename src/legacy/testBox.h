@@ -61,8 +61,6 @@ public:
     using singPointCompleteCallback = std::function<void(int testBoxId)>;
     using allPointCompleteCallback = std::function<void(int)>;
 
-    using pValPtr = UniquePtrQueue<testProblem>::Ptr;
-
     // dataSizeLimit 可以同时处理的数据的数量,testBoxId 的数量
     testBox(int workNum,int dataSizeLimit,
             const std::string & problem_path_
@@ -191,7 +189,6 @@ private:
     singPointCompleteCallback singPointCompleteCallback_;
     allPointCompleteCallback allPointCompleteCallback_;
 
-    UniquePtrQueue<testProblem> que_; // 感觉不需要这个队列
     // std::unique_ptr<testPointBox > pointBox_ = nullptr;
 
     //存有可用testBoxId的队列

@@ -10,7 +10,6 @@
 #include <atomic>
 
 #include "legacy/judgeInfo.h"
-#include "legacy/testQueue.h"
 #include "legacy/memPool.h" //内存池,从中取出testPoint
 
 
