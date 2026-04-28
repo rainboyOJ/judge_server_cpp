@@ -15,6 +15,7 @@ ConnectionRegistry::ConnectionRegistry(std::size_t slot_count) {
   slots_.reserve(slot_count);
   for (std::size_t i = 0; i < slot_count; ++i) {
     slots_.emplace_back(new ConnectionSlot);
+    free_slot_ids_.push(i);
   }
 }
 
@@ -23,7 +24,27 @@ void ConnectionRegistry::init_slot(std::size_t id, int fd,
   slots_.at(id)->init(fd, session_id);
 }
 
+int ConnectionRegistry::acquire_slot(int fd, uint64_t session_id) {
+  if (free_slot_ids_.empty()) {
+    return -1;
+  }
+
+  const std::size_t id = free_slot_ids_.front();
+  free_slot_ids_.pop();
+  init_slot(id, fd, session_id);
+  return static_cast<int>(id);
+}
+
 void ConnectionRegistry::clear_slot(std::size_t id) { slots_.at(id)->clear(); }
+
+void ConnectionRegistry::release_slot(std::size_t id) {
+  if (slots_.at(id)->get_fd() == 0) {
+    return;
+  }
+
+  clear_slot(id);
+  free_slot_ids_.push(id);
+}
 
 int ConnectionRegistry::id_to_fd(std::size_t id) const {
   return slots_.at(id)->get_fd();

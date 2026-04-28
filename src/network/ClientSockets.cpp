@@ -31,33 +31,12 @@ bool is_terminal_status(SubmissionStatus status) {
 } // namespace
 
 /** @copydoc ClientSockets::ClientSockets */
-ClientSockets::ClientSockets(testBox *test_box,
+ClientSockets::ClientSockets(std::size_t slot_count,
                              SubmissionQueue &submission_queue,
                              WakeCallback wake_callback)
-    : test_box_(test_box), submission_queue_(submission_queue),
-      connection_registry_(static_cast<std::size_t>(test_box_->size() + 5)),
+    : submission_queue_(submission_queue), connection_registry_(slot_count),
       submission_service_(result_store_, runner_factory_, judge_core_),
-      wake_callback_(std::move(wake_callback)) {
-  // 配置testBox_的回调函数
-  // [!!流程6!!] 接收到测试点完成的回调的通知
-  test_box_->setSingPointCompleteCallback([this](int testBoxId) {
-    // 设置为可以写,等待下一轮事件循环把这个对应的fd加入可以写的事件监听里
-    // client_sockets_[testBoxId] -> writeAble = true;
-    // LOG_DEBUG("[client_socket recv testBox callback],set testBoxId %d
-    // writeAble\n",testBoxId);
-
-    // TODO 这里修改一下,只让最后一次的测试点完成后,才设置写标志
-    // client_sockets_[testBoxId]->set_writable();
-  });
-
-  test_box_->setallPointCompleteCallback([this](int testBoxId) {
-    // 设置为可以写,等待下一轮事件循环把这个对应的fd加入可以写的事件监听里
-    LOG_DEBUG("[client_socket recv testBox callback],set all testBoxId %d "
-              "completed\n",
-              testBoxId);
-    set_socket_writable_and_wake(testBoxId);
-  });
-}
+      wake_callback_(std::move(wake_callback)) {}
 
 /** @copydoc ClientSockets::add_to_sets */
 int ClientSockets::add_to_sets(fd_set &read_sets, fd_set &write_sets) {
@@ -66,33 +45,21 @@ int ClientSockets::add_to_sets(fd_set &read_sets, fd_set &write_sets) {
 
 /** @copydoc ClientSockets::add_socket */
 void ClientSockets::add_socket(int client_socket) {
-  // 先得到
-  // client_sockets_.push_back(client_socket);
-
-  // 使用新的公共接口获取testBoxId
-  int testBoxId = test_box_->getTestBoxIdPublic();
-  if (testBoxId == -1) {
-    LOG_DEBUG("testBox is FULL,disconnect socket %d", client_socket);
+  const int slot_id =
+      connection_registry_.acquire_slot(client_socket, next_session_id_++);
+  if (slot_id < 0) {
+    LOG_DEBUG("connection registry is FULL, disconnect socket %d", client_socket);
     // TODO 发送评测已经满的信息
     //  并关闭连接
     close(client_socket);
   } else {
-    LOG_DEBUG("add socket %d to testBox as textBoxId %d", client_socket,
-              testBoxId);
-    connection_registry_.init_slot(testBoxId, client_socket,
-                                   next_session_id_++);
+    LOG_DEBUG("add socket %d to logical slot %d", client_socket, slot_id);
   }
 }
 
 /** @copydoc ClientSockets::del_socket */
-void ClientSockets::del_socket(int testBoxId) {
-  // 内部 close(fd)
-  connection_registry_.clear_slot(testBoxId);
-
-  // 放回去
-  //  使用新的公共接口放回testBoxId
-  test_box_->putBackTestBoxIdPublic(testBoxId);
-  // TODO 是不是还有其它的需要处理?
+void ClientSockets::del_socket(int slot_id) {
+  connection_registry_.release_slot(static_cast<std::size_t>(slot_id));
 }
 
 /** @copydoc ClientSockets::deal_events */
@@ -104,7 +71,7 @@ void ClientSockets::deal_events(const fd_set &read_sets,
     int client_socket = slot.get_fd();
     if (client_socket == 0)
       continue;
-    int testBoxId = static_cast<int>(i);
+    int slot_id = static_cast<int>(i);
     // 读取事件
     if (FD_ISSET(client_socket, &read_sets)) {
       LOG_DEBUG("read event on socket %d\n", client_socket);
@@ -113,10 +80,10 @@ void ClientSockets::deal_events(const fd_set &read_sets,
       const bool has_complete_message = slot.read_message(bytes_read, message_body);
       if (bytes_read == 0) {
         LOG_INFO("Connection closed : %d\n", client_socket);
-        del_socket(testBoxId);
+        del_socket(slot_id);
       } else if (bytes_read < 0) {
         LOG_ERROR("Failed to read frome socket: %d\n", client_socket);
-        del_socket(testBoxId);
+        del_socket(slot_id);
       } else if (has_complete_message) { // 没有发生错误
         SubmissionRequest request{};
         if (protocol_.decodeRequest(message_body, request)) {
@@ -133,7 +100,7 @@ void ClientSockets::deal_events(const fd_set &read_sets,
           task.submission_id = submission_id;
           task.request = request;
           task.reply_channel_id =
-              make_reply_channel_id(testBoxId, slot.get_session_id());
+              make_reply_channel_id(slot_id, slot.get_session_id());
 
           mark_channel_waiting_for_ack(task.reply_channel_id);
 
@@ -177,15 +144,11 @@ void ClientSockets::deal_events(const fd_set &read_sets,
       if (!slot.is_writable()) // 不是可写状态
         continue;
 
-      const bool use_protocol_response = slot.has_pending_response();
-      std::string result_data;
-      if (use_protocol_response) {
-        result_data = slot.copy_pending_response();
-      } else {
-        // 中文注释：保留旧 testBox
-        // 回写分支，方便过渡期兼容还未迁移的调用链。
-        result_data = this->test_box_->getResult(testBoxId);
+      if (!slot.has_pending_response()) {
+        slot.set_readable();
+        continue;
       }
+      std::string result_data = slot.copy_pending_response();
 #ifdef MUDEBUG
       // LOG_DEBUG("send %d bytes to socket %d", result_data.size(),
       // client_socket); debug_print_uint8_t_vector(result_data);
@@ -196,18 +159,12 @@ void ClientSockets::deal_events(const fd_set &read_sets,
           continue;
         }
         LOG_ERROR("Failed to send response to socket %d", client_socket);
-        del_socket(testBoxId);
+        del_socket(slot_id);
         continue;
       }
 
-      if (use_protocol_response && !slot.consume_pending_response(bytes_write)) {
+      if (!slot.consume_pending_response(bytes_write)) {
         continue;
-      }
-
-      // 发送完成后，清空testBox对应resultContainer的数据并设置为可读状态
-      if (!use_protocol_response) {
-        // 清空testBox对应resultContainer的数据
-        this->test_box_->clearResultByTestBoxId(testBoxId);
       }
 
       slot.set_readable(); // 转入readable 的状态
@@ -244,14 +201,14 @@ void ClientSockets::onSubmissionFinished(const SubmissionTask &task) {
 }
 
 /** @copydoc ClientSockets::make_reply_channel_id */
-std::string ClientSockets::make_reply_channel_id(int testBoxId,
+std::string ClientSockets::make_reply_channel_id(int slot_id,
                                                  uint64_t session_id) const {
-  return std::to_string(testBoxId) + ":" + std::to_string(session_id);
+  return std::to_string(slot_id) + ":" + std::to_string(session_id);
 }
 
 /** @copydoc ClientSockets::parse_reply_channel_id */
 bool ClientSockets::parse_reply_channel_id(const std::string &reply_channel_id,
-                                           int &testBoxId,
+                                           int &slot_id,
                                            uint64_t &session_id) const {
   const std::size_t separator = reply_channel_id.find(':');
   if (separator == std::string::npos) {
@@ -259,15 +216,15 @@ bool ClientSockets::parse_reply_channel_id(const std::string &reply_channel_id,
   }
 
   try {
-    testBoxId = std::stoi(reply_channel_id.substr(0, separator));
+    slot_id = std::stoi(reply_channel_id.substr(0, separator));
     session_id = static_cast<uint64_t>(
         std::stoull(reply_channel_id.substr(separator + 1)));
   } catch (const std::exception &) {
     return false;
   }
 
-  return testBoxId >= 0 &&
-         testBoxId < static_cast<int>(connection_registry_.size()) &&
+  return slot_id >= 0 &&
+         slot_id < static_cast<int>(connection_registry_.size()) &&
          session_id > 0;
 }
 
@@ -283,13 +240,13 @@ void ClientSockets::queue_protocol_response_for_channel(
     }
   }
 
-  int testBoxId = -1;
+  int slot_id = -1;
   uint64_t session_id = 0;
-  if (!parse_reply_channel_id(reply_channel_id, testBoxId, session_id)) {
+  if (!parse_reply_channel_id(reply_channel_id, slot_id, session_id)) {
     return;
   }
 
-  if (connection_registry_.slot(testBoxId)
+  if (connection_registry_.slot(slot_id)
           .set_pending_response_if_session(session_id, std::move(response))) {
     wake_select_loop();
   }
@@ -318,12 +275,6 @@ void ClientSockets::mark_channel_ack_sent(const std::string &reply_channel_id) {
   for (std::string &message : deferred_messages) {
     queue_protocol_response_for_channel(reply_channel_id, std::move(message));
   }
-}
-
-/** @copydoc ClientSockets::set_socket_writable_and_wake */
-void ClientSockets::set_socket_writable_and_wake(int testBoxId) {
-  connection_registry_.slot(testBoxId).set_writable();
-  wake_select_loop();
 }
 
 /** @copydoc ClientSockets::wake_select_loop */

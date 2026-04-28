@@ -87,11 +87,43 @@ void test_registry_maps_logical_slot_id_to_fd() {
   close(sockets[1]);
 }
 
+void test_registry_acquires_and_releases_slots() {
+  int sockets_a[2] = {-1, -1};
+  int sockets_b[2] = {-1, -1};
+  assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sockets_a) == 0);
+  assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sockets_b) == 0);
+
+  ConnectionRegistry registry(2);
+
+  const int slot_a = registry.acquire_slot(sockets_a[0], 101);
+  const int slot_b = registry.acquire_slot(sockets_b[0], 102);
+  const int slot_full = registry.acquire_slot(123, 103);
+
+  assert(slot_a == 0);
+  assert(slot_b == 1);
+  assert(slot_full == -1);
+  assert(registry.slot(slot_a).get_session_id() == 101);
+  assert(registry.slot(slot_b).get_session_id() == 102);
+
+  registry.release_slot(static_cast<std::size_t>(slot_a));
+  assert(registry.id_to_fd(slot_a) == 0);
+
+  const int slot_reused = registry.acquire_slot(sockets_a[0], 201);
+  assert(slot_reused == slot_a);
+  assert(registry.slot(slot_reused).get_session_id() == 201);
+
+  registry.release_slot(static_cast<std::size_t>(slot_reused));
+  registry.release_slot(static_cast<std::size_t>(slot_b));
+  close(sockets_a[1]);
+  close(sockets_b[1]);
+}
+
 } // namespace
 
 int main() {
   test_slot_init_and_clear();
   test_pending_response_is_session_safe();
   test_registry_maps_logical_slot_id_to_fd();
+  test_registry_acquires_and_releases_slots();
   return 0;
 }

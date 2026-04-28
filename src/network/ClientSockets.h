@@ -6,6 +6,7 @@
 #pragma once
 
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <mutex>
@@ -23,7 +24,6 @@
 #include "runner/RunnerFactory.h"
 #include "pipeline/SubmissionService.h"
 #include "pipeline/ResultStore.h"
-#include "legacy/testBox.h" //与旧 testBox 建立连接
 
 /**
  * @brief TCP 连接管理器，同时也是异步评测结果的 notifier 实现。
@@ -42,7 +42,7 @@ public:
   /**
    * @brief 构造连接管理器。
    */
-  ClientSockets(testBox *test_box, SubmissionQueue &submission_queue,
+  ClientSockets(std::size_t slot_count, SubmissionQueue &submission_queue,
                 WakeCallback wake_callback = nullptr);
   /** @brief 注册一个新的 client socket。 */
   void add_socket(int);
@@ -52,7 +52,7 @@ public:
    */
   int add_to_sets(fd_set &read_sets, fd_set &write_sets);
 
-  /** @brief 根据 testBox 槽位索引获得对应 fd。 */
+  /** @brief 根据逻辑槽位索引获得对应 fd。 */
   int id_to_fd(const int id) const { return connection_registry_.id_to_fd(id); }
 
   /**
@@ -61,7 +61,7 @@ public:
   void deal_events(const fd_set &read_sets, const fd_set &write_sets);
 
   /** @brief 删除并回收一个连接槽位。 */
-  void del_socket(int testBoxId);
+  void del_socket(int slot_id);
 
   /** @brief 暴露内部 SubmissionService，供 worker/notifier 协作使用。 */
   SubmissionService &submission_service() { return submission_service_; }
@@ -72,7 +72,6 @@ public:
   void onSubmissionFinished(const SubmissionTask &task) override;
 
 private:
-  testBox *test_box_; // 指向testBox的指针
   SubmissionQueue &submission_queue_;
   ConnectionRegistry connection_registry_;
   ResultStore result_store_;
@@ -98,8 +97,6 @@ private:
   void mark_channel_waiting_for_ack(const std::string &reply_channel_id);
   /** @brief 解除 ack 屏障，并释放该 channel 暂存的后续消息。 */
   void mark_channel_ack_sent(const std::string &reply_channel_id);
-  /** @brief 跨线程让某个连接可写后，唤醒 select 循环。 */
-  void set_socket_writable_and_wake(int testBoxId);
   /** @brief 触发外部 select 唤醒回调（若已配置）。 */
   void wake_select_loop();
 

@@ -46,8 +46,7 @@ void write_framed_message(int fd, const std::string &body) {
 class SocketHarness {
 public:
   SocketHarness()
-      : box_(1, 4, std::string(PROJECT_ROOT_DIR) + "/testData"),
-        client_sockets_(&box_, submission_queue_),
+      : client_sockets_(4, submission_queue_),
         worker_pool_(1, submission_queue_, client_sockets_.submission_service(),
                      &client_sockets_) {
     int sockets[2] = {-1, -1};
@@ -112,7 +111,6 @@ private:
     }
   }
 
-  testBox box_;
   SubmissionQueue submission_queue_;
   ClientSockets client_sockets_;
   JudgeWorkerPool worker_pool_;

@@ -28,7 +28,6 @@
 #include "common/Logger.h"
 #include "dispatch/JudgeWorkerPool.h"
 #include "dispatch/SubmissionQueue.h"
-#include "legacy/testBox.h"
 
 int main(int argc, char *argv[]) {
   // 解析命令行参数
@@ -51,10 +50,6 @@ int main(int argc, char *argv[]) {
   std::cout << "Test data path: " << config.getTestDataPath() << std::endl;
   std::cout << "================================" << std::endl;
 
-  // 1. 创建testBox，使用配置中的参数
-  std::unique_ptr<testBox> test_box = std::make_unique<testBox>(
-      config.getWorkerThreadCount(), config.getMaxConcurrentTests(),
-      config.getTestDataPath());
   SubmissionQueue submission_queue;
 
   try {
@@ -63,10 +58,10 @@ int main(int argc, char *argv[]) {
     std::function<void()> wake_server;
     
     // 1. 创建 client 
-    ClientSockets client_sockets(test_box.get(), submission_queue,
+    ClientSockets client_sockets(config.getMaxConcurrentTests(), submission_queue,
                                  [&wake_server]() {
-                                    if (wake_server) {
-                                      wake_server();
+                                     if (wake_server) {
+                                       wake_server();
                                    }
                                  });
 

@@ -45,8 +45,7 @@ void write_framed_message(int fd, const std::string &body) {
 class AsyncFlowHarness {
 public:
   explicit AsyncFlowHarness(std::atomic<int> *wake_count = nullptr)
-      : box_(1, 4, std::string(PROJECT_ROOT_DIR) + "/testData"),
-        client_sockets_(&box_, submission_queue_, [wake_count]() {
+      : client_sockets_(4, submission_queue_, [wake_count]() {
           if (wake_count != nullptr) {
             wake_count->fetch_add(1);
           }
@@ -144,7 +143,6 @@ private:
     }
   }
 
-  testBox box_;
   SubmissionQueue submission_queue_;
   ClientSockets client_sockets_;
   JudgeWorkerPool worker_pool_;

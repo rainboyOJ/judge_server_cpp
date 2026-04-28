@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <queue>
 #include <vector>
 
 #include <sys/select.h>
@@ -49,8 +50,12 @@ public:
 
   /** @brief 用新 fd 和 session_id 初始化指定槽位。 */
   void init_slot(std::size_t id, int fd, uint64_t session_id);
+  /** @brief 分配一个空闲逻辑槽位并初始化，失败返回 -1。 */
+  int acquire_slot(int fd, uint64_t session_id);
   /** @brief 清空指定槽位（关闭 fd 并重置状态）。 */
   void clear_slot(std::size_t id);
+  /** @brief 释放一个已占用槽位，使其重新进入空闲队列。 */
+  void release_slot(std::size_t id);
   /** @brief 通过槽位 id 获取当前 fd，0 表示空闲。 */
   int id_to_fd(std::size_t id) const;
   /**
@@ -66,4 +71,5 @@ public:
 
 private:
   std::vector<std::unique_ptr<ConnectionSlot>> slots_;
+  std::queue<std::size_t> free_slot_ids_;
 };
