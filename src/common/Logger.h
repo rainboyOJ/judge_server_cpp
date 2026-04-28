@@ -9,7 +9,7 @@
  */
 #pragma once
 
-#include "noncopyable.h"
+#include "common/noncopyable.h"
 #include <string>
 #include <mutex>
 

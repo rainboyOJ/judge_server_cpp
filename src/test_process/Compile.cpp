@@ -5,7 +5,7 @@
 
 #include "common/Logger.h"
 #include "test_process/RunnerCompat.h"
-#include "utils.h"
+#include "common/utils.h"
 #include <filesystem>
 
 namespace fs = std::filesystem;
