@@ -2,7 +2,7 @@
 
 ## 当前接口
 
-新语言必须实现 `include/runner/ILanguageRunner.h`：
+新语言必须实现 `src/runner/ILanguageRunner.h` 定义的接口：
 
 - `prepare(const SubmissionRequest&)`
 - `compile(const SubmissionRequest&)`
@@ -26,7 +26,7 @@
 
 ### 1. 扩充语言枚举
 
-如果是全新语言值，先修改 `include/common/SubmissionTypes.h` 的 `SubmissionLanguage`。
+如果是全新语言值，先修改 `src/common/SubmissionTypes.h` 的 `SubmissionLanguage` 枚举。
 
 注意兼容性：`lang` 是协议对外字段，改动后要同步更新：
 
@@ -36,9 +36,9 @@
 
 ### 2. 新建 runner 文件
 
-典型文件：
+新建：
 
-- `include/runner/YourLanguageRunner.h`
+- `src/runner/YourLanguageRunner.h`
 - `src/runner/YourLanguageRunner.cpp`
 
 建议直接仿照 `CppRunner` / `PythonRunner`：
@@ -52,11 +52,11 @@
 
 修改：
 
-- `include/runner/RunnerFactory.h`
+- `src/runner/RunnerFactory.h`
 - `src/runner/RunnerFactory.cpp`
-- 根 `CMakeLists.txt`
+- 根 `CMakeLists.txt`（将新 .cpp 加入 `boxTest` 静态库）
 
-确保新增源文件被静态库 `boxTest` 编译进去，并让 `RunnerFactory::createRunner()` 返回对应实例。
+确保 `RunnerFactory::createRunner()` 返回对应实例。
 
 ### 4. 明确编译阶段语义
 

@@ -2,9 +2,9 @@
 
 ## 传输层 framing
 
-当前 TCP 协议继续使用统一 framing：
+TCP 协议使用统一 framing：
 
-1. 前 `4` 字节：消息体长度，`uint32_t`，网络字节序（big-endian）。
+1. 前 4 字节：消息体长度，`uint32_t`，网络字节序（big-endian）。
 2. 后续 N 字节：UTF-8 JSON 字符串。
 
 客户端请求和服务端响应都遵循这个 framing。
@@ -175,10 +175,10 @@
 
 状态由 `ResultStore` 维护，只允许按如下方向前进：
 
-- `QUEUED -> PREPARING | FAILED`
-- `PREPARING -> COMPILING | FAILED`
-- `COMPILING -> RUNNING | FINISHED | FAILED`
-- `RUNNING -> FINISHED | FAILED`
+- `QUEUED → PREPARING | FAILED`
+- `PREPARING → COMPILING | FAILED`
+- `COMPILING → RUNNING | FINISHED | FAILED`
+- `RUNNING → FINISHED | FAILED`
 
 终态后不允许回退或再次更新。
 
@@ -255,6 +255,14 @@
 - `cpu_time_ms` 直接记为墙钟时间。
 - `memory_kb` 基本不会得到真实值。
 - 不提供真正的沙箱隔离。
+
+## 脚本参考
+
+Node 端异步评测演示脚本：`test/nodejs/send_async_judge.js`，运行方式：
+
+```bash
+cd test/nodejs && npm run async-judge
+```
 
 ## 当前限制
 

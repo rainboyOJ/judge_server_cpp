@@ -13,9 +13,17 @@ CTest 当前重点覆盖同步判题内核和新的异步调度链路：
 - `test/test_submission_service.cpp`：`SubmissionService::processSubmission()` 的完整编排。
 - `test/test_judge_worker_pool.cpp`：`SubmissionQueue` + `JudgeWorkerPool` + `SubmissionNotifier` 协作。
 - `test/test_async_submission_flow.cpp`：异步 ack 后通过 `query_result` 拿当前或最终快照，以及断线后恢复最终结果。
-- `test/test_integration_tcp_cpp_python.cpp`：TCP framed JSON 端到端链路，验证“先 ack、后 finished 推送”。
+- `test/test_integration_tcp_cpp_python.cpp`：TCP framed JSON 端到端链路，验证"先 ack、后 finished 推送"。
+- `test/test_submission_queue.cpp`：`SubmissionQueue` push/pop/shutdown 行为。
+- `test/test_connection_registry.cpp`：连接注册表单元测试。
+- `test/test_tcp_server_eventfd.cpp`：TcpServer eventfd 唤醒机制。
+- `test/test_json_simple.cpp`：简单 JSON 解析。
+- `test/test_submission_types_compile.cpp`：SubmissionTypes 编译期检查。
+- `test/test_static_loop_queue.cpp`：legacy static_loop_queue。
+- `test/testMemPool.cpp`：legacy memPool。
+- `test/testJudgeInfoSerialize.cpp`：legacy judgeInfo 序列化。
 
-旧的手工调试程序，如 `test/main.cpp`、`test/send_one_test.cpp`、`test/2.cpp`，不会注册进 CTest。
+旧的手工调试程序（`test/main.cpp`、`test/send_one_test.cpp`、`test/2`）不会注册进 CTest。
 
 ## 常用命令
 
@@ -42,6 +50,13 @@ ctest --test-dir build -R '^test_async_submission_flow$' --output-on-failure
 ctest --test-dir build -R '^test_integration_tcp_cpp_python$' --output-on-failure
 ```
 
+### 跑 runner 相关测试
+
+```bash
+ctest --test-dir build -R '^test_(cpp|python)_runner$' --output-on-failure
+ctest --test-dir build -R '^test_runner_factory$' --output-on-failure
+```
+
 ### 直接运行某个测试可执行文件
 
 ```bash
@@ -57,17 +72,18 @@ ctest --test-dir build -R '^test_integration_tcp_cpp_python$' --output-on-failur
 `test/nodejs/` 目前仍主要验证 framing / codec 辅助逻辑，不直接覆盖完整异步后端：
 
 - `npm test` 实际执行的是 `node test_codec.js`。
-- `npm run judge` 仍是手工联调脚本，需要单独运行服务端。
-- 目录里同时保留旧二进制结构兼容代码和新的 JSON 辅助函数，说明 Node 端也处于迁移期。
+- `npm run demo` 是手工联调演示脚本。
+- `npm run judge` 是旧同步评测脚本。
+- `npm run async-judge` 是异步评测演示脚本 `send_async_judge.js`。
 
-可用命令：
+目录里同时保留旧二进制结构兼容代码和新的 JSON 辅助函数，说明 Node 端也处于迁移期。
 
 ```bash
 cd test/nodejs
 npm install
 npm test
 npm run demo
-npm run judge
+npm run async-judge
 ```
 
 如果要验证现在的 async 主线，优先看 C++ 测试，尤其是：
@@ -86,7 +102,7 @@ npm run judge
 
 ## 已知边界
 
-- 目前自动化测试已经覆盖 async ack、后台 worker 和 `query_result`，但还没有“逐状态主动推送 `submission_update`”的端到端测试，因为当前实现本身没有这条完整推送链路。
-- `query_result` 测的是“读取 ResultStore 当前快照”，不是阻塞等待接口。
+- 目前自动化测试已经覆盖 async ack、后台 worker 和 `query_result`，但还没有"逐状态主动推送 `submission_update`"的端到端测试，因为当前实现本身没有这条完整推送链路。
+- `query_result` 测的是"读取 ResultStore 当前快照"，不是阻塞等待接口。
 - fallback 路径只保证真实时间超时，不验证真正 CPU/内存隔离，因此与装好 sjudge 后的生产行为可能略有差异。
 - Node `npm test` 只验证 Node 侧 codec/framing 辅助逻辑，不能替代 CTest 的 async integration coverage。

@@ -79,10 +79,10 @@ sudo make install
 
 ## 部署 sjudge
 
-当前代码只检查 `/usr/bin/sjudge` 是否存在，并通过 `call_sjudge()` 调用它。也就是说：
+当前代码只检查 `/usr/bin/sjudge` 是否存在，并通过 `call_sjudge()`（`sjudge/sjudge_call.cpp`）调用它。也就是说：
 
-- 文档层面必须把 sjudge 视为外部依赖；
-- 没有它时服务仍能跑，但资源限制只是“近似行为”；
+- sjudge 是外部依赖；
+- 没有它时服务仍能跑，但资源限制只是"近似行为"；
 - 生产环境如果需要可信资源控制，应先保证 sjudge 已正确安装到 `/usr/bin/sjudge`。
 
 ## systemd 示例
