@@ -1,3 +1,9 @@
+/**
+ * @file utils.cpp
+ * @brief 旧链路使用的序列化/反序列化工具函数实现。
+ *
+ * @note 当前异步主链路中，提交的 JSON 编解码已由 protocol/JudgeProtocol 负责。
+ */
 #include "utils.h"
 #include "common/Logger.h"
 #include "legacy/resultContainer.h"

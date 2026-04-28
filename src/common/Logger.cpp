@@ -1,3 +1,7 @@
+/**
+ * @file Logger.cpp
+ * @brief 线程安全日志输出实现。
+ */
 #include "common/Logger.h"
 #include "legacy/Timestamp.h"
 #include <iostream>

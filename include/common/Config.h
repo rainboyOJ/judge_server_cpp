@@ -1,3 +1,7 @@
+/**
+ * @file Config.h
+ * @brief 全局单例配置对象，负责读取 config.json 并提供默认值安全的访问接口。
+ */
 #pragma once
 
 #include <string>

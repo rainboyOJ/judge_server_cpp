@@ -1,3 +1,7 @@
+/**
+ * @file Config.cpp
+ * @brief 运行时配置加载与安全访问实现。
+ */
 #include "common/Config.h" // 调整后的路径
 #include "common/Logger.h" // 用于在配置加载期间记录错误
 #include <fstream>

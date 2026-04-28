@@ -1,3 +1,7 @@
+/**
+ * @file TcpServer.cpp
+ * @brief select/eventfd 事件循环与 TCP 监听唤醒机制实现。
+ */
 #include <sys/eventfd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>

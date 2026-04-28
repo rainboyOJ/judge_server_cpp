@@ -1,3 +1,10 @@
+/**
+ * @file Types.h
+ * @brief 旧评测链路使用的遗留类型定义（enum_testStatus、TestCaseInfo、TestCaseResult 等）。
+ *
+ * @note 这些类型主要服务于 legacy/testBox 链路。当前异步评测主链路优先使用
+ *       common/SubmissionTypes.h 中的新枚举与结构体。
+ */
 #pragma once
 
 #include <string>

@@ -1,3 +1,7 @@
+/**
+ * @file Result.h
+ * @brief 泛型 Result<T, E> 工具类，用于函数式风格的返回值/错误统一表达。
+ */
 #pragma once
 
 #include <string>

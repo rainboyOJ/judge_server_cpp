@@ -1,3 +1,11 @@
+/**
+ * @file SubmissionTypes.h
+ * @brief 当前异步评测链路的核心共享数据结构。
+ *
+ * 定义了 SubmissionRequest/SubmissionResult/SubmissionCaseResult
+ * 以及 SubmissionStatus/SubmissionLanguage/SubmissionVerdict 枚举，
+ * 供协议层、服务层、调度层与存储层统一使用。
+ */
 #pragma once
 
 #include <string>

@@ -1,3 +1,12 @@
+/**
+ * @file Logger.h
+ * @brief 线程安全的日志宏与日志级别定义。
+ *
+ * 对外暴露 LOG_INFO / LOG_ERROR / LOG_DEBUG / LOG_FATAL 四个宏：
+ * - LOG_INFO / LOG_ERROR 始终可用
+ * - LOG_FATAL 打印后调用 exit(-1)
+ * - LOG_DEBUG 仅在 CMake Debug 构建 (MUDEBUG) 时可见
+ */
 #pragma once
 
 #include "noncopyable.h"

@@ -1,3 +1,10 @@
+/**
+ * @file utils.h
+ * @brief 旧评测链路使用的序列化/反序列化与进程执行工具声明。
+ *
+ * @note 当前异步主链路不依赖此头文件中的序列化函数；它主要由 legacy/testBox 和
+ *       test_process 兼容代码使用。
+ */
 //执行一个程序
 #pragma once
 
