@@ -8,7 +8,7 @@
 #include <vector>
 #include <iostream> // 为了使用std::cerr
 #include <mutex> // 如果需要线程安全访问，虽然通常配置只读取一次
-#include "../../include/json.hpp" // 假设json.hpp在项目根目录相对的include目录中
+#include "json.hpp"
 
 using json = nlohmann::json;
 

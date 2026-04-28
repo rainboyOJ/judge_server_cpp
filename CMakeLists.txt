@@ -11,7 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 add_definitions(-DPROJECT_ROOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 
 # 添加头文件目
-include_directories(include)
+include_directories(src)
 include_directories(sjudge)
 
 set(CMAKE_EXE_LINKER_FLAGS "-Wl,--copy-dt-needed-entries")

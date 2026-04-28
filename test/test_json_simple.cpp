@@ -2,8 +2,8 @@
 #include <cassert>
 #include <cstring>
 #include <string>
-#include "../include/utils.h"
-#include "../include/legacy/judgeInfo.h"
+#include "../src/utils.h"
+#include "../src/legacy/judgeInfo.h"
 
 using namespace std;
 
