@@ -24,6 +24,7 @@ endif()
 
 # 查找源文件并添加可执行文件
 file(GLOB SOURCES "src/*.cpp" "src/common/*.cpp" "src/test_process/*.cpp"
+    list(REMOVE_ITEM SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
                   "src/network/*.cpp")
 list(APPEND SOURCES
     "sjudge/sjudge_call.cpp"
@@ -41,7 +42,7 @@ add_library(${CMAKE_PROJECT_NAME} STATIC ${SOURCES})
 
 # 编译主代码
 
-add_executable(judge_server main.cpp)
+add_executable(judge_server src/main.cpp)
 target_link_libraries(judge_server ${CMAKE_PROJECT_NAME})
 
 
