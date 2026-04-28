@@ -17,6 +17,7 @@ Scope: `/home/rainboy/mycode/boxtest-opencode-dev`.
 - `src/` implementation
 - `include/` headers
 - `src/common/`, `include/common/` shared components (logger/config/result/types)
+- `src/net/`, `include/net/` connection slot/registry helpers for TCP bridge
 - `src/protocol/`, `include/protocol/` JSON protocol codec
 - `src/dispatch/`, `include/dispatch/` async submission queue / worker pool / notifier
 - `src/service/`, `include/service/` submission orchestration
@@ -180,6 +181,7 @@ Notes:
 - `SubmissionService` is split between `createSubmission()` for record creation and `processSubmission()` for worker-side execution.
 - `SubmissionQueue` owns in-memory pending tasks; `JudgeWorkerPool` consumes them on background threads.
 - `SubmissionNotifier` lets the worker pool notify socket-facing code about lifecycle events.
+- `TcpServer` owns the `select + eventfd` outer loop; connection/session/pending-response state now lives in `ConnectionRegistry`.
 - `SubmissionService` worker path orchestrates `prepare -> compile/check -> run cases -> aggregate`.
 - `RunnerFactory` currently supports `C++` and `Python`; `C` remains unsupported.
 - `JudgeCore` decides final verdict from case results.

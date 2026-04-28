@@ -4,7 +4,9 @@
 
 当前 worktree 已经从“socket 线程里同步跑完整次评测”切到“旧 TCP 外壳 + 新异步判题后端”的过渡架构：
 
-- `TcpServer` 和 `ClientSockets` 仍负责 `select`、连接管理、framing 和回包。
+- `TcpServer` 负责 `select` / `accept` / `eventfd` 唤醒循环本身。
+- `ClientSockets` 负责协议接入、submission 入队、查询分流与结果回包桥接。
+- `ConnectionRegistry` / `ConnectionSlot` 负责连接槽位、session、待发送缓冲和 `fd_set` 参与逻辑。
 - `SubmissionService` 不再只有单体 `submit()` 路径，而是拆成 `createSubmission()` 和 `processSubmission()` 两段。
 - `SubmissionQueue` 负责缓存待评测任务。
 - `JudgeWorkerPool` 在后台线程里消费队列并调用 `processSubmission()`。
@@ -15,6 +17,7 @@
 
 - `main.cpp`：读取 `config/config.json`，构造 `SubmissionQueue`、`ClientSockets`、`JudgeWorkerPool`，再启动 `TcpServer`。
 - `src/client_sockets.cpp`：收包、协议解码、创建 submission、入队、立即回 `submission_ack`、处理 `query_result`、接收 notifier 回调并排队回包。
+- `src/net/ConnectionRegistry.cpp`：管理逻辑槽位、fd/session 映射、待发送 frame 与 `fd_set` 参与逻辑。
 - `src/dispatch/SubmissionQueue.cpp`：线程安全提交队列。
 - `src/dispatch/JudgeWorkerPool.cpp`：后台 worker 循环，`pop -> notifier(start) -> processSubmission -> notifier(finish)`。
 - `src/service/SubmissionService.cpp`：真正的评测编排。
@@ -25,7 +28,14 @@
 
 ### 1. 网络接入层
 
-`TcpServer` 仍然基于 `select`，`ClientSockets` 仍然持有每个 fd 的读写状态：
+`TcpServer` 仍然基于 `select`，但它现在只负责“事件循环外壳”本身：
+
+- 监听 server socket
+- 维护 `eventfd` 唤醒源
+- 在阻塞 `select(nullptr)` 中等待真实事件
+- 把 `fd_set` 交给上层连接管理器和业务层
+
+连接具体状态已经从 `ClientSockets` 中抽离到 `ConnectionRegistry/ConnectionSlot`：
 
 - 读：从 `FdInfo::input_buffer_` 累积数据。
 - 解帧：读取前 `4` 字节大端长度，再读取完整 JSON body。
@@ -139,6 +149,8 @@ client
 - 任务刚入队时先把 channel 标记为 `awaiting_ack`。
 - notifier 在 ack 尚未发出前产生的协议消息会先进入 `deferred_protocol_messages_`。
 - `mark_channel_ack_sent()` 后再把这些延迟消息回灌到正常发送路径。
+
+此外，后台线程把连接切到 `WRITABLE` 或挂上待发送协议响应时，会通过 `eventfd` 显式唤醒阻塞中的 `TcpServer::select()`，因此主循环不再依赖超时轮询发现跨线程状态变化。
 
 这保证了同一连接上不会出现“最终结果先于 ack 发出”的乱序。
 
