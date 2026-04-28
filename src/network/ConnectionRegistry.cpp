@@ -1,3 +1,10 @@
+/**
+ * @file ConnectionRegistry.cpp
+ * @brief 连接槽位与连接注册表的完整实现。
+ *
+ * 包含 ConnectionSlot（单个连接状态管理）和
+ * ConnectionRegistry（槽位容器管理）的实现。
+ */
 #include "network/ConnectionRegistry.h"
 
 #include <arpa/inet.h>
@@ -7,6 +14,10 @@
 #include <utility>
 
 #include "common/Logger.h"
+
+// ====================================================================
+// ConnectionSlot 实现
+// ====================================================================
 
 void ConnectionSlot::init(int fd, uint64_t session_id) {
   std::lock_guard<std::mutex> lock(mutex_);
@@ -164,6 +175,10 @@ void ConnectionSlot::queue_response_locked(std::string response) {
                            sizeof(body_size));
   pending_response_ += response;
 }
+
+// ====================================================================
+// ConnectionRegistry 实现
+// ====================================================================
 
 ConnectionRegistry::ConnectionRegistry(std::size_t slot_count) {
   slots_.reserve(slot_count);
