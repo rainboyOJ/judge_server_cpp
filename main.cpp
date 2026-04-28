@@ -61,18 +61,22 @@ int main(int argc, char *argv[]) {
     ClientSockets *client_sockets_ptr = nullptr;
     std::unique_ptr<TcpServer> server;
     std::function<void()> wake_server;
+    
+    // 1. 创建 client 
     ClientSockets client_sockets(test_box.get(), submission_queue,
                                  [&wake_server]() {
                                     if (wake_server) {
                                       wake_server();
                                    }
                                  });
+
+    // 2. 创建评测池
     JudgeWorkerPool judge_worker_pool(
         config.getWorkerThreadCount(), submission_queue,
         client_sockets.submission_service(), &client_sockets);
     client_sockets_ptr = &client_sockets;
 
-    // 创建TCP服务器，使用配置中的端口
+    // 3. 创建TCP服务器，使用配置中的端口
     server = std::make_unique<TcpServer>(
         config.getServerPort(),
         // 接受新连接的回调
