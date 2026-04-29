@@ -1,5 +1,6 @@
 #include "network/SubmissionRequestHandler.h"
 
+#include "common/Logger.h"
 #include "dispatch/SubmissionQueue.h"
 #include "dispatch/SubmissionTask.h"
 #include "network/AckBarrier.h"
@@ -19,9 +20,13 @@ SubmissionRequestHandler::HandleSubmitResult SubmissionRequestHandler::handleSub
 
   const int submission_id = submission_service_.createSubmission(request);
   if (submission_id <= 0) {
+    LOG_ERROR("submit create failed reply_channel=%s",
+              reply_channel_id.c_str());
     result.response = protocol_.encodeError("failed to create submission");
     return result;
   }
+  LOG_DEBUG("submit created id=%d reply_channel=%s", submission_id,
+            reply_channel_id.c_str());
 
   SubmissionTask task{};
   task.submission_id = submission_id;
@@ -31,12 +36,20 @@ SubmissionRequestHandler::HandleSubmitResult SubmissionRequestHandler::handleSub
   ack_barrier_.mark_waiting(reply_channel_id);
 
   if (!submission_queue_.push(task)) {
+    LOG_ERROR("submit queue failed id=%d reply_channel=%s", submission_id,
+              reply_channel_id.c_str());
     result.response = protocol_.encodeError("submission queue unavailable");
     result.deferred_messages = ack_barrier_.release(reply_channel_id);
+    LOG_DEBUG("submit ack release id=%d count=%zu", submission_id,
+              result.deferred_messages.size());
     return result;
   }
 
+  LOG_DEBUG("submit queued id=%d reply_channel=%s", submission_id,
+            reply_channel_id.c_str());
   result.response = protocol_.encodeSubmissionAck(submission_id);
   result.deferred_messages = ack_barrier_.release(reply_channel_id);
+  LOG_DEBUG("submit ack release id=%d count=%zu", submission_id,
+            result.deferred_messages.size());
   return result;
 }

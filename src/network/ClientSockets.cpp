@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <cctype>
 #include <exception>
 #include <memory>
 
@@ -17,6 +18,30 @@
 #include "dispatch/JudgeWorkerPool.h"
 #include "network/ReplyChannel.h"
 #include "protocol/JudgeProtocol.h"
+
+namespace {
+
+std::string sanitize_pid_for_log(const std::string &pid) {
+  constexpr std::size_t kMaxPidLogLength = 32;
+
+  std::string sanitized = pid;
+  for (char &ch : sanitized) {
+    const unsigned char uch = static_cast<unsigned char>(ch);
+    if (!(std::isalnum(uch) || ch == '_' || ch == '-' || ch == '.' ||
+          ch == ':')) {
+      ch = '_';
+    }
+  }
+
+  if (sanitized.size() > kMaxPidLogLength) {
+    sanitized.resize(kMaxPidLogLength);
+    sanitized += "...";
+  }
+
+  return sanitized;
+}
+
+} // namespace
 
 /** @copydoc ClientSockets::ClientSockets */
 ClientSockets::ClientSockets(std::size_t slot_count,
@@ -89,6 +114,10 @@ void ClientSockets::handle_read_event(ConnectionSlot &slot, int slot_id) {
     if (protocol_.decodeRequest(message_body, request)) {
       const std::string reply_channel_id =
           ReplyChannel{slot_id, slot.get_session_id()}.to_string();
+      const std::string sanitized_pid = sanitize_pid_for_log(request.pid);
+      LOG_DEBUG("submit recv reply_channel=%s pid=%s lang=%d",
+                reply_channel_id.c_str(), sanitized_pid.c_str(),
+                static_cast<int>(request.language));
       const auto submit_result =
           submission_request_handler_.handleSubmit(request, reply_channel_id);
       slot.set_pending_response(submit_result.response);
@@ -189,6 +218,8 @@ void ClientSockets::queue_protocol_response_for_channel(
       ReplyChannel::parse(reply_channel_id);
   if (!reply_channel.has_value() ||
       reply_channel->slot_id >= static_cast<int>(connection_registry_.size())) {
+    LOG_DEBUG("async drop invalid_channel reply_channel=%s",
+              reply_channel_id.c_str());
     return;
   }
 
@@ -196,7 +227,11 @@ void ClientSockets::queue_protocol_response_for_channel(
           .set_pending_response_if_session(reply_channel->session_id,
                                            std::move(response))) {
     wake_select_loop();
+    return;
   }
+
+  LOG_DEBUG("async drop stale_session reply_channel=%s",
+            reply_channel_id.c_str());
 }
 
 /** @copydoc ClientSockets::wake_select_loop */

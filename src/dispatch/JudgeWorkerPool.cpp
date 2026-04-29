@@ -5,6 +5,9 @@
 
 #include "dispatch/JudgeWorkerPool.h"
 
+#include <sstream>
+
+#include "common/Logger.h"
 #include "pipeline/SubmissionService.h"
 
 /** @copydoc JudgeWorkerPool::JudgeWorkerPool */
@@ -45,8 +48,16 @@ void JudgeWorkerPool::graceful_shutdown() {
 
 /** @copydoc JudgeWorkerPool::workerLoop */
 void JudgeWorkerPool::workerLoop() {
+  std::ostringstream worker_id_stream;
+  worker_id_stream << std::this_thread::get_id();
+  const std::string worker_id = worker_id_stream.str();
+
   SubmissionTask task{};
   while (queue_.pop(task)) {
+    LOG_DEBUG("worker start worker_id=%s submission_id=%d reply_channel_id=%s",
+              worker_id.c_str(), task.submission_id,
+              task.reply_channel_id.c_str());
+
     if (notifier_ != nullptr && !stopped_.load()) {
       notifier_->onSubmissionStarted(task);
     }
@@ -56,5 +67,9 @@ void JudgeWorkerPool::workerLoop() {
     if (notifier_ != nullptr && !stopped_.load()) {
       notifier_->onSubmissionFinished(task);
     }
+
+    LOG_DEBUG("worker finish worker_id=%s submission_id=%d reply_channel_id=%s",
+              worker_id.c_str(), task.submission_id,
+              task.reply_channel_id.c_str());
   }
 }

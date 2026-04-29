@@ -9,6 +9,7 @@
 #include <system_error>
 
 #include "common/Config.h"
+#include "common/Logger.h"
 #include "pipeline/JudgeCore.h"
 #include "runner/ILanguageRunner.h"
 #include "runner/RunnerFactory.h"
@@ -18,6 +19,36 @@
 namespace fs = std::filesystem;
 
 namespace {
+
+constexpr std::size_t kLogFieldMaxLen = 80;
+
+std::string sanitize_for_log(const std::string &value) {
+  std::string sanitized;
+  sanitized.reserve(value.size());
+  for (unsigned char ch : value) {
+    if (std::isalnum(ch) || ch == '_' || ch == '-' || ch == '.' || ch == ':') {
+      sanitized.push_back(static_cast<char>(ch));
+    } else {
+      sanitized.push_back('_');
+    }
+  }
+
+  if (sanitized.size() <= kLogFieldMaxLen) {
+    return sanitized;
+  }
+
+  return sanitized.substr(0, kLogFieldMaxLen) + "...";
+}
+
+void log_failure_detail(const char *event, int submission_id,
+                        const std::string &detail) {
+  if (detail.empty()) {
+    return;
+  }
+
+  LOG_DEBUG("%s id=%d detail=%s", event, submission_id,
+            sanitize_for_log(detail).c_str());
+}
 
 /** @brief 构造某个阶段的 SubmissionResult 快照。 */
 SubmissionResult make_result(int submission_id, SubmissionStatus status,
@@ -35,6 +66,21 @@ SubmissionResult make_result(int submission_id, SubmissionStatus status,
 bool persist_result(ResultStore &store, int submission_id,
                     const SubmissionResult &result) {
   return store.updateResult(submission_id, result);
+}
+
+bool persist_result_logged(ResultStore &store, int submission_id,
+                           const SubmissionResult &result,
+                           const std::string &log_pid,
+                           const char *transition) {
+  if (persist_result(store, submission_id, result)) {
+    return true;
+  }
+
+  LOG_ERROR(
+      "submission persist failed id=%d pid=%s transition=%s status=%d verdict=%d",
+      submission_id, log_pid.c_str(), transition,
+      static_cast<int>(result.status), static_cast<int>(result.verdict));
+  return false;
 }
 
 /** @brief 解析测试数据根目录。 */
@@ -121,22 +167,33 @@ void SubmissionService::processSubmission(int submission_id,
     return;
   }
 
+  const std::string log_pid = sanitize_for_log(request.pid);
+
   try {
     // 中文注释：先把提交推进到
     // PREPARING，后续任何系统级异常都基于这个提交单据回写。
-    if (!persist_result(result_store_, submission_id,
-                        make_result(submission_id, SubmissionStatus::PREPARING,
-                                    SubmissionVerdict::PENDING))) {
+    LOG_DEBUG("submission prepare enter id=%d pid=%s", submission_id,
+              log_pid.c_str());
+    if (!persist_result_logged(
+            result_store_, submission_id,
+            make_result(submission_id, SubmissionStatus::PREPARING,
+                        SubmissionVerdict::PENDING),
+            log_pid, "preparing")) {
       return;
     }
 
     const std::shared_ptr<ILanguageRunner> runner =
         runner_factory_.createRunner(request.language);
     if (runner == nullptr) {
-      persist_result(result_store_, submission_id,
-                     make_result(submission_id, SubmissionStatus::FAILED,
-                                 SubmissionVerdict::SYSTEM_ERROR,
-                                 "unsupported language"));
+      LOG_ERROR(
+          "submission runner missing id=%d pid=%s reason=unsupported_language",
+          submission_id, log_pid.c_str());
+      persist_result_logged(result_store_, submission_id,
+                            make_result(submission_id,
+                                        SubmissionStatus::FAILED,
+                                        SubmissionVerdict::SYSTEM_ERROR,
+                                        "unsupported language"),
+                            log_pid, "runner_missing");
       return;
     }
 
@@ -148,44 +205,66 @@ void SubmissionService::processSubmission(int submission_id,
     const RunnerPrepareResult prepare_result =
         runner->prepare(execution_request);
     if (!prepare_result.ok) {
-      persist_result(result_store_, submission_id,
-                     make_result(submission_id, SubmissionStatus::FAILED,
-                                 SubmissionVerdict::SYSTEM_ERROR,
-                                 prepare_result.message));
+      LOG_ERROR("submission prepare failed id=%d pid=%s reason=prepare_failed",
+                submission_id, log_pid.c_str());
+      log_failure_detail("submission prepare failed", submission_id,
+                         prepare_result.message);
+      persist_result_logged(result_store_, submission_id,
+                            make_result(submission_id,
+                                        SubmissionStatus::FAILED,
+                                        SubmissionVerdict::SYSTEM_ERROR,
+                                        prepare_result.message),
+                            log_pid, "prepare_failed");
       return;
     }
 
     // 中文注释：prepare 成功后进入 COMPILING；解释型语言也统一走 compile
     // 阶段，保持状态机一致。
-    if (!persist_result(result_store_, submission_id,
-                        make_result(submission_id, SubmissionStatus::COMPILING,
-                                    SubmissionVerdict::PENDING))) {
+    if (!persist_result_logged(
+            result_store_, submission_id,
+            make_result(submission_id, SubmissionStatus::COMPILING,
+                        SubmissionVerdict::PENDING),
+            log_pid, "compiling")) {
       return;
     }
 
     const RunnerCompileResult compile_result =
         runner->compile(execution_request);
     if (!compile_result.ok) {
-      persist_result(result_store_, submission_id,
-                     make_result(submission_id, SubmissionStatus::FINISHED,
-                                 compile_result.verdict,
-                                 compile_result.message));
+      LOG_ERROR("submission compile failed id=%d pid=%s verdict=%d reason=compile_failed",
+                submission_id, log_pid.c_str(),
+                static_cast<int>(compile_result.verdict));
+      log_failure_detail("submission compile failed", submission_id,
+                         compile_result.message);
+      persist_result_logged(result_store_, submission_id,
+                            make_result(submission_id,
+                                        SubmissionStatus::FINISHED,
+                                        compile_result.verdict,
+                                        compile_result.message),
+                            log_pid, "compile_failed");
       return;
     }
 
-    if (!persist_result(result_store_, submission_id,
-                        make_result(submission_id, SubmissionStatus::RUNNING,
-                                    SubmissionVerdict::PENDING))) {
+    if (!persist_result_logged(
+            result_store_, submission_id,
+            make_result(submission_id, SubmissionStatus::RUNNING,
+                        SubmissionVerdict::PENDING),
+            log_pid, "running")) {
       return;
     }
 
     const std::vector<SubmissionCaseSpec> cases =
         load_cases_for_problem(request.pid);
     if (cases.empty()) {
-      persist_result(result_store_, submission_id,
-                     make_result(submission_id, SubmissionStatus::FAILED,
-                                 SubmissionVerdict::SYSTEM_ERROR,
-                                 "failed to load problem cases"));
+      LOG_ERROR(
+          "submission cases missing id=%d pid=%s reason=problem_cases_missing",
+          submission_id, log_pid.c_str());
+      persist_result_logged(result_store_, submission_id,
+                            make_result(submission_id,
+                                        SubmissionStatus::FAILED,
+                                        SubmissionVerdict::SYSTEM_ERROR,
+                                        "failed to load problem cases"),
+                            log_pid, "problem_cases_missing");
       return;
     }
 
@@ -197,7 +276,8 @@ void SubmissionService::processSubmission(int submission_id,
           runner->runCase(execution_request, case_spec.input);
       running_result.case_results.push_back(case_result.result);
       running_result.message = case_result.message;
-      if (!persist_result(result_store_, submission_id, running_result)) {
+      if (!persist_result_logged(result_store_, submission_id, running_result,
+                                 log_pid, "running_case_update")) {
         return;
       }
     }
@@ -207,11 +287,25 @@ void SubmissionService::processSubmission(int submission_id,
                     judge_core_.summarize(running_result.case_results),
                     running_result.message);
     finished_result.case_results = running_result.case_results;
-    persist_result(result_store_, submission_id, finished_result);
+    if (!persist_result_logged(result_store_, submission_id, finished_result,
+                               log_pid, "finished")) {
+      return;
+    }
+    LOG_INFO("submission verdict final id=%d pid=%s status=%d verdict=%d",
+             submission_id, log_pid.c_str(),
+             static_cast<int>(finished_result.status),
+             static_cast<int>(finished_result.verdict));
   } catch (const std::exception &ex) {
-    persist_result(result_store_, submission_id,
-                   make_result(submission_id, SubmissionStatus::FAILED,
-                               SubmissionVerdict::SYSTEM_ERROR, ex.what()));
+    LOG_ERROR(
+        "submission terminal exception id=%d pid=%s reason=terminal_exception",
+        submission_id, log_pid.c_str());
+    log_failure_detail("submission terminal exception", submission_id,
+                       ex.what());
+    persist_result_logged(result_store_, submission_id,
+                          make_result(submission_id, SubmissionStatus::FAILED,
+                                      SubmissionVerdict::SYSTEM_ERROR,
+                                      ex.what()),
+                          log_pid, "terminal_exception");
   }
 }
 
