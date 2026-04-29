@@ -70,6 +70,7 @@ int main(int argc, char *argv[]) {
         config.getWorkerThreadCount(), submission_queue,
         client_sockets.submission_service(), &client_sockets);
     client_sockets_ptr = &client_sockets;
+    client_sockets.set_pool(&judge_worker_pool);
 
     // 3. 创建TCP服务器，使用配置中的端口
     server = std::make_unique<TcpServer>(

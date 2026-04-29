@@ -12,18 +12,19 @@
 #include <mutex>
 #include <string>
 #include <sys/select.h>
-#include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 #include "dispatch/SubmissionNotifier.h"
 #include "dispatch/SubmissionQueue.h"
 #include "pipeline/JudgeCore.h"
 #include "network/ConnectionRegistry.h"
+#include "network/AckBarrier.h"
 #include "protocol/JudgeProtocol.h"
 #include "runner/RunnerFactory.h"
 #include "pipeline/SubmissionService.h"
 #include "pipeline/ResultStore.h"
+
+class JudgeWorkerPool;
 
 /**
  * @brief TCP 连接管理器，同时也是异步评测结果的 notifier 实现。
@@ -66,6 +67,11 @@ public:
   /** @brief 暴露内部 SubmissionService，供 worker/notifier 协作使用。 */
   SubmissionService &submission_service() { return submission_service_; }
 
+  /**
+   * @brief 设置关联的 worker pool 指针，用于 graceful shutdown 时跳过回推。
+   */
+  void set_pool(JudgeWorkerPool *pool) { pool_ = pool; }
+
   /** @copydoc SubmissionNotifier::onSubmissionStarted */
   void onSubmissionStarted(const SubmissionTask &task) override;
   /** @copydoc SubmissionNotifier::onSubmissionFinished */
@@ -80,10 +86,7 @@ private:
   SubmissionService submission_service_;
   JudgeProtocol protocol_;
   std::atomic<uint64_t> next_session_id_{1};
-  mutable std::mutex notifier_mutex_;
-  std::unordered_set<std::string> awaiting_ack_channels_;
-  std::unordered_map<std::string, std::vector<std::string>>
-      deferred_protocol_messages_;
+  AckBarrier ack_barrier_;
 
   /** @brief 生成“槽位 + 会话”组成的异步回推通道标识。 */
   std::string make_reply_channel_id(int testBoxId, uint64_t session_id) const;
@@ -93,12 +96,9 @@ private:
   /** @brief 把协议响应挂到目标连接的待发送队列。 */
   void queue_protocol_response_for_channel(const std::string &reply_channel_id,
                                            std::string response);
-  /** @brief 标记某个 channel 目前必须先发 submission_ack。 */
-  void mark_channel_waiting_for_ack(const std::string &reply_channel_id);
-  /** @brief 解除 ack 屏障，并释放该 channel 暂存的后续消息。 */
-  void mark_channel_ack_sent(const std::string &reply_channel_id);
   /** @brief 触发外部 select 唤醒回调（若已配置）。 */
   void wake_select_loop();
 
   WakeCallback wake_callback_;
+  JudgeWorkerPool *pool_{nullptr};
 };

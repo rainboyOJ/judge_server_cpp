@@ -31,6 +31,16 @@ public:
    */
   void stop();
 
+  /**
+   * @brief 优雅关闭线程池，先标记停止状态再关闭队列。
+   */
+  void graceful_shutdown();
+
+  /**
+   * @brief 查询是否正在停止中。
+   */
+  bool is_stopping() const { return stopped_.load(); }
+
 private:
   /**
    * @brief 单个 worker 线程的主循环。

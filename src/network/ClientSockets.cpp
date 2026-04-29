@@ -14,6 +14,7 @@
 
 #include "network/ClientSockets.h"
 #include "common/Logger.h"
+#include "dispatch/JudgeWorkerPool.h"
 #include "protocol/JudgeProtocol.h"
 
 namespace {
@@ -100,17 +101,23 @@ void ClientSockets::deal_events(const fd_set &read_sets,
           task.reply_channel_id =
               make_reply_channel_id(slot_id, slot.get_session_id());
 
-          mark_channel_waiting_for_ack(task.reply_channel_id);
+          ack_barrier_.mark_waiting(task.reply_channel_id);
 
           if (!submission_queue_.push(task)) {
-            mark_channel_ack_sent(task.reply_channel_id);
+            const auto deferred = ack_barrier_.release(task.reply_channel_id);
             slot.set_pending_response(
                 protocol_.encodeError("submission queue unavailable"));
             slot.set_writable();
+            for (const std::string &msg : deferred) {
+              queue_protocol_response_for_channel(task.reply_channel_id, msg);
+            }
           } else {
             slot.set_pending_response(protocol_.encodeSubmissionAck(submission_id));
             slot.set_writable();
-            mark_channel_ack_sent(task.reply_channel_id);
+            const auto deferred = ack_barrier_.release(task.reply_channel_id);
+            for (const std::string &msg : deferred) {
+              queue_protocol_response_for_channel(task.reply_channel_id, msg);
+            }
           }
         } else {
           QueryResultRequest query_request{};
@@ -172,6 +179,10 @@ void ClientSockets::deal_events(const fd_set &read_sets,
 
 /** @copydoc ClientSockets::onSubmissionStarted */
 void ClientSockets::onSubmissionStarted(const SubmissionTask &task) {
+  if (pool_ && pool_->is_stopping()) {
+    return;
+  }
+
   SubmissionResult result{};
   if (!submission_service_.query(task.submission_id, result)) {
     return;
@@ -187,6 +198,10 @@ void ClientSockets::onSubmissionStarted(const SubmissionTask &task) {
 
 /** @copydoc ClientSockets::onSubmissionFinished */
 void ClientSockets::onSubmissionFinished(const SubmissionTask &task) {
+  if (pool_ && pool_->is_stopping()) {
+    return;
+  }
+
   SubmissionResult result{};
   if (!submission_service_.query(task.submission_id, result)) {
     return;
@@ -229,13 +244,8 @@ bool ClientSockets::parse_reply_channel_id(const std::string &reply_channel_id,
 /** @copydoc ClientSockets::queue_protocol_response_for_channel */
 void ClientSockets::queue_protocol_response_for_channel(
     const std::string &reply_channel_id, std::string response) {
-  {
-    std::lock_guard<std::mutex> lock(notifier_mutex_);
-    if (awaiting_ack_channels_.count(reply_channel_id) > 0) {
-      deferred_protocol_messages_[reply_channel_id].push_back(
-          std::move(response));
-      return;
-    }
+  if (ack_barrier_.try_defer(reply_channel_id, std::move(response))) {
+    return;
   }
 
   int slot_id = -1;
@@ -247,31 +257,6 @@ void ClientSockets::queue_protocol_response_for_channel(
   if (connection_registry_.slot(slot_id)
           .set_pending_response_if_session(session_id, std::move(response))) {
     wake_select_loop();
-  }
-}
-
-/** @copydoc ClientSockets::mark_channel_waiting_for_ack */
-void ClientSockets::mark_channel_waiting_for_ack(
-    const std::string &reply_channel_id) {
-  std::lock_guard<std::mutex> lock(notifier_mutex_);
-  awaiting_ack_channels_.insert(reply_channel_id);
-}
-
-/** @copydoc ClientSockets::mark_channel_ack_sent */
-void ClientSockets::mark_channel_ack_sent(const std::string &reply_channel_id) {
-  std::vector<std::string> deferred_messages;
-  {
-    std::lock_guard<std::mutex> lock(notifier_mutex_);
-    awaiting_ack_channels_.erase(reply_channel_id);
-    const auto it = deferred_protocol_messages_.find(reply_channel_id);
-    if (it != deferred_protocol_messages_.end()) {
-      deferred_messages = std::move(it->second);
-      deferred_protocol_messages_.erase(it);
-    }
-  }
-
-  for (std::string &message : deferred_messages) {
-    queue_protocol_response_for_channel(reply_channel_id, std::move(message));
   }
 }
 

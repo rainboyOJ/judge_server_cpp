@@ -37,17 +37,23 @@ void JudgeWorkerPool::stop() {
   }
 }
 
+/** @copydoc JudgeWorkerPool::graceful_shutdown */
+void JudgeWorkerPool::graceful_shutdown() {
+  stopped_.store(true);
+  stop();
+}
+
 /** @copydoc JudgeWorkerPool::workerLoop */
 void JudgeWorkerPool::workerLoop() {
   SubmissionTask task{};
   while (queue_.pop(task)) {
-    if (notifier_ != nullptr) {
+    if (notifier_ != nullptr && !stopped_.load()) {
       notifier_->onSubmissionStarted(task);
     }
 
     service_.processSubmission(task.submission_id, task.request);
 
-    if (notifier_ != nullptr) {
+    if (notifier_ != nullptr && !stopped_.load()) {
       notifier_->onSubmissionFinished(task);
     }
   }

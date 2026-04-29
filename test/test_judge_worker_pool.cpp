@@ -178,10 +178,23 @@ void test_worker_pool_invokes_processing_and_notifier() {
   }
 }
 
+void test_is_stopping_after_stop() {
+  SubmissionQueue queue;
+  FakeSubmissionService service;
+  RecordingNotifier notifier;
+
+  JudgeWorkerPool pool(1, queue, service, &notifier);
+  assert(!pool.is_stopping());
+
+  pool.stop();
+  assert(pool.is_stopping());
+}
+
 } // namespace
 
 int main() {
   test_worker_pool_consumes_queued_task();
   test_worker_pool_invokes_processing_and_notifier();
+  test_is_stopping_after_stop();
   return 0;
 }
