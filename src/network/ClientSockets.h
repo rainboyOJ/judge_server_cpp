@@ -98,6 +98,8 @@ private:
                                            std::string response);
   /** @brief 触发外部 select 唤醒回调（若已配置）。 */
   void wake_select_loop();
+  void handle_read_event(ConnectionSlot &slot, int slot_id);
+  void handle_write_event(ConnectionSlot &slot, int slot_id);
 
   WakeCallback wake_callback_;
   JudgeWorkerPool *pool_{nullptr};

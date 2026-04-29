@@ -68,113 +68,119 @@ void ClientSockets::deal_events(const fd_set &read_sets,
   for (std::size_t i = 0; i < connection_registry_.size(); i++) {
     ConnectionSlot &slot = connection_registry_.slot(i);
     int client_socket = slot.get_fd();
-    if (client_socket == 0)
-      continue;
+    if (client_socket == 0) continue;
     int slot_id = static_cast<int>(i);
-    // 读取事件
     if (FD_ISSET(client_socket, &read_sets)) {
-      LOG_DEBUG("read event on socket %d\n", client_socket);
-      int bytes_read = 0;
-      std::string message_body;
-      const bool has_complete_message = slot.read_message(bytes_read, message_body);
-      if (bytes_read == 0) {
-        LOG_INFO("Connection closed : %d\n", client_socket);
-        del_socket(slot_id);
-      } else if (bytes_read < 0) {
-        LOG_ERROR("Failed to read frome socket: %d\n", client_socket);
-        del_socket(slot_id);
-      } else if (has_complete_message) { // 没有发生错误
-        SubmissionRequest request{};
-        if (protocol_.decodeRequest(message_body, request)) {
-          const int submission_id =
-              submission_service_.createSubmission(request);
-          if (submission_id <= 0) {
-            slot.set_pending_response(
-                protocol_.encodeError("failed to create submission"));
-            slot.set_writable();
-            continue;
-          }
-
-          SubmissionTask task{};
-          task.submission_id = submission_id;
-          task.request = request;
-          task.reply_channel_id =
-              make_reply_channel_id(slot_id, slot.get_session_id());
-
-          ack_barrier_.mark_waiting(task.reply_channel_id);
-
-          if (!submission_queue_.push(task)) {
-            const auto deferred = ack_barrier_.release(task.reply_channel_id);
-            slot.set_pending_response(
-                protocol_.encodeError("submission queue unavailable"));
-            slot.set_writable();
-            for (const std::string &msg : deferred) {
-              queue_protocol_response_for_channel(task.reply_channel_id, msg);
-            }
-          } else {
-            slot.set_pending_response(protocol_.encodeSubmissionAck(submission_id));
-            slot.set_writable();
-            const auto deferred = ack_barrier_.release(task.reply_channel_id);
-            for (const std::string &msg : deferred) {
-              queue_protocol_response_for_channel(task.reply_channel_id, msg);
-            }
-          }
-        } else {
-          QueryResultRequest query_request{};
-          if (protocol_.decodeQueryRequest(message_body, query_request)) {
-            SubmissionResult result{};
-            if (!submission_service_.query(query_request.submission_id,
-                                           result)) {
-              slot.set_pending_response(
-                  protocol_.encodeError("submission not found"));
-            } else {
-              slot.set_pending_response(protocol_.encodeResult(result));
-            }
-            slot.set_writable();
-          } else {
-            slot.set_pending_response(protocol_.encodeError("bad request"));
-            slot.set_writable();
-          }
-        }
-      } // 没有读取发生错误else end
-      else {
-        LOG_DEBUG("read bytes_read = %d, but not get All testProblem data",
-                  bytes_read);
-      }
-    }
-    // 写事件
-    else if (FD_ISSET(client_socket, &write_sets)) {
-      LOG_DEBUG("write event on socket %d\n", client_socket);
-      // 1. 检查socket状态，确保可写
-      if (!slot.is_writable()) // 不是可写状态
-        continue;
-
-      if (!slot.has_pending_response()) {
-        slot.set_readable();
-        continue;
-      }
-      std::string result_data = slot.copy_pending_response();
-#ifdef MUDEBUG
-      // LOG_DEBUG("send %d bytes to socket %d", result_data.size(),
-      // client_socket); debug_print_uint8_t_vector(result_data);
-#endif
-      int bytes_write = slot.send(result_data);
-      if (bytes_write < 0) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
-          continue;
-        }
-        LOG_ERROR("Failed to send response to socket %d", client_socket);
-        del_socket(slot_id);
-        continue;
-      }
-
-      if (!slot.consume_pending_response(bytes_write)) {
-        continue;
-      }
-
-      slot.set_readable(); // 转入readable 的状态
+      handle_read_event(slot, slot_id);
+    } else if (FD_ISSET(client_socket, &write_sets)) {
+      handle_write_event(slot, slot_id);
     }
   }
+}
+
+void ClientSockets::handle_read_event(ConnectionSlot &slot, int slot_id) {
+  int client_socket = slot.get_fd();
+  LOG_DEBUG("read event on socket %d\n", client_socket);
+  int bytes_read = 0;
+  std::string message_body;
+  const bool has_complete_message = slot.read_message(bytes_read, message_body);
+  if (bytes_read == 0) {
+    LOG_INFO("Connection closed : %d\n", client_socket);
+    del_socket(slot_id);
+  } else if (bytes_read < 0) {
+    LOG_ERROR("Failed to read frome socket: %d\n", client_socket);
+    del_socket(slot_id);
+  } else if (has_complete_message) { // 没有发生错误
+    SubmissionRequest request{};
+    if (protocol_.decodeRequest(message_body, request)) {
+      const int submission_id =
+          submission_service_.createSubmission(request);
+      if (submission_id <= 0) {
+        slot.set_pending_response(
+            protocol_.encodeError("failed to create submission"));
+        slot.set_writable();
+        return;
+      }
+
+      SubmissionTask task{};
+      task.submission_id = submission_id;
+      task.request = request;
+      task.reply_channel_id =
+          make_reply_channel_id(slot_id, slot.get_session_id());
+
+      ack_barrier_.mark_waiting(task.reply_channel_id);
+
+      if (!submission_queue_.push(task)) {
+        const auto deferred = ack_barrier_.release(task.reply_channel_id);
+        slot.set_pending_response(
+            protocol_.encodeError("submission queue unavailable"));
+        slot.set_writable();
+        for (const std::string &msg : deferred) {
+          queue_protocol_response_for_channel(task.reply_channel_id, msg);
+        }
+      } else {
+        slot.set_pending_response(protocol_.encodeSubmissionAck(submission_id));
+        slot.set_writable();
+        const auto deferred = ack_barrier_.release(task.reply_channel_id);
+        for (const std::string &msg : deferred) {
+          queue_protocol_response_for_channel(task.reply_channel_id, msg);
+        }
+      }
+    } else {
+      QueryResultRequest query_request{};
+      if (protocol_.decodeQueryRequest(message_body, query_request)) {
+        SubmissionResult result{};
+        if (!submission_service_.query(query_request.submission_id,
+                                       result)) {
+          slot.set_pending_response(
+              protocol_.encodeError("submission not found"));
+        } else {
+          slot.set_pending_response(protocol_.encodeResult(result));
+        }
+        slot.set_writable();
+      } else {
+        slot.set_pending_response(protocol_.encodeError("bad request"));
+        slot.set_writable();
+      }
+    }
+  } // 没有读取发生错误else end
+  else {
+    LOG_DEBUG("read bytes_read = %d, but not get All testProblem data",
+              bytes_read);
+  }
+}
+
+void ClientSockets::handle_write_event(ConnectionSlot &slot, int slot_id) {
+  int client_socket = slot.get_fd();
+  LOG_DEBUG("write event on socket %d\n", client_socket);
+  // 1. 检查socket状态，确保可写
+  if (!slot.is_writable()) // 不是可写状态
+    return;
+
+  if (!slot.has_pending_response()) {
+    slot.set_readable();
+    return;
+  }
+  std::string result_data = slot.copy_pending_response();
+#ifdef MUDEBUG
+  // LOG_DEBUG("send %d bytes to socket %d", result_data.size(),
+  // client_socket); debug_print_uint8_t_vector(result_data);
+#endif
+  int bytes_write = slot.send(result_data);
+  if (bytes_write < 0) {
+    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+      return;
+    }
+    LOG_ERROR("Failed to send response to socket %d", client_socket);
+    del_socket(slot_id);
+    return;
+  }
+
+  if (!slot.consume_pending_response(bytes_write)) {
+    return;
+  }
+
+  slot.set_readable(); // 转入readable 的状态
 }
 
 /** @copydoc ClientSockets::onSubmissionStarted */
