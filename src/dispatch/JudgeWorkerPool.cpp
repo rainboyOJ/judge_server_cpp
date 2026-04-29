@@ -54,7 +54,7 @@ void JudgeWorkerPool::workerLoop() {
 
   SubmissionTask task{};
   while (queue_.pop(task)) {
-    LOG_DEBUG("worker start worker_id=%s submission_id=%d reply_channel_id=%s",
+    LOG_DEBUG("worker start worker_id=%s submission_id=%d reply_channel=%s",
               worker_id.c_str(), task.submission_id,
               task.reply_channel_id.c_str());
 
@@ -68,7 +68,7 @@ void JudgeWorkerPool::workerLoop() {
       notifier_->onSubmissionFinished(task);
     }
 
-    LOG_DEBUG("worker finish worker_id=%s submission_id=%d reply_channel_id=%s",
+    LOG_DEBUG("worker finish worker_id=%s submission_id=%d reply_channel=%s",
               worker_id.c_str(), task.submission_id,
               task.reply_channel_id.c_str());
   }

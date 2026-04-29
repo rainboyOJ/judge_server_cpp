@@ -12,16 +12,16 @@ std::optional<std::string>
 SubmissionEventResponder::onSubmissionStarted(const SubmissionTask &task) {
   SubmissionResult result{};
   if (!submission_service_.query(task.submission_id, result)) {
-    LOG_DEBUG("async start miss id=%d", task.submission_id);
+    LOG_DEBUG("async start miss submission_id=%d", task.submission_id);
     return std::nullopt;
   }
 
   if (result.status == SubmissionStatus::QUEUED) {
-    LOG_DEBUG("async start skip queued id=%d", task.submission_id);
+    LOG_DEBUG("async start skip queued submission_id=%d", task.submission_id);
     return std::nullopt;
   }
 
-  LOG_DEBUG("async start msg id=%d status=%d", task.submission_id,
+  LOG_DEBUG("async start msg submission_id=%d status=%d", task.submission_id,
             static_cast<int>(result.status));
   return protocol_.encodeSubmissionUpdate(result);
 }
@@ -30,7 +30,7 @@ std::optional<std::string>
 SubmissionEventResponder::onSubmissionFinished(const SubmissionTask &task) {
   SubmissionResult result{};
   if (!submission_service_.query(task.submission_id, result)) {
-    LOG_DEBUG("async finish miss id=%d", task.submission_id);
+    LOG_DEBUG("async finish miss submission_id=%d", task.submission_id);
     return std::nullopt;
   }
 
@@ -38,7 +38,7 @@ SubmissionEventResponder::onSubmissionFinished(const SubmissionTask &task) {
                                      result.status == SubmissionStatus::FAILED
                                  ? "submission_finished"
                                  : "submission_update";
-  LOG_DEBUG("async finish msg id=%d status=%d type=%s", task.submission_id,
+  LOG_DEBUG("async finish msg submission_id=%d status=%d type=%s", task.submission_id,
             static_cast<int>(result.status), message_type);
   return protocol_.encodeResult(result);
 }

@@ -46,7 +46,7 @@ void log_failure_detail(const char *event, int submission_id,
     return;
   }
 
-  LOG_DEBUG("%s id=%d detail=%s", event, submission_id,
+  LOG_DEBUG("%s submission_id=%d detail=%s", event, submission_id,
             sanitize_for_log(detail).c_str());
 }
 
@@ -77,7 +77,7 @@ bool persist_result_logged(ResultStore &store, int submission_id,
   }
 
   LOG_ERROR(
-      "submission persist failed id=%d pid=%s transition=%s status=%d verdict=%d",
+      "submission persist failed submission_id=%d pid=%s transition=%s status=%d verdict=%d",
       submission_id, log_pid.c_str(), transition,
       static_cast<int>(result.status), static_cast<int>(result.verdict));
   return false;
@@ -172,7 +172,7 @@ void SubmissionService::processSubmission(int submission_id,
   try {
     // 中文注释：先把提交推进到
     // PREPARING，后续任何系统级异常都基于这个提交单据回写。
-    LOG_DEBUG("submission prepare enter id=%d pid=%s", submission_id,
+    LOG_DEBUG("submission prepare enter submission_id=%d pid=%s", submission_id,
               log_pid.c_str());
     if (!persist_result_logged(
             result_store_, submission_id,
@@ -186,7 +186,7 @@ void SubmissionService::processSubmission(int submission_id,
         runner_factory_.createRunner(request.language);
     if (runner == nullptr) {
       LOG_ERROR(
-          "submission runner missing id=%d pid=%s reason=unsupported_language",
+          "submission runner missing submission_id=%d pid=%s reason=unsupported_language",
           submission_id, log_pid.c_str());
       persist_result_logged(result_store_, submission_id,
                             make_result(submission_id,
@@ -205,7 +205,7 @@ void SubmissionService::processSubmission(int submission_id,
     const RunnerPrepareResult prepare_result =
         runner->prepare(execution_request);
     if (!prepare_result.ok) {
-      LOG_ERROR("submission prepare failed id=%d pid=%s reason=prepare_failed",
+      LOG_ERROR("submission prepare failed submission_id=%d pid=%s reason=prepare_failed",
                 submission_id, log_pid.c_str());
       log_failure_detail("submission prepare failed", submission_id,
                          prepare_result.message);
@@ -231,7 +231,7 @@ void SubmissionService::processSubmission(int submission_id,
     const RunnerCompileResult compile_result =
         runner->compile(execution_request);
     if (!compile_result.ok) {
-      LOG_ERROR("submission compile failed id=%d pid=%s verdict=%d reason=compile_failed",
+      LOG_ERROR("submission compile failed submission_id=%d pid=%s verdict=%d reason=compile_failed",
                 submission_id, log_pid.c_str(),
                 static_cast<int>(compile_result.verdict));
       log_failure_detail("submission compile failed", submission_id,
@@ -257,7 +257,7 @@ void SubmissionService::processSubmission(int submission_id,
         load_cases_for_problem(request.pid);
     if (cases.empty()) {
       LOG_ERROR(
-          "submission cases missing id=%d pid=%s reason=problem_cases_missing",
+          "submission cases missing submission_id=%d pid=%s reason=problem_cases_missing",
           submission_id, log_pid.c_str());
       persist_result_logged(result_store_, submission_id,
                             make_result(submission_id,
@@ -291,13 +291,13 @@ void SubmissionService::processSubmission(int submission_id,
                                log_pid, "finished")) {
       return;
     }
-    LOG_INFO("submission verdict final id=%d pid=%s status=%d verdict=%d",
+    LOG_INFO("submission verdict final submission_id=%d pid=%s status=%d verdict=%d",
              submission_id, log_pid.c_str(),
              static_cast<int>(finished_result.status),
              static_cast<int>(finished_result.verdict));
   } catch (const std::exception &ex) {
     LOG_ERROR(
-        "submission terminal exception id=%d pid=%s reason=terminal_exception",
+        "submission terminal exception submission_id=%d pid=%s reason=terminal_exception",
         submission_id, log_pid.c_str());
     log_failure_detail("submission terminal exception", submission_id,
                        ex.what());

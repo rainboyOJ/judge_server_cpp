@@ -2,7 +2,7 @@
 
 ## 概览
 
-本项目是一个 async OJ 判题后端，所有源码位于单一 `src/` 目录树下。核心思路是"旧 TCP 外壳 + 新异步判题后端"的过渡架构：
+本项目是一个 async OJ 判题后端，所有源码位于单一 `src/` 目录树下。当前主线已经收敛为 `network + dispatch + pipeline + runner + protocol` 的组合式结构：
 
 - `TcpServer`：基于 `select` + `eventfd` 的事件循环外壳。
 - `ClientSockets`：协议接入、submission 入队、查询分流、结果回包桥接。
@@ -13,7 +13,7 @@
 - `SubmissionNotifier`：worker 生命周期事件回传给 socket 层。
 - `ResultStore`：线程安全保存提交快照，`query_result` 和最终推送都从这里读取最新状态。
 
-核心入口：`main.cpp` 读取 `config/config.json`，构造 `SubmissionQueue`、`ClientSockets`、`JudgeWorkerPool`，再启动 `TcpServer`。
+核心入口：`main.cpp` 读取 `config/config.json`，构造 `SubmissionQueue`、`SubmissionService`、`ClientSockets`、`JudgeWorkerPool`，再启动 `TcpServer`。
 
 ## 目录结构
 
@@ -25,8 +25,6 @@
 | `src/runner/` | 语言 Runner 接口与实现（CppRunner、PythonRunner）、工厂（RunnerFactory）、运行支撑（RunnerSupport） |
 | `src/pipeline/` | 评测编排（SubmissionService）、判题归并（JudgeCore）、结果存储（ResultStore） |
 | `src/protocol/` | JSON 协议编解码（JudgeProtocol） |
-| `src/legacy/` | 旧系统兼容层（testBox、workThreadPool、resultContainer、testPointBox 等） |
-
 ## 网络层 (src/network/)
 
 `TcpServer` 基于 `select` + `eventfd` 实现事件循环：
@@ -42,7 +40,7 @@
 - 写：响应同样带 4 字节长度前缀，支持部分写出后的续传。
 - 管理逻辑槽位、fd/session 映射、待发送 frame 与 `fd_set` 参与逻辑。
 
-`ClientSockets` 继承 `SubmissionNotifier`，将 worker 事件转换为 socket 回包。同时保留旧 `testBox` 槽位生命周期和 fallback 回写分支，是兼容层而非全新的 reactor 模块。
+`ClientSockets` 继承 `SubmissionNotifier`，负责把 worker 生命周期事件转换成协议响应并挂回对应连接。它内部进一步拆成 `SubmissionRequestHandler`、`QueryRequestHandler`、`SubmissionEventResponder`、`ReplyChannel` 和 `AckBarrier` 等小组件。
 
 ## 协议层 (src/protocol/)
 
@@ -100,16 +98,6 @@
 - `CppRunner` / `PythonRunner`：约定工作目录 `/tmp/oj_compile_<submission_id>`。
 - `RunnerSupport` / `RunnerCompileSupport` / `RunnerExecutionSupport`：runner 共用的编译、执行与输出比较支撑代码。
 
-## 旧系统层 (src/legacy/)
-
-- `testBox`：旧评测槽位管理器，`main.cpp` 仍创建它，`ClientSockets` 仍依赖它分配 `testBoxId`。
-- `workThreadPool`：旧线程池。
-- `resultContainer`：旧结果容器。
-- `testPointBox`：旧单点评测逻辑。
-- `memPool`、`static_loop_queue`、`testQueue`：旧内存/队列工具。
-
-当前最准确的理解是：前端网络壳仍旧，后端判题主流程已异步化。
-
 ## 请求生命周期
 
 ### `submit` 流程
@@ -153,11 +141,11 @@ client
 
 ## ack 屏障机制
 
-`ClientSockets` 实现了 ack 屏障：
+`AckBarrier` 保证 ack 顺序：
 
 - 任务刚入队时先把 channel 标记为 `awaiting_ack`。
-- notifier 在 ack 尚未发出前产生的协议消息会先进入 `deferred_protocol_messages_`。
-- `mark_channel_ack_sent()` 后再把这些延迟消息回灌到正常发送路径。
+- notifier 在 ack 尚未发出前产生的协议消息会先被延迟。
+- ack 发出后，再把这些延迟消息回灌到正常发送路径。
 
 这保证了同一连接上不会出现"最终结果先于 ack 发出"的乱序。
 

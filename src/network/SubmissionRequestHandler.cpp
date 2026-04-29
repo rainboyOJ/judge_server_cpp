@@ -25,7 +25,7 @@ SubmissionRequestHandler::HandleSubmitResult SubmissionRequestHandler::handleSub
     result.response = protocol_.encodeError("failed to create submission");
     return result;
   }
-  LOG_DEBUG("submit created id=%d reply_channel=%s", submission_id,
+  LOG_DEBUG("submit created submission_id=%d reply_channel=%s", submission_id,
             reply_channel_id.c_str());
 
   SubmissionTask task{};
@@ -36,20 +36,20 @@ SubmissionRequestHandler::HandleSubmitResult SubmissionRequestHandler::handleSub
   ack_barrier_.mark_waiting(reply_channel_id);
 
   if (!submission_queue_.push(task)) {
-    LOG_ERROR("submit queue failed id=%d reply_channel=%s", submission_id,
+    LOG_ERROR("submit queue failed submission_id=%d reply_channel=%s", submission_id,
               reply_channel_id.c_str());
     result.response = protocol_.encodeError("submission queue unavailable");
     result.deferred_messages = ack_barrier_.release(reply_channel_id);
-    LOG_DEBUG("submit ack release id=%d count=%zu", submission_id,
+    LOG_DEBUG("submit ack release submission_id=%d count=%zu", submission_id,
               result.deferred_messages.size());
     return result;
   }
 
-  LOG_DEBUG("submit queued id=%d reply_channel=%s", submission_id,
+  LOG_DEBUG("submit queued submission_id=%d reply_channel=%s", submission_id,
             reply_channel_id.c_str());
   result.response = protocol_.encodeSubmissionAck(submission_id);
   result.deferred_messages = ack_barrier_.release(reply_channel_id);
-  LOG_DEBUG("submit ack release id=%d count=%zu", submission_id,
+  LOG_DEBUG("submit ack release submission_id=%d count=%zu", submission_id,
             result.deferred_messages.size());
   return result;
 }
