@@ -7,43 +7,86 @@ project(boxTest VERSION 1.0)
 set(CMAKE_CXX_STANDARD 17)          # 可以根据需要调整标准版本
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-# 定义项目根目录的宏
-add_definitions(-DPROJECT_ROOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
-
-# 添加头文件目
-include_directories(src)
-include_directories(sjudge)
-
-set(CMAKE_EXE_LINKER_FLAGS "-Wl,--copy-dt-needed-entries")
-
-# 检查是否是 Debug 模式
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_definitions(-DMUDEBUG)
-endif()
-
-
-# 查找源文件并添加可执行文件
-file(GLOB SOURCES "src/*.cpp" "src/common/*.cpp" "src/test_process/*.cpp"
-    list(REMOVE_ITEM SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
-                  "src/network/*.cpp")
-list(APPEND SOURCES
-    "sjudge/sjudge_call.cpp"
-    "src/protocol/JudgeProtocol.cpp"
-    "src/dispatch/JudgeWorkerPool.cpp"
-    "src/runner/CppRunner.cpp"
-    "src/runner/PythonRunner.cpp"
-    "src/pipeline/SubmissionService.cpp"
-    "src/runner/RunnerFactory.cpp"
-    "src/pipeline/JudgeCore.cpp"
-    "src/pipeline/ResultStore.cpp"
-    "src/dispatch/SubmissionQueue.cpp"
+add_library(bt_build_settings INTERFACE)
+target_include_directories(bt_build_settings INTERFACE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+    "${CMAKE_CURRENT_SOURCE_DIR}/sjudge"
 )
-add_library(${CMAKE_PROJECT_NAME} STATIC ${SOURCES})
+target_compile_definitions(bt_build_settings INTERFACE
+    PROJECT_ROOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+    $<$<CONFIG:Debug>:MUDEBUG>
+)
+target_link_libraries(bt_build_settings INTERFACE "-Wl,--copy-dt-needed-entries")
 
-# 编译主代码
+add_library(bt_common STATIC
+    src/common/Config.cpp
+    src/common/Logger.cpp
+    src/common/Timestamp.cpp
+    src/common/utils.cpp
+)
+target_link_libraries(bt_common PUBLIC bt_build_settings)
+
+add_library(bt_protocol STATIC
+    src/protocol/JudgeProtocol.cpp
+)
+target_link_libraries(bt_protocol PUBLIC bt_build_settings bt_common)
+
+add_library(bt_runner STATIC
+    sjudge/sjudge_call.cpp
+    src/test_process/Compile.cpp
+    src/test_process/TestOneSinglePoint.cpp
+    src/runner/CppRunner.cpp
+    src/runner/PythonRunner.cpp
+    src/runner/RunnerFactory.cpp
+)
+target_link_libraries(bt_runner PUBLIC bt_build_settings bt_common)
+
+add_library(bt_pipeline STATIC
+    src/pipeline/JudgeCore.cpp
+    src/pipeline/ResultStore.cpp
+    src/pipeline/SubmissionService.cpp
+)
+target_link_libraries(bt_pipeline PUBLIC bt_build_settings bt_common bt_runner)
+
+add_library(bt_dispatch STATIC
+    src/dispatch/JudgeWorkerPool.cpp
+    src/dispatch/SubmissionQueue.cpp
+)
+target_link_libraries(bt_dispatch PUBLIC bt_build_settings bt_common bt_pipeline)
+
+add_library(bt_network STATIC
+    src/network/AckBarrier.cpp
+    src/network/Buffer.cpp
+    src/network/ClientSockets.cpp
+    src/network/ConnectionRegistry.cpp
+    src/network/ConnectionSlot.cpp
+    src/network/QueryRequestHandler.cpp
+    src/network/ReplyChannel.cpp
+    src/network/SubmissionEventResponder.cpp
+    src/network/SubmissionRequestHandler.cpp
+    src/network/TcpServer.cpp
+)
+target_link_libraries(bt_network PUBLIC
+    bt_build_settings
+    bt_common
+    bt_dispatch
+    bt_pipeline
+    bt_protocol
+)
+
+add_library(boxTest INTERFACE)
+target_link_libraries(boxTest INTERFACE
+    bt_build_settings
+    bt_common
+    bt_protocol
+    bt_runner
+    bt_pipeline
+    bt_dispatch
+    bt_network
+)
 
 add_executable(judge_server src/main.cpp)
-target_link_libraries(judge_server ${CMAKE_PROJECT_NAME})
+target_link_libraries(judge_server PRIVATE boxTest)
 
 
 # 如果你有测试代码，可以使用CMake的测试框架（如CTest）进行构建

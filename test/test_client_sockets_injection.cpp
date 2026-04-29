@@ -1,0 +1,29 @@
+#include <cassert>
+
+#include "dispatch/SubmissionQueue.h"
+#include "network/ClientSockets.h"
+#include "pipeline/JudgeCore.h"
+#include "pipeline/ResultStore.h"
+#include "pipeline/SubmissionService.h"
+#include "runner/RunnerFactory.h"
+
+namespace {
+
+void test_client_sockets_accepts_injected_submission_service() {
+  SubmissionQueue queue;
+  ResultStore result_store;
+  RunnerFactory runner_factory;
+  JudgeCore judge_core;
+  SubmissionService submission_service(result_store, runner_factory, judge_core);
+
+  ClientSockets client_sockets(16, queue, submission_service);
+
+  assert(&client_sockets.submission_service() == &submission_service);
+}
+
+} // namespace
+
+int main() {
+  test_client_sockets_accepts_injected_submission_service();
+  return 0;
+}

@@ -7,7 +7,7 @@
  * - 按索引获取/初始化/清理具体槽位
  * - 把当前所有活跃连接按照读写状态加入 fd_set
  *
- * 当前实现是一个固定大小的槽位数组，和旧 testBox 的 testBoxId 分配模型匹配。
+ * 当前实现是一个固定大小的槽位数组，用来承载所有活跃连接。
  */
 #pragma once
 
@@ -33,7 +33,7 @@ class ConnectionRegistry {
 public:
   /**
    * @brief 预分配指定数量的连接槽位。
-   * @param slot_count 最大槽位数量，通常由 testBox::size() + 5 决定。
+   * @param slot_count 最大槽位数量。
    */
   explicit ConnectionRegistry(std::size_t slot_count = 0);
 

@@ -1,28 +1,26 @@
-// 连接上层服务器主循环线程 与 testBox，
-// 1. 加入，删除，client_socket
-// 2. 设置socket的状态，可读，可写
-// 3. 发送，读取，信息
-// 4. 设置 外部的FD_SET
+/**
+ * @file ClientSockets.h
+ * @brief TCP 连接管理与异步协议回推入口。
+ */
 #pragma once
 
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
-#include <mutex>
 #include <string>
 #include <sys/select.h>
 #include <vector>
 
 #include "dispatch/SubmissionNotifier.h"
 #include "dispatch/SubmissionQueue.h"
-#include "pipeline/JudgeCore.h"
 #include "network/ConnectionRegistry.h"
+#include "network/QueryRequestHandler.h"
 #include "network/AckBarrier.h"
+#include "network/SubmissionEventResponder.h"
+#include "network/SubmissionRequestHandler.h"
 #include "protocol/JudgeProtocol.h"
-#include "runner/RunnerFactory.h"
 #include "pipeline/SubmissionService.h"
-#include "pipeline/ResultStore.h"
 
 class JudgeWorkerPool;
 
@@ -44,6 +42,7 @@ public:
    * @brief 构造连接管理器。
    */
   ClientSockets(std::size_t slot_count, SubmissionQueue &submission_queue,
+                SubmissionService &submission_service,
                 WakeCallback wake_callback = nullptr);
   /** @brief 注册一个新的 client socket。 */
   void add_socket(int);
@@ -80,19 +79,14 @@ public:
 private:
   SubmissionQueue &submission_queue_;
   ConnectionRegistry connection_registry_;
-  ResultStore result_store_;
-  RunnerFactory runner_factory_;
-  JudgeCore judge_core_;
-  SubmissionService submission_service_;
+  SubmissionService &submission_service_;
   JudgeProtocol protocol_;
   std::atomic<uint64_t> next_session_id_{1};
   AckBarrier ack_barrier_;
+  SubmissionRequestHandler submission_request_handler_;
+  QueryRequestHandler query_request_handler_;
+  SubmissionEventResponder submission_event_responder_;
 
-  /** @brief 生成“槽位 + 会话”组成的异步回推通道标识。 */
-  std::string make_reply_channel_id(int testBoxId, uint64_t session_id) const;
-  /** @brief 解析 reply_channel_id 得到目标槽位和会话 id。 */
-  bool parse_reply_channel_id(const std::string &reply_channel_id,
-                              int &testBoxId, uint64_t &session_id) const;
   /** @brief 把协议响应挂到目标连接的待发送队列。 */
   void queue_protocol_response_for_channel(const std::string &reply_channel_id,
                                            std::string response);

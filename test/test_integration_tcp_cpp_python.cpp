@@ -12,6 +12,10 @@
 #include "dispatch/JudgeWorkerPool.h"
 #include "dispatch/SubmissionQueue.h"
 #include "json.hpp"
+#include "pipeline/JudgeCore.h"
+#include "pipeline/ResultStore.h"
+#include "pipeline/SubmissionService.h"
+#include "runner/RunnerFactory.h"
 
 using json = nlohmann::json;
 
@@ -46,9 +50,9 @@ void write_framed_message(int fd, const std::string &body) {
 class SocketHarness {
 public:
   SocketHarness()
-      : client_sockets_(4, submission_queue_),
-        worker_pool_(1, submission_queue_, client_sockets_.submission_service(),
-                     &client_sockets_) {
+      : submission_service_(result_store_, runner_factory_, judge_core_),
+        client_sockets_(4, submission_queue_, submission_service_),
+        worker_pool_(1, submission_queue_, submission_service_, &client_sockets_) {
     int sockets[2] = {-1, -1};
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) == 0);
     client_fd_ = sockets[0];
@@ -112,6 +116,10 @@ private:
   }
 
   SubmissionQueue submission_queue_;
+  ResultStore result_store_;
+  RunnerFactory runner_factory_;
+  JudgeCore judge_core_;
+  SubmissionService submission_service_;
   ClientSockets client_sockets_;
   JudgeWorkerPool worker_pool_;
   int client_fd_{-1};

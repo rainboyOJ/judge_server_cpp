@@ -11,6 +11,10 @@
 #include "dispatch/JudgeWorkerPool.h"
 #include "dispatch/SubmissionQueue.h"
 #include "json.hpp"
+#include "pipeline/JudgeCore.h"
+#include "pipeline/ResultStore.h"
+#include "pipeline/SubmissionService.h"
+#include "runner/RunnerFactory.h"
 
 using json = nlohmann::json;
 
@@ -45,13 +49,14 @@ void write_framed_message(int fd, const std::string &body) {
 class AsyncFlowHarness {
 public:
   explicit AsyncFlowHarness(std::atomic<int> *wake_count = nullptr)
-      : client_sockets_(4, submission_queue_, [wake_count]() {
-          if (wake_count != nullptr) {
-            wake_count->fetch_add(1);
-          }
-        }),
-        worker_pool_(1, submission_queue_, client_sockets_.submission_service(),
-                     &client_sockets_) {
+      : submission_service_(result_store_, runner_factory_, judge_core_),
+        client_sockets_(4, submission_queue_, submission_service_,
+                        [wake_count]() {
+                          if (wake_count != nullptr) {
+                            wake_count->fetch_add(1);
+                          }
+                        }),
+        worker_pool_(1, submission_queue_, submission_service_, &client_sockets_) {
     createConnection();
   }
 
@@ -144,6 +149,10 @@ private:
   }
 
   SubmissionQueue submission_queue_;
+  ResultStore result_store_;
+  RunnerFactory runner_factory_;
+  JudgeCore judge_core_;
+  SubmissionService submission_service_;
   ClientSockets client_sockets_;
   JudgeWorkerPool worker_pool_;
   int client_fd_{-1};

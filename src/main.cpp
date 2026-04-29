@@ -28,6 +28,10 @@
 #include "common/Logger.h"
 #include "dispatch/JudgeWorkerPool.h"
 #include "dispatch/SubmissionQueue.h"
+#include "pipeline/JudgeCore.h"
+#include "pipeline/ResultStore.h"
+#include "pipeline/SubmissionService.h"
+#include "runner/RunnerFactory.h"
 
 int main(int argc, char *argv[]) {
   // 解析命令行参数
@@ -51,24 +55,29 @@ int main(int argc, char *argv[]) {
   std::cout << "================================" << std::endl;
 
   SubmissionQueue submission_queue;
+  ResultStore result_store;
+  RunnerFactory runner_factory;
+  JudgeCore judge_core;
+  SubmissionService submission_service(result_store, runner_factory, judge_core);
 
   try {
     ClientSockets *client_sockets_ptr = nullptr;
     std::unique_ptr<TcpServer> server;
     std::function<void()> wake_server;
-    
-    // 1. 创建 client 
+
+    // 1. 创建连接管理器
     ClientSockets client_sockets(config.getMaxConcurrentTests(), submission_queue,
+                                 submission_service,
                                  [&wake_server]() {
-                                     if (wake_server) {
-                                       wake_server();
+                                   if (wake_server) {
+                                     wake_server();
                                    }
                                  });
 
     // 2. 创建评测池
     JudgeWorkerPool judge_worker_pool(
         config.getWorkerThreadCount(), submission_queue,
-        client_sockets.submission_service(), &client_sockets);
+        submission_service, &client_sockets);
     client_sockets_ptr = &client_sockets;
     client_sockets.set_pool(&judge_worker_pool);
 

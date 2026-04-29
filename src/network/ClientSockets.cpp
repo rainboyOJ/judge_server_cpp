@@ -1,5 +1,5 @@
 /**
- * @file client_sockets.cpp
+ * @file ClientSockets.cpp
  * @brief TCP 连接管理、协议接入与异步结果回推实现。
  */
 
@@ -15,26 +15,20 @@
 #include "network/ClientSockets.h"
 #include "common/Logger.h"
 #include "dispatch/JudgeWorkerPool.h"
+#include "network/ReplyChannel.h"
 #include "protocol/JudgeProtocol.h"
-
-namespace {
-
-/**
- * @brief 判断快照是否已经进入终态。
- */
-bool is_terminal_status(SubmissionStatus status) {
-  return status == SubmissionStatus::FINISHED ||
-         status == SubmissionStatus::FAILED;
-}
-
-} // namespace
 
 /** @copydoc ClientSockets::ClientSockets */
 ClientSockets::ClientSockets(std::size_t slot_count,
                              SubmissionQueue &submission_queue,
+                             SubmissionService &submission_service,
                              WakeCallback wake_callback)
     : submission_queue_(submission_queue), connection_registry_(slot_count),
-      submission_service_(result_store_, runner_factory_, judge_core_),
+      submission_service_(submission_service),
+      submission_request_handler_(submission_queue_, submission_service_,
+                                  protocol_, ack_barrier_),
+      query_request_handler_(submission_service_, protocol_),
+      submission_event_responder_(submission_service_, protocol_),
       wake_callback_(std::move(wake_callback)) {}
 
 /** @copydoc ClientSockets::add_to_sets */
@@ -88,55 +82,25 @@ void ClientSockets::handle_read_event(ConnectionSlot &slot, int slot_id) {
     LOG_INFO("Connection closed : %d\n", client_socket);
     del_socket(slot_id);
   } else if (bytes_read < 0) {
-    LOG_ERROR("Failed to read frome socket: %d\n", client_socket);
+    LOG_ERROR("Failed to read from socket: %d\n", client_socket);
     del_socket(slot_id);
   } else if (has_complete_message) { // 没有发生错误
     SubmissionRequest request{};
     if (protocol_.decodeRequest(message_body, request)) {
-      const int submission_id =
-          submission_service_.createSubmission(request);
-      if (submission_id <= 0) {
-        slot.set_pending_response(
-            protocol_.encodeError("failed to create submission"));
-        slot.set_writable();
-        return;
-      }
-
-      SubmissionTask task{};
-      task.submission_id = submission_id;
-      task.request = request;
-      task.reply_channel_id =
-          make_reply_channel_id(slot_id, slot.get_session_id());
-
-      ack_barrier_.mark_waiting(task.reply_channel_id);
-
-      if (!submission_queue_.push(task)) {
-        const auto deferred = ack_barrier_.release(task.reply_channel_id);
-        slot.set_pending_response(
-            protocol_.encodeError("submission queue unavailable"));
-        slot.set_writable();
-        for (const std::string &msg : deferred) {
-          queue_protocol_response_for_channel(task.reply_channel_id, msg);
-        }
-      } else {
-        slot.set_pending_response(protocol_.encodeSubmissionAck(submission_id));
-        slot.set_writable();
-        const auto deferred = ack_barrier_.release(task.reply_channel_id);
-        for (const std::string &msg : deferred) {
-          queue_protocol_response_for_channel(task.reply_channel_id, msg);
-        }
+      const std::string reply_channel_id =
+          ReplyChannel{slot_id, slot.get_session_id()}.to_string();
+      const auto submit_result =
+          submission_request_handler_.handleSubmit(request, reply_channel_id);
+      slot.set_pending_response(submit_result.response);
+      slot.set_writable();
+      for (const std::string &msg : submit_result.deferred_messages) {
+        queue_protocol_response_for_channel(reply_channel_id, msg);
       }
     } else {
       QueryResultRequest query_request{};
       if (protocol_.decodeQueryRequest(message_body, query_request)) {
-        SubmissionResult result{};
-        if (!submission_service_.query(query_request.submission_id,
-                                       result)) {
-          slot.set_pending_response(
-              protocol_.encodeError("submission not found"));
-        } else {
-          slot.set_pending_response(protocol_.encodeResult(result));
-        }
+        slot.set_pending_response(
+            query_request_handler_.handleQuery(query_request));
         slot.set_writable();
       } else {
         slot.set_pending_response(protocol_.encodeError("bad request"));
@@ -189,17 +153,13 @@ void ClientSockets::onSubmissionStarted(const SubmissionTask &task) {
     return;
   }
 
-  SubmissionResult result{};
-  if (!submission_service_.query(task.submission_id, result)) {
+  const std::optional<std::string> response =
+      submission_event_responder_.onSubmissionStarted(task);
+  if (!response.has_value()) {
     return;
   }
 
-  if (result.status == SubmissionStatus::QUEUED) {
-    return;
-  }
-
-  queue_protocol_response_for_channel(task.reply_channel_id,
-                                      protocol_.encodeSubmissionUpdate(result));
+  queue_protocol_response_for_channel(task.reply_channel_id, *response);
 }
 
 /** @copydoc ClientSockets::onSubmissionFinished */
@@ -208,60 +168,33 @@ void ClientSockets::onSubmissionFinished(const SubmissionTask &task) {
     return;
   }
 
-  SubmissionResult result{};
-  if (!submission_service_.query(task.submission_id, result)) {
+  const std::optional<std::string> response =
+      submission_event_responder_.onSubmissionFinished(task);
+  if (!response.has_value()) {
     return;
   }
 
-  const std::string response = is_terminal_status(result.status)
-                                   ? protocol_.encodeSubmissionFinished(result)
-                                   : protocol_.encodeSubmissionUpdate(result);
-  queue_protocol_response_for_channel(task.reply_channel_id, response);
-}
-
-/** @copydoc ClientSockets::make_reply_channel_id */
-std::string ClientSockets::make_reply_channel_id(int slot_id,
-                                                 uint64_t session_id) const {
-  return std::to_string(slot_id) + ":" + std::to_string(session_id);
-}
-
-/** @copydoc ClientSockets::parse_reply_channel_id */
-bool ClientSockets::parse_reply_channel_id(const std::string &reply_channel_id,
-                                           int &slot_id,
-                                           uint64_t &session_id) const {
-  const std::size_t separator = reply_channel_id.find(':');
-  if (separator == std::string::npos) {
-    return false;
-  }
-
-  try {
-    slot_id = std::stoi(reply_channel_id.substr(0, separator));
-    session_id = static_cast<uint64_t>(
-        std::stoull(reply_channel_id.substr(separator + 1)));
-  } catch (const std::exception &) {
-    return false;
-  }
-
-  return slot_id >= 0 &&
-         slot_id < static_cast<int>(connection_registry_.size()) &&
-         session_id > 0;
+  queue_protocol_response_for_channel(task.reply_channel_id, *response);
 }
 
 /** @copydoc ClientSockets::queue_protocol_response_for_channel */
 void ClientSockets::queue_protocol_response_for_channel(
     const std::string &reply_channel_id, std::string response) {
-  if (ack_barrier_.try_defer(reply_channel_id, std::move(response))) {
+  std::string deferred_response = response;
+  if (ack_barrier_.try_defer(reply_channel_id, std::move(deferred_response))) {
     return;
   }
 
-  int slot_id = -1;
-  uint64_t session_id = 0;
-  if (!parse_reply_channel_id(reply_channel_id, slot_id, session_id)) {
+  const std::optional<ReplyChannel> reply_channel =
+      ReplyChannel::parse(reply_channel_id);
+  if (!reply_channel.has_value() ||
+      reply_channel->slot_id >= static_cast<int>(connection_registry_.size())) {
     return;
   }
 
-  if (connection_registry_.slot(slot_id)
-          .set_pending_response_if_session(session_id, std::move(response))) {
+  if (connection_registry_.slot(reply_channel->slot_id)
+          .set_pending_response_if_session(reply_channel->session_id,
+                                           std::move(response))) {
     wake_select_loop();
   }
 }
