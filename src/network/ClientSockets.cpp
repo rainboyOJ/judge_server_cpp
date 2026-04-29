@@ -126,15 +126,7 @@ void ClientSockets::handle_read_event(ConnectionSlot &slot, int slot_id) {
         queue_protocol_response_for_channel(reply_channel_id, msg);
       }
     } else {
-      QueryResultRequest query_request{};
-      if (protocol_.decodeQueryRequest(message_body, query_request)) {
-        slot.set_pending_response(
-            query_request_handler_.handleQuery(query_request));
-        slot.set_writable();
-      } else {
-        slot.set_pending_response(protocol_.encodeError("bad request"));
-        slot.set_writable();
-      }
+      handle_query_or_bad_request(slot, message_body);
     }
   } // 没有读取发生错误else end
   else {
@@ -176,6 +168,31 @@ void ClientSockets::handle_write_event(ConnectionSlot &slot, int slot_id) {
   slot.set_readable(); // 转入readable 的状态
 }
 
+void ClientSockets::handle_query_or_bad_request(ConnectionSlot &slot,
+                                                const std::string &message_body) {
+  QueryResultRequest query_request{};
+  if (protocol_.decodeQueryRequest(message_body, query_request)) {
+    slot.set_pending_response(query_request_handler_.handleQuery(query_request));
+  } else {
+    slot.set_pending_response(protocol_.encodeError("bad request"));
+  }
+  slot.set_writable();
+}
+
+std::optional<ReplyChannel> ClientSockets::resolve_reply_channel_for_delivery(
+    const std::string &reply_channel_id) const {
+  const std::optional<ReplyChannel> reply_channel =
+      ReplyChannel::parse(reply_channel_id);
+  if (!reply_channel.has_value() ||
+      reply_channel->slot_id >= static_cast<int>(connection_registry_.size())) {
+    LOG_DEBUG("async drop invalid_channel reply_channel=%s",
+              reply_channel_id.c_str());
+    return std::nullopt;
+  }
+
+  return reply_channel;
+}
+
 /** @copydoc ClientSockets::onSubmissionStarted */
 void ClientSockets::onSubmissionStarted(const SubmissionTask &task) {
   if (pool_ && pool_->is_stopping()) {
@@ -215,11 +232,8 @@ void ClientSockets::queue_protocol_response_for_channel(
   }
 
   const std::optional<ReplyChannel> reply_channel =
-      ReplyChannel::parse(reply_channel_id);
-  if (!reply_channel.has_value() ||
-      reply_channel->slot_id >= static_cast<int>(connection_registry_.size())) {
-    LOG_DEBUG("async drop invalid_channel reply_channel=%s",
-              reply_channel_id.c_str());
+      resolve_reply_channel_for_delivery(reply_channel_id);
+  if (!reply_channel.has_value()) {
     return;
   }
 

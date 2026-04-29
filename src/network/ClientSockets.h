@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <string>
 #include <sys/select.h>
 #include <vector>
@@ -17,6 +18,7 @@
 #include "network/ConnectionRegistry.h"
 #include "network/QueryRequestHandler.h"
 #include "network/AckBarrier.h"
+#include "network/ReplyChannel.h"
 #include "network/SubmissionEventResponder.h"
 #include "network/SubmissionRequestHandler.h"
 #include "protocol/JudgeProtocol.h"
@@ -90,6 +92,12 @@ private:
   /** @brief 把协议响应挂到目标连接的待发送队列。 */
   void queue_protocol_response_for_channel(const std::string &reply_channel_id,
                                            std::string response);
+  /** @brief 处理 query_result 请求或回退为 bad request。 */
+  void handle_query_or_bad_request(ConnectionSlot &slot,
+                                   const std::string &message_body);
+  /** @brief 解析并校验用于异步回推的 reply channel。 */
+  std::optional<ReplyChannel>
+  resolve_reply_channel_for_delivery(const std::string &reply_channel_id) const;
   /** @brief 触发外部 select 唤醒回调（若已配置）。 */
   void wake_select_loop();
   void handle_read_event(ConnectionSlot &slot, int slot_id);
