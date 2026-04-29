@@ -33,8 +33,8 @@ target_link_libraries(bt_protocol PUBLIC bt_build_settings bt_common)
 
 add_library(bt_runner STATIC
     sjudge/sjudge_call.cpp
-    src/test_process/Compile.cpp
-    src/test_process/TestOneSinglePoint.cpp
+    src/runner/RunnerCompileSupport.cpp
+    src/runner/RunnerExecutionSupport.cpp
     src/runner/CppRunner.cpp
     src/runner/PythonRunner.cpp
     src/runner/RunnerFactory.cpp

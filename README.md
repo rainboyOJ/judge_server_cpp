@@ -94,12 +94,11 @@ src/
 │   ├── ILanguageRunner.h                     # 统一语言 runner 抽象接口
 │   ├── PythonRunner.h                        # Python runner 接口定义
 │   ├── PythonRunner.cpp                      # Python 提交 prepare/compile/runCase 实现
+│   ├── RunnerSupport.h                       # runner 共用支撑函数声明入口
+│   ├── RunnerCompileSupport.cpp              # C++ 编译辅助能力实现
+│   ├── RunnerExecutionSupport.cpp            # 可执行程序运行与输出比较辅助实现
 │   ├── RunnerFactory.h                       # runner 工厂接口
 │   └── RunnerFactory.cpp                     # 按语言类型创建 runner 的实现
-└── test_process/
-    ├── Compile.cpp                           # 旧执行链路兼容的编译辅助实现
-    ├── RunnerCompat.h                        # runner 复用旧执行逻辑的兼容接口
-    └── TestOneSinglePoint.cpp                # 单个测试点执行与比较输出的兼容实现
 ```
 
 ## 诚实说明

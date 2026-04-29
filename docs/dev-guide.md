@@ -7,7 +7,7 @@
 - 前台接入：`TcpServer`、`ConnectionRegistry`、`ClientSockets`、`JudgeProtocol`
 - 异步调度：`SubmissionQueue`、`JudgeWorkerPool`、`SubmissionNotifier`
 - 判题主链路：`SubmissionService`、`RunnerFactory`、`JudgeCore`、`ResultStore`
-- 旧兼容层：`testBox`、`resultContainer`、部分 `ClientSockets` / `test_process` 逻辑
+- 旧兼容层：`testBox`、`resultContainer`、部分 `ClientSockets` 逻辑
 
 所有源文件在单一 `src/` 目录树下，`#include` 以 `src/` 为根（如 `#include "network/TcpServer.h"`）。
 
@@ -89,7 +89,7 @@ cmake --build build -j
 - `src/runner/RunnerFactory.cpp`
 - `src/runner/CppRunner.h` / `src/runner/CppRunner.cpp`
 - `src/runner/PythonRunner.h` / `src/runner/PythonRunner.cpp`
-- `src/test_process/RunnerCompat.h` — 兼容接口
+- `src/runner/RunnerSupport.h` — runner 共用支撑接口
 - `test/test_runner_factory.cpp`
 - `test/test_cpp_runner.cpp`
 - `test/test_python_runner.cpp`

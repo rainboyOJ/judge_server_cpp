@@ -1,10 +1,10 @@
 /**
- * @file Compile.cpp
+ * @file RunnerCompileSupport.cpp
  * @brief 旧 test_process 流程中的编译能力实现，同时对新 runner 提供兼容 helper。
  */
 
 #include "common/Logger.h"
-#include "test_process/RunnerCompat.h"
+#include "runner/RunnerSupport.h"
 #include "common/utils.h"
 #include <filesystem>
 

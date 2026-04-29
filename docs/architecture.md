@@ -22,11 +22,10 @@
 | `src/common/` | 共享数据结构（SubmissionTypes.h）、配置（Config）、日志（Logger）、基础类型（Types.h、Result.h） |
 | `src/network/` | TCP Server（TcpServer）、客户端连接管理（ClientSockets）、连接注册表（ConnectionRegistry） |
 | `src/dispatch/` | 任务队列（SubmissionQueue）、Worker 线程池（JudgeWorkerPool）、通知接口（SubmissionNotifier） |
-| `src/runner/` | 语言 Runner 接口与实现（CppRunner、PythonRunner）、工厂（RunnerFactory） |
+| `src/runner/` | 语言 Runner 接口与实现（CppRunner、PythonRunner）、工厂（RunnerFactory）、运行支撑（RunnerSupport） |
 | `src/pipeline/` | 评测编排（SubmissionService）、判题归并（JudgeCore）、结果存储（ResultStore） |
 | `src/protocol/` | JSON 协议编解码（JudgeProtocol） |
 | `src/legacy/` | 旧系统兼容层（testBox、workThreadPool、resultContainer、testPointBox 等） |
-| `src/test_process/` | 单点测试执行辅助（Compile、TestOneSinglePoint、RunnerCompat） |
 
 ## 网络层 (src/network/)
 
@@ -99,7 +98,7 @@
 - `ILanguageRunner`：统一定义 `prepare()`、`compile()`、`runCase()` 接口。
 - `RunnerFactory`：当前支持 C++（lang=0）和 Python（lang=2）。
 - `CppRunner` / `PythonRunner`：约定工作目录 `/tmp/oj_compile_<submission_id>`。
-- `RunnerCompat`（`src/test_process/`）：兼容接口，用于复用旧执行逻辑。
+- `RunnerSupport` / `RunnerCompileSupport` / `RunnerExecutionSupport`：runner 共用的编译、执行与输出比较支撑代码。
 
 ## 旧系统层 (src/legacy/)
 

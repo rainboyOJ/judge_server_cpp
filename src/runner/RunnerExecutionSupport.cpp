@@ -1,11 +1,11 @@
 /**
- * @file TestOneSinglePoint.cpp
+ * @file RunnerExecutionSupport.cpp
  * @brief 旧链路单点执行与新 runner 共用执行 helper 的实现。
  */
 
 #include "common/Logger.h"
+#include "runner/RunnerSupport.h"
 #include "sjudge_call.h"
-#include "test_process/RunnerCompat.h"
 #include <chrono>
 #include <fcntl.h>
 #include <filesystem>

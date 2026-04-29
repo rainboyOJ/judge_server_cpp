@@ -11,7 +11,7 @@
 #include <string>
 #include <system_error>
 
-#include "test_process/RunnerCompat.h"
+#include "runner/RunnerSupport.h"
 
 namespace fs = std::filesystem;
 

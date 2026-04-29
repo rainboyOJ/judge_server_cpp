@@ -17,7 +17,7 @@
 
 #include <sys/resource.h>
 
-#include "test_process/RunnerCompat.h"
+#include "runner/RunnerSupport.h"
 
 namespace fs = std::filesystem;
 
@@ -93,7 +93,7 @@ RunnerPrepareResult CppRunner::prepare(const SubmissionRequest &request) {
     }
 
     // 中文注释：这里故意把 runner 工作目录固定到 temp 路径，
-    // 避免提前绑定旧 test_process 的 resultContainer 生命周期。
+    // 让运行时编译产物与连接/结果存储生命周期解耦。
     source_stream << request.code;
     source_stream.close();
 
