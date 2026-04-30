@@ -92,6 +92,17 @@ private:
   /** @brief 把协议响应挂到目标连接的待发送队列。 */
   void queue_protocol_response_for_channel(const std::string &reply_channel_id,
                                            std::string response);
+  /** @brief 为当前连接挂载立即返回的响应。 */
+  void queue_immediate_response(ConnectionSlot &slot, std::string response);
+  /** @brief 处理完整协议消息并分发到 submit/query 路径。 */
+  void handle_complete_message(ConnectionSlot &slot, int slot_id,
+                               const std::string &message_body);
+  /** @brief 处理 submit 请求及其立即/延迟响应。 */
+  void handle_submit_message(ConnectionSlot &slot, int slot_id,
+                             const SubmissionRequest &request);
+  /** @brief 处理 query_result 请求并写回立即响应。 */
+  void handle_query_message(ConnectionSlot &slot,
+                            const QueryResultRequest &request);
   /** @brief 处理 query_result 请求或回退为 bad request。 */
   void handle_query_or_bad_request(ConnectionSlot &slot,
                                    const std::string &message_body);

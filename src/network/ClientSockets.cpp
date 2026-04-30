@@ -110,24 +110,7 @@ void ClientSockets::handle_read_event(ConnectionSlot &slot, int slot_id) {
     LOG_ERROR("Failed to read from socket: %d\n", client_socket);
     del_socket(slot_id);
   } else if (has_complete_message) { // 没有发生错误
-    SubmissionRequest request{};
-    if (protocol_.decodeRequest(message_body, request)) {
-      const std::string reply_channel_id =
-          ReplyChannel{slot_id, slot.get_session_id()}.to_string();
-      const std::string sanitized_pid = sanitize_pid_for_log(request.pid);
-      LOG_DEBUG("submit recv reply_channel=%s pid=%s lang=%d",
-                reply_channel_id.c_str(), sanitized_pid.c_str(),
-                static_cast<int>(request.language));
-      const auto submit_result =
-          submission_request_handler_.handleSubmit(request, reply_channel_id);
-      slot.set_pending_response(submit_result.response);
-      slot.set_writable();
-      for (const std::string &msg : submit_result.deferred_messages) {
-        queue_protocol_response_for_channel(reply_channel_id, msg);
-      }
-    } else {
-      handle_query_or_bad_request(slot, message_body);
-    }
+    handle_complete_message(slot, slot_id, message_body);
   } // 没有读取发生错误else end
   else {
     LOG_DEBUG("read bytes_read = %d, but not get All testProblem data",
@@ -172,11 +155,49 @@ void ClientSockets::handle_query_or_bad_request(ConnectionSlot &slot,
                                                 const std::string &message_body) {
   QueryResultRequest query_request{};
   if (protocol_.decodeQueryRequest(message_body, query_request)) {
-    slot.set_pending_response(query_request_handler_.handleQuery(query_request));
+    handle_query_message(slot, query_request);
   } else {
-    slot.set_pending_response(protocol_.encodeError("bad request"));
+    queue_immediate_response(slot, protocol_.encodeError("bad request"));
   }
+}
+
+void ClientSockets::queue_immediate_response(ConnectionSlot &slot,
+                                             std::string response) {
+  slot.set_pending_response(std::move(response));
   slot.set_writable();
+}
+
+void ClientSockets::handle_complete_message(ConnectionSlot &slot, int slot_id,
+                                            const std::string &message_body) {
+  SubmissionRequest request{};
+  if (protocol_.decodeRequest(message_body, request)) {
+    handle_submit_message(slot, slot_id, request);
+    return;
+  }
+
+  handle_query_or_bad_request(slot, message_body);
+}
+
+void ClientSockets::handle_submit_message(ConnectionSlot &slot, int slot_id,
+                                          const SubmissionRequest &request) {
+  const std::string reply_channel_id =
+      ReplyChannel{slot_id, slot.get_session_id()}.to_string();
+  const std::string sanitized_pid = sanitize_pid_for_log(request.pid);
+  LOG_DEBUG("submit recv reply_channel=%s pid=%s lang=%d",
+            reply_channel_id.c_str(), sanitized_pid.c_str(),
+            static_cast<int>(request.language));
+
+  const auto submit_result =
+      submission_request_handler_.handleSubmit(request, reply_channel_id);
+  queue_immediate_response(slot, submit_result.response);
+  for (const std::string &msg : submit_result.deferred_messages) {
+    queue_protocol_response_for_channel(reply_channel_id, msg);
+  }
+}
+
+void ClientSockets::handle_query_message(ConnectionSlot &slot,
+                                         const QueryResultRequest &request) {
+  queue_immediate_response(slot, query_request_handler_.handleQuery(request));
 }
 
 std::optional<ReplyChannel> ClientSockets::resolve_reply_channel_for_delivery(
