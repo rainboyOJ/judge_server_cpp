@@ -1,5 +1,7 @@
 #include "ChildSetup.h"
 
+#include "CgroupSupport.h"
+#include "Privilege.h"
 #include "SeccompPolicy.h"
 
 #include <fcntl.h>
@@ -121,6 +123,31 @@ void apply_seccomp_policy_or_exit(const judge_config &config) {
 }
 
 /**
+ * @brief 把子进程加入 cgroup v2 并写入可选限制。
+ *
+ * cgroup 需要在降权前完成，因为普通低权限用户通常不能写 cgroup 控制文件。
+ */
+void apply_cgroup_or_exit(const judge_config &config) {
+  int error_code = 0;
+  if (!apply_cgroup_if_configured(config, error_code)) {
+    _exit(error_code);
+  }
+}
+
+/**
+ * @brief 按配置执行 uid/gid 降权。
+ *
+ * 降权放在 cgroup 和 rlimit 之后、seccomp/execve 之前，确保需要较高权限的
+ * 准备工作已经完成，而用户程序最终以低权限身份运行。
+ */
+void drop_privileges_or_exit(const judge_config &config) {
+  int error_code = 0;
+  if (!drop_privileges_if_configured(config, error_code)) {
+    _exit(error_code);
+  }
+}
+
+/**
  * @brief 执行用户程序。
  *
  * execve 成功后不会返回；如果返回，说明执行失败，需要用明确错误码退出，
@@ -141,6 +168,8 @@ void apply_seccomp_policy_or_exit(const judge_config &config) {
   change_working_directory_or_exit(config);
   redirect_standard_streams_or_exit(config);
   apply_resource_limits_or_exit(config);
+  apply_cgroup_or_exit(config);
+  drop_privileges_or_exit(config);
   apply_seccomp_policy_or_exit(config);
   exec_program_or_exit(config);
 }

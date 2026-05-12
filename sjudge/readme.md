@@ -14,7 +14,7 @@
    - 专门解释 AC/TLE/MLE/RE/SYSTEM_ERROR 的判定顺序。
 4. [`docs/seccomp.md`](./docs/seccomp.md)
    - 学习 seccomp 系统调用过滤。
-   - 当前项目仍是 stub，这份文档用于理解后续如何接入真实 seccomp。
+   - 当前项目已支持 libseccomp 可选接入，默认关闭，需要在 `judge_config` 显式启用。
 5. [`docs/security-boundary.md`](./docs/security-boundary.md)
    - 理解当前 sjudger 的安全边界。
    - 区分 `setrlimit`、seccomp、uid/gid、namespace、cgroup 等能力。

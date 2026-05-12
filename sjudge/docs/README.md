@@ -68,8 +68,9 @@ judge_result run_sjudger(const judge_config &config);
 - `ResultMapper`
   - 把 `ParentMonitor` 采集到的退出状态映射成 `SUCCESS/TLE/MLE/RE` 等统一结果码。
 - `SeccompPolicy`
-  - 当前接入的是 stub。
-  - 后续可以在 `SJUDGER_ENABLE_SECCOMP` 打开时替换成真正的 seccomp 策略实现。
+  - CMake 找到 libseccomp 时接入真实实现，否则回退到 stub。
+  - 真实实现默认关闭，需要 `judge_config::enable_seccomp = true`。
+  - 当前策略默认允许系统调用，但可禁止网络和派生进程相关 syscall。
 
 ## 执行流程
 
@@ -168,7 +169,7 @@ runner 侧的结果映射如下：
 option(SJUDGER_ENABLE_SECCOMP "Build sjudger with seccomp support" ON)
 ```
 
-当前实现仍编译 `SeccompPolicyStub.cpp`。真正的 `SeccompPolicy.cpp` 和 libseccomp 链接规则还没有完成，因此这个开关目前只保留接口形状，不提供实际系统调用过滤。
+当前实现会在 CMake 找到 libseccomp 时编译 `SeccompPolicy.cpp` 并链接 seccomp；否则回退到 `SeccompPolicyStub.cpp`。即使编译了真实实现，也需要在 `judge_config` 中显式开启 `enable_seccomp`。
 
 ## 测试
 
@@ -201,7 +202,8 @@ ctest --test-dir build -R '^(test_sjudger|test_cpp_runner|test_python_runner|tes
 ## 当前限制
 
 - `config.env` 字段暂未传给 `execve()`，当前仍使用父进程 `environ`。
-- seccomp 还是 stub，没有真正限制系统调用。
+- seccomp 已支持可选真实实现，但当前策略是默认允许 + 禁止网络/派生进程，不是严格白名单。
 - `RLIMIT_CPU` 只能按秒限制，毫秒级 CPU 限制依赖结果映射兜底。
-- 当前没有 uid/gid 降权，也没有独立 mount namespace、cgroup 或 chroot。
+- uid/gid 降权和 cgroup v2 已支持配置式接入，但默认关闭，且需要系统权限和预创建 cgroup 目录。
+- 当前没有独立 mount namespace、network namespace 或 chroot。
 - 输出比较仍在 runner 层完成，sjudger 只负责执行和资源结果。

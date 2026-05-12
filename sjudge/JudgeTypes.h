@@ -46,6 +46,28 @@ struct judge_config {
   std::vector<std::string> args;
   /** @brief 预留环境变量字段；当前实现仍沿用父进程 environ。 */
   std::vector<std::string> env;
+  /** @brief 是否加载 seccomp 系统调用过滤策略；默认关闭以保持兼容。 */
+  bool enable_seccomp{false};
+  /** @brief seccomp 开启时是否禁止 socket/connect 等网络系统调用。 */
+  bool seccomp_deny_network{true};
+  /** @brief seccomp 开启时是否禁止 fork/clone/vfork 等派生进程系统调用。 */
+  bool seccomp_deny_process_spawn{true};
+  /** @brief 子进程降权后的 uid；0 表示不调用 setuid。 */
+  uint32_t run_uid{0};
+  /** @brief 子进程降权后的 gid；0 表示不调用 setgid。 */
+  uint32_t run_gid{0};
+  /** @brief setgid/setuid 前是否清空附加组；需要相应权限。 */
+  bool clear_supplementary_groups{false};
+  /** @brief cgroup v2 目录路径；为空表示不加入 cgroup。 */
+  std::string cgroup_path;
+  /** @brief 写入 memory.max 的限制，单位字节；0 表示不写。 */
+  uint64_t cgroup_memory_max_bytes{0};
+  /** @brief 写入 pids.max 的限制；0 表示不写。 */
+  uint32_t cgroup_pids_max{0};
+  /** @brief 写入 cpu.max 的 quota，单位微秒；0 表示不写。 */
+  uint64_t cgroup_cpu_max_quota_us{0};
+  /** @brief 写入 cpu.max 的 period，单位微秒；quota 非 0 时 0 表示 100000。 */
+  uint64_t cgroup_cpu_max_period_us{100000};
 };
 
 /**
@@ -84,6 +106,8 @@ enum judgeResult_id {
   LOAD_SECCOMP_FAILED,
   /// setrlimit 失败。
   SETRLIMIT_FAILED,
+  /// cgroup 配置或加入失败。
+  CGROUP_FAILED,
   /// open/dup2 重定向标准流失败。
   DUP2_FAILED,
   /// 历史保留：setuid 失败。

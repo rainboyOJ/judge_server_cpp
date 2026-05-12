@@ -6,7 +6,7 @@
 
 简短答案：它是一个评测执行核心，但不是完整生产级沙箱。
 
-它已经能控制进程执行、输入输出、资源限制和基础结果映射；但它还没有完成权限隔离、文件系统隔离、系统调用过滤、cgroup 等完整安全边界。
+它已经能控制进程执行、输入输出、资源限制和基础结果映射，并提供可选的 uid/gid 降权、cgroup v2 接入和 seccomp 禁网络/禁派生进程能力；但它还不是完整生产级沙箱。
 
 ## 当前已经具备的能力
 
@@ -33,6 +33,43 @@
 
 真实时间限制由父进程主动监控。
 
+### 可选 seccomp
+
+CMake 找到 libseccomp 时会编译真实 `SeccompPolicy.cpp`。运行时需要设置：
+
+```cpp
+config.enable_seccomp = true;
+```
+
+当前策略是默认允许系统调用，但可以禁止：
+
+- 网络相关 syscall。
+- fork/clone/vfork 等派生进程 syscall。
+
+它是小型 OJ 的实用安全边界，不是严格白名单沙箱。
+
+### 可选 uid/gid 降权
+
+可以通过：
+
+```cpp
+config.run_uid = ...;
+config.run_gid = ...;
+config.clear_supplementary_groups = true;
+```
+
+让用户程序在 `execve()` 前切换到低权限用户。这个能力需要 judge_server 进程本身具备相应权限。
+
+### 可选 cgroup v2
+
+可以通过 `config.cgroup_path` 把子进程加入预创建的 cgroup v2 目录，并可写入：
+
+- `memory.max`
+- `pids.max`
+- `cpu.max`
+
+调用方需要负责创建 cgroup 目录并授予写权限。
+
 ### 结果映射
 
 通过 `ParentMonitor` 和 `ResultMapper`，把底层进程状态映射成：
@@ -43,19 +80,7 @@
 - RE
 - SYSTEM_ERROR
 
-## 当前没有完成的能力
-
-### 没有真实 seccomp
-
-当前 `SeccompPolicyStub.cpp` 是空实现。
-
-这意味着用户程序仍然可以发起系统调用，是否成功取决于当前用户权限和系统环境。
-
-### 没有 uid/gid 降权
-
-用户程序和 judge server 仍以同一系统用户运行。
-
-如果这个用户能访问某些文件，用户程序理论上也可能访问这些文件，除非被文件权限或后续 seccomp 阻止。
+## 当前仍没有完成的能力
 
 ### 没有文件系统隔离
 
@@ -63,19 +88,19 @@
 
 `cwd` 只是切换工作目录，不是隔离文件系统。
 
-### 没有 cgroup
+### 没有 network namespace
 
-`setrlimit()` 对单进程有帮助，但对复杂进程树、总内存、总 CPU、pids 数量等控制不如 cgroup。
-
-### 没有网络隔离
-
-当前没有 network namespace，也没有 seccomp 禁止 socket。
+当前可以用 seccomp 禁止网络 syscall，但没有创建独立 network namespace。
 
 ### 没有完整进程树清理
 
-当前监控的是直接 fork 出来的子进程。
+当前可以用 seccomp 禁止派生进程，也可以用 cgroup pids 限制进程数量。
+但如果显式允许派生进程，还没有进程组级 kill 整棵树的逻辑。
 
-如果用户程序再创建子进程，完整清理和限制需要进程组、cgroup 或额外追踪机制。
+### 没有严格 syscall 白名单
+
+当前 seccomp 策略为了兼容 C++/Python 动态运行时，采用默认允许 + 禁止关键能力。
+严格白名单需要按语言用 strace 收集 syscall 后逐步收紧。
 
 ## 各种隔离技术分别解决什么
 
@@ -97,7 +122,7 @@
 
 建议按下面顺序增强：
 
-1. 完成真实 seccomp 接入。
+1. 从默认允许 seccomp 策略收紧到按语言白名单。
 2. 使用独立低权限用户运行评测进程。
 3. 给子进程设置独立进程组，超时时杀整个进程组。
 4. 接入 cgroup v2，限制内存、CPU、pids。
@@ -131,4 +156,3 @@
 但不要用它直接运行不可信代码并假设系统安全。
 
 特别是不要在高权限用户下运行 judge server 去执行不可信提交。
-

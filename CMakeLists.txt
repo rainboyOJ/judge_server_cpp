@@ -34,12 +34,24 @@ add_library(bt_protocol STATIC
 target_link_libraries(bt_protocol PUBLIC bt_build_settings bt_common)
 
 set(SJUDGER_SECCOMP_SOURCE sjudge/SeccompPolicyStub.cpp)
+set(SJUDGER_HAS_REAL_SECCOMP OFF)
+if(SJUDGER_ENABLE_SECCOMP)
+    find_library(SECCOMP_LIB seccomp)
+    if(SECCOMP_LIB)
+        set(SJUDGER_SECCOMP_SOURCE sjudge/SeccompPolicy.cpp)
+        set(SJUDGER_HAS_REAL_SECCOMP ON)
+    else()
+        message(WARNING "libseccomp not found; building sjudger with seccomp stub")
+    endif()
+endif()
 
 add_library(bt_runner STATIC
+    sjudge/CgroupSupport.cpp
     sjudge/ChildSetup.cpp
     sjudge/ConfigValidator.cpp
     sjudge/ExternalSjudgeCompat.cpp
     sjudge/ParentMonitor.cpp
+    sjudge/Privilege.cpp
     sjudge/ResultMapper.cpp
     sjudge/sjudge_call.cpp
     ${SJUDGER_SECCOMP_SOURCE}
@@ -51,8 +63,12 @@ add_library(bt_runner STATIC
 )
 target_link_libraries(bt_runner PUBLIC bt_build_settings bt_common)
 
-if(SJUDGER_ENABLE_SECCOMP)
+if(SJUDGER_HAS_REAL_SECCOMP)
     target_compile_definitions(bt_runner PUBLIC SJUDGER_ENABLE_SECCOMP=1)
+endif()
+
+if(SECCOMP_LIB)
+    target_link_libraries(bt_runner PUBLIC ${SECCOMP_LIB})
 endif()
 
 add_library(bt_pipeline STATIC

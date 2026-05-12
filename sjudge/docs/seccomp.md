@@ -24,7 +24,7 @@
 6. 如何为 C++/Python 程序设计一个最小策略。
 7. 本项目 `sjudge/` 后续如何接入真实 seccomp。
 
-当前项目状态：`sjudge/SeccompPolicyStub.cpp` 仍是空实现，真实 seccomp 策略还没有完成。所以本文是教学和实现指南，不表示当前代码已经具备系统调用过滤能力。
+当前项目状态：CMake 找到 libseccomp 时会编译 `sjudge/SeccompPolicy.cpp`，否则回退到 `SeccompPolicyStub.cpp`。真实策略默认关闭，只有 `judge_config::enable_seccomp = true` 时才加载。
 
 ## 先理解系统调用
 
@@ -380,7 +380,7 @@ if(SJUDGER_ENABLE_SECCOMP)
 endif()
 ```
 
-当前仓库还没有完成这一步。现状是 stub 始终参与编译。
+当前仓库已经按这个思路接入：找到 libseccomp 时编译真实实现，找不到时编译 stub。真实策略采用“默认允许 + 禁止网络/派生进程”的兼容策略，便于 C++/Python 动态运行时先稳定工作。
 
 ## ChildSetup 应该在哪里调用
 
@@ -454,13 +454,13 @@ seccomp 调试通常是迭代式的：
 
 建议按下面步骤接入本仓库：
 
-1. 新增 `sjudge/SeccompPolicy.cpp`，实现最小白名单。
-2. 修改 `CMakeLists.txt`，根据 `SJUDGER_ENABLE_SECCOMP` 选择真实实现或 stub。
-3. 在 `ChildSetup.cpp` 的 `execve()` 前调用 `apply_seccomp_if_enabled()`。
-4. 增加 `test_sjudger` 条件测试，只在 `SJUDGER_ENABLE_SECCOMP` 定义时运行。
-5. 先验证 C++ 简单程序。
-6. 再验证 Python wrapper。
-7. 如果 Python 白名单过大，考虑后续拆分按语言策略。
+1. 已新增 `sjudge/SeccompPolicy.cpp`，实现默认允许但禁止网络/派生进程的策略。
+2. 已修改 `CMakeLists.txt`，根据 libseccomp 是否存在选择真实实现或 stub。
+3. 已在 `ChildSetup.cpp` 的 `execve()` 前调用 `apply_seccomp_if_enabled()`。
+4. 已增加 `test_sjudger` 条件测试，只在真实 seccomp 构建时运行。
+5. 后续可以验证更多 C++ 简单程序。
+6. 再验证更多 Python wrapper。
+7. 如果要从黑名单式策略收紧到白名单，建议按语言拆分策略。
 
 ## 当前项目的安全提示
 
@@ -485,4 +485,3 @@ seccomp 只是沙箱的一部分。
 - 严格的工作目录和文件权限管理。
 
 本项目的合理目标是先做一个清晰、可测、可演进的内置执行核心，再逐步增强隔离能力。
-

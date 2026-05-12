@@ -22,6 +22,7 @@ bool is_child_setup_error_code(int exit_code) {
   case FORK_FAILED:
   case LOAD_SECCOMP_FAILED:
   case SETRLIMIT_FAILED:
+  case CGROUP_FAILED:
   case DUP2_FAILED:
   case SETUID_FAILED:
   case EXECVE_FAILED:
