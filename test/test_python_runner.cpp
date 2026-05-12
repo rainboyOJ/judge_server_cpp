@@ -177,6 +177,38 @@ void test_run_case_maps_busy_loop_to_tle() {
     remove_work_dir(uuid);
 }
 
+void test_run_case_maps_memory_hungry_python_to_mle() {
+    const int uuid = 72006;
+    remove_work_dir(uuid);
+
+    PythonRunner runner;
+    const SubmissionRequest request =
+        make_request(uuid,
+                     "x = 'a' * (32 * 1024 * 1024)\nprint(len(x))\n");
+
+    const RunnerPrepareResult prepare_result = runner.prepare(request);
+    const RunnerCompileResult compile_result = runner.compile(request);
+    assert(prepare_result.ok);
+    assert(compile_result.ok);
+
+    const fs::path work_dir = make_work_dir(uuid);
+    const fs::path input_path = work_dir / "case.in";
+    const fs::path expected_path = work_dir / "case.out";
+    write_file(input_path, "\n");
+    write_file(expected_path, "33554432\n");
+
+    RunnerCaseInput input{};
+    input.seq_id = 4;
+    input.input_path = input_path.string();
+    input.expected_output_path = expected_path.string();
+    input.memory_limit_kb = 8 * 1024;
+
+    const RunnerCaseResult case_result = runner.runCase(request, input);
+
+    assert(case_result.result.verdict == SubmissionVerdict::MLE);
+    remove_work_dir(uuid);
+}
+
 } // namespace
 
 int main() {
@@ -185,5 +217,6 @@ int main() {
     test_run_case_returns_ac_for_matching_output();
     test_run_case_maps_python_exception_to_re();
     test_run_case_maps_busy_loop_to_tle();
+    test_run_case_maps_memory_hungry_python_to_mle();
     return 0;
 }

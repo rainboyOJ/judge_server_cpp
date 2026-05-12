@@ -1,6 +1,7 @@
 #include "ChildSetup.h"
 #include "ConfigValidator.h"
 #include "ParentMonitor.h"
+#include "ResultMapper.h"
 #include "sjudge_call.h"
 
 #ifdef SJUDGER_ENABLE_SECCOMP
@@ -186,12 +187,6 @@ judge_result run_sjudger(const judge_config &config) {
         return result;
     }
 
-    if (monitor.timed_out) {
-        result.result = REAL_TIME_LIMIT_EXCEEDED;
-        result.error = 0;
-        return result;
-    }
-
     if (result.signal == 0 && result.exit_code != 0 &&
         is_child_setup_error_code(result.exit_code)) {
         result.result = SYSTEM_ERROR;
@@ -200,7 +195,6 @@ judge_result run_sjudger(const judge_config &config) {
     }
 
     result.error = 0;
-    result.result =
-        (result.exit_code == 0 && result.signal == 0) ? SUCCESS : RUNTIME_ERROR;
+    result.result = map_monitor_result_to_judge_code(config, monitor);
     return result;
 }

@@ -147,6 +147,37 @@ void test_run_case_returns_re_for_non_zero_exit_code() {
     remove_work_dir(uuid);
 }
 
+void test_run_case_returns_tle_without_external_sjudge_dependency() {
+    const int uuid = 71005;
+    remove_work_dir(uuid);
+
+    CppRunner runner;
+    const SubmissionRequest request =
+        make_request(uuid, "int main(){for(;;){}return 0;}\n");
+
+    const RunnerPrepareResult prepare_result = runner.prepare(request);
+    const RunnerCompileResult compile_result = runner.compile(request);
+    assert(prepare_result.ok);
+    assert(compile_result.ok);
+
+    const fs::path work_dir = make_work_dir(uuid);
+    const fs::path input_path = work_dir / "case.in";
+    const fs::path expected_path = work_dir / "case.out";
+    write_file(input_path, "\n");
+    write_file(expected_path, "\n");
+
+    RunnerCaseInput input{};
+    input.seq_id = 3;
+    input.input_path = input_path.string();
+    input.expected_output_path = expected_path.string();
+    input.real_time_limit_ms = 50;
+
+    const RunnerCaseResult case_result = runner.runCase(request, input);
+
+    assert(case_result.result.verdict == SubmissionVerdict::TLE);
+    remove_work_dir(uuid);
+}
+
 } // namespace
 
 int main() {
@@ -154,5 +185,6 @@ int main() {
     test_compile_fails_for_invalid_cpp_code();
     test_run_case_returns_ac_for_matching_output();
     test_run_case_returns_re_for_non_zero_exit_code();
+    test_run_case_returns_tle_without_external_sjudge_dependency();
     return 0;
 }

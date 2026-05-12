@@ -33,15 +33,13 @@ add_library(bt_protocol STATIC
 )
 target_link_libraries(bt_protocol PUBLIC bt_build_settings bt_common)
 
-set(SJUDGER_SECCOMP_SOURCE)
-if(SJUDGER_ENABLE_SECCOMP)
-    set(SJUDGER_SECCOMP_SOURCE sjudge/SeccompPolicyStub.cpp)
-endif()
+set(SJUDGER_SECCOMP_SOURCE sjudge/SeccompPolicyStub.cpp)
 
 add_library(bt_runner STATIC
     sjudge/ChildSetup.cpp
     sjudge/ConfigValidator.cpp
     sjudge/ParentMonitor.cpp
+    sjudge/ResultMapper.cpp
     sjudge/sjudge_call.cpp
     ${SJUDGER_SECCOMP_SOURCE}
     src/runner/RunnerCompileSupport.cpp

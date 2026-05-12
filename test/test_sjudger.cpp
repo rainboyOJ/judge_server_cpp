@@ -150,6 +150,30 @@ void test_run_sjudger_maps_busy_loop_to_real_time_limit_exceeded() {
     assert(result.signal != 0);
 }
 
+void test_run_sjudger_maps_non_zero_exit_code_to_runtime_error() {
+    const fs::path dir = make_sjudger_dir("sjudger_re");
+    const fs::path script = dir / "fail.sh";
+    const fs::path output = dir / "out.txt";
+
+    {
+        std::ofstream stream(script);
+        stream << "#!/bin/sh\nexit 3\n";
+    }
+    fs::permissions(script, fs::perms::owner_all, fs::perm_options::replace);
+
+    judge_config config{};
+    config.exe_path = script.string();
+    config.args = {script.string()};
+    config.output_path = output.string();
+    config.error_path = output.string();
+    config.cwd = dir.string();
+
+    const judge_result result = run_sjudger(config);
+
+    assert(result.result == RUNTIME_ERROR);
+    assert(result.exit_code == 3);
+}
+
 } // namespace
 
 int main() {
@@ -159,5 +183,6 @@ int main() {
     test_run_sjudger_executes_program_and_writes_output();
     test_run_sjudger_reports_child_setup_failure();
     test_run_sjudger_maps_busy_loop_to_real_time_limit_exceeded();
+    test_run_sjudger_maps_non_zero_exit_code_to_runtime_error();
     return 0;
 }
