@@ -1,6 +1,8 @@
 #include <cassert>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <unistd.h>
 
 #include "sjudge_call.h"
 
@@ -9,10 +11,23 @@ namespace fs = std::filesystem;
 namespace {
 
 fs::path make_sjudger_dir(const std::string &name) {
-    const fs::path dir = fs::temp_directory_path() / name;
     std::error_code ec;
+    const fs::path temp_dir = fs::temp_directory_path(ec);
+    assert(!ec);
+
+    const auto unique_suffix =
+        std::to_string(getpid()) + "_" +
+        std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    const fs::path dir = temp_dir / (name + "_" + unique_suffix);
+
+    ec.clear();
     fs::remove_all(dir, ec);
-    fs::create_directories(dir, ec);
+    assert(!ec);
+
+    ec.clear();
+    const bool created = fs::create_directories(dir, ec);
+    assert(!ec);
+    assert(created);
     return dir;
 }
 
