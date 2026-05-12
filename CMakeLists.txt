@@ -39,6 +39,7 @@ if(SJUDGER_ENABLE_SECCOMP)
 endif()
 
 add_library(bt_runner STATIC
+    sjudge/ConfigValidator.cpp
     sjudge/sjudge_call.cpp
     ${SJUDGER_SECCOMP_SOURCE}
     src/runner/RunnerCompileSupport.cpp

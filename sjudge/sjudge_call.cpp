@@ -5,8 +5,6 @@
 #include "SeccompPolicy.h"
 #endif
 
-#include "ConfigValidator.cpp"
-
 #include <array>
 #include <iostream>
 #include <memory>

@@ -14,11 +14,8 @@ void test_invalid_config_returns_invalid_config_error() {
     assert(result.result == SYSTEM_ERROR || result.error == INVALID_CONFIG);
 }
 
-void test_zero_cpu_limit_is_treated_as_unlimited_but_missing_exe_is_invalid() {
+void test_missing_exe_is_invalid_config() {
     judge_config config{};
-    config.max_cpu_time_ms = 0;
-    config.max_real_time_ms = 0;
-    config.max_memory_bytes = 0;
     config.exe_path.clear();
 
     const judge_result result = run_sjudger(config);
@@ -27,10 +24,15 @@ void test_zero_cpu_limit_is_treated_as_unlimited_but_missing_exe_is_invalid() {
     assert(result.result == SYSTEM_ERROR);
 }
 
-void test_negative_like_limits_cannot_be_expressed_in_unsigned_fields() {
+void test_zero_limits_are_treated_as_unlimited_for_valid_exe() {
     judge_config config{};
     config.exe_path = "/bin/echo";
     config.args = {"/bin/echo", "ok"};
+    config.max_cpu_time_ms = 0;
+    config.max_real_time_ms = 0;
+    config.max_memory_bytes = 0;
+    config.max_stack_bytes = 0;
+    config.max_output_bytes = 0;
 
     const judge_result result = run_sjudger(config);
 
@@ -41,7 +43,7 @@ void test_negative_like_limits_cannot_be_expressed_in_unsigned_fields() {
 
 int main() {
     test_invalid_config_returns_invalid_config_error();
-    test_zero_cpu_limit_is_treated_as_unlimited_but_missing_exe_is_invalid();
-    test_negative_like_limits_cannot_be_expressed_in_unsigned_fields();
+    test_missing_exe_is_invalid_config();
+    test_zero_limits_are_treated_as_unlimited_for_valid_exe();
     return 0;
 }
