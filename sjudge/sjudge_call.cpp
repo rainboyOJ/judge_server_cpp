@@ -1,5 +1,6 @@
 #include "ChildSetup.h"
 #include "ConfigValidator.h"
+#include "ParentMonitor.h"
 #include "sjudge_call.h"
 
 #ifdef SJUDGER_ENABLE_SECCOMP
@@ -13,7 +14,6 @@
 #include <stdexcept>
 #include <string>
 
-#include <sys/wait.h>
 #include <unistd.h>
 
 namespace {
@@ -172,15 +172,25 @@ judge_result run_sjudger(const judge_config &config) {
         return result;
     }
 
-    int status = 0;
-    if (waitpid(pid, &status, 0) < 0) {
+    const monitor_result monitor =
+        monitor_child_process(pid, config.max_real_time_ms);
+    result.cpu_time_ms = monitor.cpu_time_ms;
+    result.real_time_ms = monitor.real_time_ms;
+    result.memory_bytes = monitor.memory_bytes;
+    result.signal = monitor.signal;
+    result.exit_code = monitor.exit_code;
+
+    if (monitor.error != 0) {
         result.result = SYSTEM_ERROR;
-        result.error = WAIT_FAILED;
+        result.error = monitor.error;
         return result;
     }
 
-    result.exit_code = WIFEXITED(status) ? WEXITSTATUS(status) : 0;
-    result.signal = WIFSIGNALED(status) ? WTERMSIG(status) : 0;
+    if (monitor.timed_out) {
+        result.result = REAL_TIME_LIMIT_EXCEEDED;
+        result.error = 0;
+        return result;
+    }
 
     if (result.signal == 0 && result.exit_code != 0 &&
         is_child_setup_error_code(result.exit_code)) {

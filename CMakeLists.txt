@@ -41,6 +41,7 @@ endif()
 add_library(bt_runner STATIC
     sjudge/ChildSetup.cpp
     sjudge/ConfigValidator.cpp
+    sjudge/ParentMonitor.cpp
     sjudge/sjudge_call.cpp
     ${SJUDGER_SECCOMP_SOURCE}
     src/runner/RunnerCompileSupport.cpp

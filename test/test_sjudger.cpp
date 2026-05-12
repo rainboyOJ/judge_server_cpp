@@ -125,6 +125,31 @@ void test_run_sjudger_reports_child_setup_failure() {
     assert(result.error == DUP2_FAILED);
 }
 
+void test_run_sjudger_maps_busy_loop_to_real_time_limit_exceeded() {
+    const fs::path dir = make_sjudger_dir("sjudger_tle");
+    const fs::path script = dir / "spin.sh";
+    const fs::path output = dir / "out.txt";
+
+    {
+        std::ofstream stream(script);
+        stream << "#!/bin/sh\nwhile true; do :; done\n";
+    }
+    fs::permissions(script, fs::perms::owner_all, fs::perm_options::replace);
+
+    judge_config config{};
+    config.exe_path = script.string();
+    config.args = {script.string()};
+    config.output_path = output.string();
+    config.error_path = output.string();
+    config.max_real_time_ms = 50;
+    config.cwd = dir.string();
+
+    const judge_result result = run_sjudger(config);
+
+    assert(result.result == REAL_TIME_LIMIT_EXCEEDED);
+    assert(result.signal != 0);
+}
+
 } // namespace
 
 int main() {
@@ -133,5 +158,6 @@ int main() {
     test_zero_limits_are_treated_as_unlimited_for_valid_exe();
     test_run_sjudger_executes_program_and_writes_output();
     test_run_sjudger_reports_child_setup_failure();
+    test_run_sjudger_maps_busy_loop_to_real_time_limit_exceeded();
     return 0;
 }
