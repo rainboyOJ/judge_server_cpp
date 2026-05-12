@@ -199,15 +199,17 @@ RunnerCaseResult run_executable_case(const fs::path &executable_path,
     const fs::path sjudgePath = "/usr/bin/sjudge";
     if (fs::exists(sjudgePath)) {
         judge_config config;
-        config.max_cpu_time = test_case.cpu_time_limit_ms > 0
-                                  ? test_case.cpu_time_limit_ms
-                                  : UNLIMITED;
-        config.max_real_time = test_case.real_time_limit_ms > 0
-                                   ? test_case.real_time_limit_ms
-                                   : UNLIMITED;
-        config.max_memory = test_case.memory_limit_kb > 0
-                                ? test_case.memory_limit_kb
-                                : UNLIMITED;
+        config.max_cpu_time_ms = test_case.cpu_time_limit_ms > 0
+                                     ? test_case.cpu_time_limit_ms
+                                     : SJUDGE_UNLIMITED;
+        config.max_real_time_ms = test_case.real_time_limit_ms > 0
+                                      ? test_case.real_time_limit_ms
+                                      : SJUDGE_UNLIMITED;
+        config.max_memory_bytes = test_case.memory_limit_kb > 0
+                                      ? static_cast<uint64_t>(
+                                            test_case.memory_limit_kb) *
+                                            1024
+                                      : SJUDGE_UNLIMITED;
         config.cwd = executable_path.parent_path().string();
         config.exe_path = executable_path.string();
         config.input_path = test_case.input_path;
@@ -215,9 +217,10 @@ RunnerCaseResult run_executable_case(const fs::path &executable_path,
 
         try {
             const judge_result result = call_sjudge(sjudgePath.c_str(), config);
-            case_result.result.cpu_time_ms = result.cpu_time;
-            case_result.result.real_time_ms = result.real_time;
-            case_result.result.memory_kb = result.memory;
+            case_result.result.cpu_time_ms = result.cpu_time_ms;
+            case_result.result.real_time_ms = result.real_time_ms;
+            case_result.result.memory_kb =
+                static_cast<int>(result.memory_bytes / 1024);
             case_result.result.signal = result.signal;
             case_result.result.exit_code = result.exit_code;
             case_result.result.error_code = result.error;

@@ -14,20 +14,25 @@ judge_result call_sjudge(const char *sjudge_binary_path,
                          const judge_config &config) {
     std::string command = sjudge_binary_path;
 
-    if (config.max_cpu_time != UNLIMITED) {
-        command += " --max-cpu-time " + std::to_string(config.max_cpu_time);
+    if (config.max_cpu_time_ms != SJUDGE_UNLIMITED) {
+        command += " --max-cpu-time " + std::to_string(config.max_cpu_time_ms);
     }
 
-    if (config.max_real_time != UNLIMITED) {
-        command += " --max-real-time " + std::to_string(config.max_real_time);
+    if (config.max_real_time_ms != SJUDGE_UNLIMITED) {
+        command += " --max-real-time " +
+                   std::to_string(config.max_real_time_ms);
     }
 
-    if (config.max_memory != UNLIMITED) {
-        command += " --max-memory " + std::to_string(config.max_memory);
+    if (config.max_memory_bytes != SJUDGE_UNLIMITED) {
+        command += " --max-memory " + std::to_string(config.max_memory_bytes);
     }
 
-    if (config.max_stack != UNLIMITED) {
-        command += " --max-stack " + std::to_string(config.max_stack);
+    if (config.max_stack_bytes != SJUDGE_UNLIMITED) {
+        command += " --max-stack " + std::to_string(config.max_stack_bytes);
+    }
+
+    if (config.max_output_bytes != SJUDGE_UNLIMITED) {
+        command += " --max-output " + std::to_string(config.max_output_bytes);
     }
 
     if (!config.cwd.empty()) {
@@ -77,17 +82,17 @@ judge_result call_sjudge(const char *sjudge_binary_path,
         if (line.find("cpu_time") == 0) {
             size_t pos = line.find_first_of("0123456789");
             if (pos != std::string::npos) {
-                jresult.cpu_time = std::stoi(line.substr(pos));
+                jresult.cpu_time_ms = std::stoi(line.substr(pos));
             }
         } else if (line.find("real_time") == 0) {
             size_t pos = line.find_first_of("0123456789");
             if (pos != std::string::npos) {
-                jresult.real_time = std::stoi(line.substr(pos));
+                jresult.real_time_ms = std::stoi(line.substr(pos));
             }
         } else if (line.find("memory") == 0) {
             size_t pos = line.find_first_of("0123456789");
             if (pos != std::string::npos) {
-                jresult.memory = std::stol(line.substr(pos));
+                jresult.memory_bytes = std::stoll(line.substr(pos));
             }
         } else if (line.find("signal") == 0) {
             size_t pos = line.find_first_of("0123456789");

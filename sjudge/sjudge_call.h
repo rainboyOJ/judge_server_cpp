@@ -8,15 +8,10 @@
 #include <vector>
 
 // 定义常量
-constexpr uint32_t UNLIMITED = 0;
 constexpr uint64_t SJUDGE_UNLIMITED = 0;
 
 // 评测参数结构体
 struct judge_config {
-    uint32_t max_cpu_time{UNLIMITED};       // seconds
-    uint32_t max_real_time{UNLIMITED};      // seconds
-    uint64_t max_memory{UNLIMITED};         // mb
-    uint64_t max_stack{UNLIMITED};          // mb
     uint32_t max_cpu_time_ms{0};
     uint32_t max_real_time_ms{0};
     uint64_t max_memory_bytes{0};
@@ -56,9 +51,6 @@ enum judgeResult_id {
 
 // 评测结果结构体
 struct judge_result {
-    int cpu_time{0};
-    int real_time{0};
-    long memory{0};
     int cpu_time_ms{0};
     int real_time_ms{0};
     long long memory_bytes{0};
