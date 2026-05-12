@@ -36,7 +36,8 @@ void test_zero_limits_are_treated_as_unlimited_for_valid_exe() {
 
     const judge_result result = run_sjudger(config);
 
-    assert(result.error != INVALID_CONFIG);
+    assert(result.result == SUCCESS);
+    assert(result.error == 0);
 }
 
 } // namespace
