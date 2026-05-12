@@ -8,7 +8,23 @@
    - 教学型文档。
    - 从“为什么 judger 要这样设计”讲到 `fork/execve/wait4/setrlimit` 的基本原理。
    - 看完后应该能理解本仓库 sjudger 的架构，并能自己写一个最小 judger。
-2. 本文件后续章节
+2. [`from-scratch-mini-judger.md`](./from-scratch-mini-judger.md)
+   - 动手教学。
+   - 按步骤从 `fork/execve` 一直写到一个最小 judger。
+   - 对应 demo 在 `../demo_code_for_tutorial/`。
+3. [`result-mapping.md`](./result-mapping.md)
+   - 判题结果语义。
+   - 专门解释 AC/TLE/MLE/RE/SYSTEM_ERROR 如何判断。
+4. [`seccomp.md`](./seccomp.md)
+   - seccomp 教学文档。
+   - 解释系统调用过滤的原理、libseccomp 的基本用法，以及 sjudger 后续如何接入。
+5. [`security-boundary.md`](./security-boundary.md)
+   - 安全边界。
+   - 说明当前 sjudger 做了什么、没做什么，以及生产级沙箱还需要什么。
+6. [`debugging.md`](./debugging.md)
+   - 调试手册。
+   - 帮助定位执行失败、资源超限、结果映射异常。
+7. 本文件后续章节
    - 维护型速查。
    - 用来快速定位模块、字段、测试命令和当前限制。
 
