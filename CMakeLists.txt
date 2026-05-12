@@ -33,9 +33,15 @@ add_library(bt_protocol STATIC
 )
 target_link_libraries(bt_protocol PUBLIC bt_build_settings bt_common)
 
+if(SJUDGER_ENABLE_SECCOMP)
+    set(SJUDGER_SECCOMP_SOURCE sjudge/SeccompPolicyStub.cpp)
+else()
+    set(SJUDGER_SECCOMP_SOURCE sjudge/SeccompPolicyStub.cpp)
+endif()
+
 add_library(bt_runner STATIC
     sjudge/sjudge_call.cpp
-    sjudge/SeccompPolicyStub.cpp
+    ${SJUDGER_SECCOMP_SOURCE}
     src/runner/RunnerCompileSupport.cpp
     src/runner/RunnerExecutionSupport.cpp
     src/runner/CppRunner.cpp
@@ -43,6 +49,10 @@ add_library(bt_runner STATIC
     src/runner/RunnerFactory.cpp
 )
 target_link_libraries(bt_runner PUBLIC bt_build_settings bt_common)
+
+if(SJUDGER_ENABLE_SECCOMP)
+    target_compile_definitions(bt_runner PUBLIC SJUDGER_ENABLE_SECCOMP=1)
+endif()
 
 add_library(bt_pipeline STATIC
     src/pipeline/JudgeCore.cpp
