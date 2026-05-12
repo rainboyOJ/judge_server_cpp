@@ -100,6 +100,31 @@ void test_run_sjudger_executes_program_and_writes_output() {
     assert(text == "hello");
 }
 
+void test_run_sjudger_reports_child_setup_failure() {
+    const fs::path dir = make_sjudger_dir("sjudger_exec_missing_input");
+    const fs::path script = dir / "hello.sh";
+    const fs::path missing_input = dir / "missing.txt";
+    const fs::path output = dir / "out.txt";
+
+    {
+        std::ofstream stream(script);
+        stream << "#!/bin/sh\nprintf 'should_not_run\\n'\n";
+    }
+    fs::permissions(script, fs::perms::owner_all, fs::perm_options::replace);
+
+    judge_config config{};
+    config.exe_path = script.string();
+    config.args = {script.string()};
+    config.input_path = missing_input.string();
+    config.output_path = output.string();
+    config.cwd = dir.string();
+
+    const judge_result result = run_sjudger(config);
+
+    assert(result.result == SYSTEM_ERROR);
+    assert(result.error == DUP2_FAILED);
+}
+
 } // namespace
 
 int main() {
@@ -107,5 +132,6 @@ int main() {
     test_missing_exe_is_invalid_config();
     test_zero_limits_are_treated_as_unlimited_for_valid_exe();
     test_run_sjudger_executes_program_and_writes_output();
+    test_run_sjudger_reports_child_setup_failure();
     return 0;
 }

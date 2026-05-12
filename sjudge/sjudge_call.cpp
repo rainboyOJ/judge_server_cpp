@@ -16,6 +16,27 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+namespace {
+
+bool is_child_setup_error_code(int exit_code) {
+    switch (exit_code) {
+    case SYSTEM_ERROR:
+    case WAIT_FAILED:
+    case INVALID_CONFIG:
+    case FORK_FAILED:
+    case LOAD_SECCOMP_FAILED:
+    case SETRLIMIT_FAILED:
+    case DUP2_FAILED:
+    case SETUID_FAILED:
+    case EXECVE_FAILED:
+        return true;
+    default:
+        return false;
+    }
+}
+
+} // namespace
+
 judge_result call_sjudge(const char *sjudge_binary_path,
                          const judge_config &config) {
     std::string command = sjudge_binary_path;
@@ -160,6 +181,14 @@ judge_result run_sjudger(const judge_config &config) {
 
     result.exit_code = WIFEXITED(status) ? WEXITSTATUS(status) : 0;
     result.signal = WIFSIGNALED(status) ? WTERMSIG(status) : 0;
+
+    if (result.signal == 0 && result.exit_code != 0 &&
+        is_child_setup_error_code(result.exit_code)) {
+        result.result = SYSTEM_ERROR;
+        result.error = result.exit_code;
+        return result;
+    }
+
     result.error = 0;
     result.result =
         (result.exit_code == 0 && result.signal == 0) ? SUCCESS : RUNTIME_ERROR;
