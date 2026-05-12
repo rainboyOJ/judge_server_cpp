@@ -1,5 +1,9 @@
 #include "sjudge_call.h"
 
+#ifdef SJUDGER_ENABLE_SECCOMP
+#include "SeccompPolicy.h"
+#endif
+
 #include <array>
 #include <iostream>
 #include <memory>
@@ -128,6 +132,12 @@ judge_result run_sjudger(const judge_config &config) {
     if (config.exe_path.empty()) {
         return result;
     }
+
+#ifdef SJUDGER_ENABLE_SECCOMP
+    if (!apply_seccomp_if_enabled(config, result.error)) {
+        return result;
+    }
+#endif
 
     result.result = SUCCESS;
     result.error = 0;

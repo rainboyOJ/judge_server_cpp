@@ -33,9 +33,8 @@ add_library(bt_protocol STATIC
 )
 target_link_libraries(bt_protocol PUBLIC bt_build_settings bt_common)
 
+set(SJUDGER_SECCOMP_SOURCE)
 if(SJUDGER_ENABLE_SECCOMP)
-    set(SJUDGER_SECCOMP_SOURCE sjudge/SeccompPolicyStub.cpp)
-else()
     set(SJUDGER_SECCOMP_SOURCE sjudge/SeccompPolicyStub.cpp)
 endif()
 
