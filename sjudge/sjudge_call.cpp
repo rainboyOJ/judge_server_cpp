@@ -1,8 +1,11 @@
+#include "ConfigValidator.h"
 #include "sjudge_call.h"
 
 #ifdef SJUDGER_ENABLE_SECCOMP
 #include "SeccompPolicy.h"
 #endif
+
+#include "ConfigValidator.cpp"
 
 #include <array>
 #include <iostream>
@@ -126,10 +129,10 @@ judge_result call_sjudge(const char *sjudge_binary_path,
 
 judge_result run_sjudger(const judge_config &config) {
     judge_result result{};
-    result.result = SYSTEM_ERROR;
-    result.error = INVALID_CONFIG;
-
-    if (config.exe_path.empty()) {
+    int error_code = 0;
+    if (!validate_judge_config(config, error_code)) {
+        result.result = SYSTEM_ERROR;
+        result.error = error_code;
         return result;
     }
 
