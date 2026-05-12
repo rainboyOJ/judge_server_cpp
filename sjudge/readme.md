@@ -49,3 +49,25 @@ make
 
 这些 demo 不是生产代码，而是为了帮助理解 `sjudge/` 的核心原理。真正的工程实现请看 `sjudge/*.cpp`。
 
+## 代码阅读顺序
+
+理解实现时建议按这个顺序读代码：
+
+1. [`JudgeTypes.h`](./JudgeTypes.h)
+   - 先看 `judge_config`、`judge_result`、结果码和错误码。
+2. [`SJudger.h`](./SJudger.h)
+   - 看内置执行核心对外入口 `run_sjudger()`。
+3. [`sjudge_call.cpp`](./sjudge_call.cpp)
+   - 看总控流程：校验配置、`fork()`、父子进程分工、结果组装。
+4. [`ConfigValidator.cpp`](./ConfigValidator.cpp)
+   - 看配置合法性检查。
+5. [`ChildSetup.cpp`](./ChildSetup.cpp)
+   - 看子进程如何 `chdir`、重定向 IO、应用资源限制、加载 seccomp、`execve()`。
+6. [`ParentMonitor.cpp`](./ParentMonitor.cpp)
+   - 看父进程如何 `wait4()`、统计真实时间、超时杀进程、采集资源。
+7. [`ResultMapper.cpp`](./ResultMapper.cpp)
+   - 看底层状态如何映射成 SUCCESS/TLE/MLE/RE。
+8. [`ExternalSjudgeCompat.cpp`](./ExternalSjudgeCompat.cpp)
+   - 这是旧外部 `/usr/bin/sjudge` 兼容层；理解内置 sjudger 时可以最后看。
+9. [`../src/runner/RunnerExecutionSupport.cpp`](../src/runner/RunnerExecutionSupport.cpp)
+   - 看 runner 如何把 `RunnerCaseInput` 转成 `judge_config` 并调用 `run_sjudger()`。

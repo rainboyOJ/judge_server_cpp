@@ -247,7 +247,9 @@ verdict=AC exit_code=0 signal=0 real_time_ms=...
 
 | demo 概念 | 工程文件 |
 | --- | --- |
-| 配置结构 | `sjudge/sjudge_call.h` |
+| 配置结构 | `sjudge/JudgeTypes.h` |
+| 内置入口声明 | `sjudge/SJudger.h` |
+| 兼容头 | `sjudge/sjudge_call.h` |
 | 总控入口 | `sjudge/sjudge_call.cpp` |
 | 配置校验 | `sjudge/ConfigValidator.cpp` |
 | 子进程准备 | `sjudge/ChildSetup.cpp` |
@@ -265,4 +267,3 @@ verdict=AC exit_code=0 signal=0 real_time_ms=...
 4. 增加 `EXECVE_FAILED`、`DUP2_FAILED` 这类基础设施错误码。
 5. 用 `strace` 观察 demo 运行时使用了哪些 syscall。
 6. 参考 `seccomp.md` 给 demo 加一个最小 seccomp 白名单。
-

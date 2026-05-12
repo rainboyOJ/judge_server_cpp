@@ -21,6 +21,7 @@ set(TEST_SOURCES
     test_result_store.cpp
     test_runner_factory.cpp
     test_runner_support_compile.cpp
+    test_sjudger_result_mapper.cpp
     test_sjudger.cpp
     test_submission_event_responder.cpp
     test_submission_queue.cpp

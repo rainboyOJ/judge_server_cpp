@@ -38,6 +38,7 @@ set(SJUDGER_SECCOMP_SOURCE sjudge/SeccompPolicyStub.cpp)
 add_library(bt_runner STATIC
     sjudge/ChildSetup.cpp
     sjudge/ConfigValidator.cpp
+    sjudge/ExternalSjudgeCompat.cpp
     sjudge/ParentMonitor.cpp
     sjudge/ResultMapper.cpp
     sjudge/sjudge_call.cpp

@@ -43,9 +43,15 @@ judge_result run_sjudger(const judge_config &config);
 ## 模块结构
 
 - `sjudge_call.h/.cpp`
-  - 定义 `judge_config`、`judge_result`、结果码枚举。
-  - 提供 `run_sjudger()` 入口。
-  - 仍保留旧的 `call_sjudge()`，用于兼容历史外部 sjudge 调用代码。
+  - `sjudge_call.h` 是兼容头，继续同时暴露内置入口和旧外部调用入口。
+  - `sjudge_call.cpp` 只负责内置 `run_sjudger()` 总控流程。
+- `JudgeTypes.h`
+  - 定义 `judge_config`、`judge_result`、结果码和错误码。
+- `SJudger.h`
+  - 提供内置执行入口 `run_sjudger()`。
+- `ExternalSjudgeCompat`
+  - 保留旧的 `call_sjudge()`，用于兼容历史外部 sjudge 调用代码。
+  - 理解当前内置 sjudger 时可以最后阅读。
 - `ConfigValidator`
   - 校验执行配置。
   - 当前主要检查 `exe_path` 是否有效。
@@ -53,6 +59,7 @@ judge_result run_sjudger(const judge_config &config);
   - 在子进程中切换工作目录。
   - 重定向 `stdin/stdout/stderr`。
   - 应用资源限制。
+  - 加载 seccomp 策略。
   - 最后调用 `execve()`。
 - `ParentMonitor`
   - 在父进程中等待子进程。
