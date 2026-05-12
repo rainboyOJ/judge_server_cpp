@@ -1,3 +1,4 @@
+#include "ChildSetup.h"
 #include "ConfigValidator.h"
 #include "sjudge_call.h"
 
@@ -140,7 +141,27 @@ judge_result run_sjudger(const judge_config &config) {
     }
 #endif
 
-    result.result = SUCCESS;
+    const pid_t pid = fork();
+    if (pid == 0) {
+        run_child_process_or_exit(config);
+    }
+    if (pid < 0) {
+        result.result = SYSTEM_ERROR;
+        result.error = FORK_FAILED;
+        return result;
+    }
+
+    int status = 0;
+    if (waitpid(pid, &status, 0) < 0) {
+        result.result = SYSTEM_ERROR;
+        result.error = WAIT_FAILED;
+        return result;
+    }
+
+    result.exit_code = WIFEXITED(status) ? WEXITSTATUS(status) : 0;
+    result.signal = WIFSIGNALED(status) ? WTERMSIG(status) : 0;
     result.error = 0;
+    result.result =
+        (result.exit_code == 0 && result.signal == 0) ? SUCCESS : RUNTIME_ERROR;
     return result;
 }

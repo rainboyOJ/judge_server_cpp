@@ -1,8 +1,20 @@
 #include <cassert>
+#include <filesystem>
+#include <fstream>
 
 #include "sjudge_call.h"
 
+namespace fs = std::filesystem;
+
 namespace {
+
+fs::path make_sjudger_dir(const std::string &name) {
+    const fs::path dir = fs::temp_directory_path() / name;
+    std::error_code ec;
+    fs::remove_all(dir, ec);
+    fs::create_directories(dir, ec);
+    return dir;
+}
 
 void test_invalid_config_returns_invalid_config_error() {
     judge_config config{};
@@ -40,11 +52,45 @@ void test_zero_limits_are_treated_as_unlimited_for_valid_exe() {
     assert(result.error == 0);
 }
 
+void test_run_sjudger_executes_program_and_writes_output() {
+    const fs::path dir = make_sjudger_dir("sjudger_exec_ok");
+    const fs::path script = dir / "hello.sh";
+    const fs::path input = dir / "in.txt";
+    const fs::path output = dir / "out.txt";
+
+    {
+        std::ofstream stream(script);
+        stream << "#!/bin/sh\nread line\nprintf '%s\\n' \"$line\"\n";
+    }
+    fs::permissions(script, fs::perms::owner_all, fs::perm_options::replace);
+    {
+        std::ofstream stream(input);
+        stream << "hello\n";
+    }
+
+    judge_config config{};
+    config.exe_path = script.string();
+    config.args = {script.string()};
+    config.input_path = input.string();
+    config.output_path = output.string();
+    config.cwd = dir.string();
+
+    const judge_result result = run_sjudger(config);
+
+    std::ifstream output_stream(output);
+    std::string text;
+    std::getline(output_stream, text);
+    assert(result.result == SUCCESS);
+    assert(result.exit_code == 0);
+    assert(text == "hello");
+}
+
 } // namespace
 
 int main() {
     test_invalid_config_returns_invalid_config_error();
     test_missing_exe_is_invalid_config();
     test_zero_limits_are_treated_as_unlimited_for_valid_exe();
+    test_run_sjudger_executes_program_and_writes_output();
     return 0;
 }
