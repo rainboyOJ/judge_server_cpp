@@ -9,6 +9,8 @@
 
 namespace {
 
+/** @brief popen 返回的 FILE* 需要用 pclose 回收，以取得子进程状态并释放管道。
+ */
 struct PipeCloser {
   void operator()(FILE *pipe) const {
     if (pipe != nullptr) {
@@ -17,6 +19,7 @@ struct PipeCloser {
   }
 };
 
+/** @brief 兼容旧 sjudge CLI：资源限制为 0 时不拼接对应参数。 */
 void append_limit_arg(std::string &command, const char *name, uint64_t value) {
   if (value != SJUDGE_UNLIMITED) {
     command += " ";
@@ -26,6 +29,7 @@ void append_limit_arg(std::string &command, const char *name, uint64_t value) {
   }
 }
 
+/** @brief 兼容旧 sjudge CLI：路径为空时不拼接对应参数。 */
 void append_path_arg(std::string &command, const char *name,
                      const std::string &value) {
   if (!value.empty()) {
@@ -36,6 +40,7 @@ void append_path_arg(std::string &command, const char *name,
   }
 }
 
+/** @brief 解析旧外部 sjudge 的逐行文本输出。 */
 void parse_result_line(judge_result &result, const std::string &line) {
   const size_t pos = line.find_first_of("0123456789");
   if (pos == std::string::npos) {
@@ -63,6 +68,7 @@ void parse_result_line(judge_result &result, const std::string &line) {
 
 judge_result call_sjudge(const char *sjudge_binary_path,
                          const judge_config &config) {
+  // 旧兼容路径保留历史行为：拼命令行、执行外部程序、解析文本结果。
   std::string command = sjudge_binary_path;
 
   append_limit_arg(command, "--max-cpu-time", config.max_cpu_time_ms);
