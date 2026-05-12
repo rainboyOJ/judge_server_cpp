@@ -9,6 +9,7 @@
 set(TEST_SOURCES
     test_async_submission_flow.cpp
     test_client_sockets_injection.cpp
+    test_config_sjudge_security.cpp
     test_connection_registry.cpp
     test_cpp_runner.cpp
     test_integration_tcp_cpp_python.cpp

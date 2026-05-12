@@ -18,7 +18,9 @@
 5. [`docs/security-boundary.md`](./docs/security-boundary.md)
    - 理解当前 sjudger 的安全边界。
    - 区分 `setrlimit`、seccomp、uid/gid、namespace、cgroup 等能力。
-6. [`docs/debugging.md`](./docs/debugging.md)
+6. [`docs/low-privilege-user.md`](./docs/low-privilege-user.md)
+   - 记录 simple OJ 推荐部署方式：手动创建低权限用户，并让 sjudge 子进程降权运行。
+7. [`docs/debugging.md`](./docs/debugging.md)
    - 学习怎么排查 `DUP2_FAILED`、`EXECVE_FAILED`、TLE、MLE、RE 等问题。
 
 ## demo 代码

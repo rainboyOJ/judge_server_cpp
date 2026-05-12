@@ -12,5 +12,18 @@
   },
   "performance": {
     "buffer_size": 8192
+  },
+  "sjudge": {
+    "run_uid": 0,
+    "run_gid": 0,
+    "clear_supplementary_groups": false,
+    "enable_seccomp": false,
+    "seccomp_deny_network": true,
+    "seccomp_deny_process_spawn": true,
+    "cgroup_path": "",
+    "cgroup_memory_max_bytes": 0,
+    "cgroup_pids_max": 0,
+    "cgroup_cpu_max_quota_us": 0,
+    "cgroup_cpu_max_period_us": 0
   }
 }
