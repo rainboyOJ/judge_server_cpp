@@ -1,4 +1,5 @@
 #include "runner/RunnerSupport.h"
+#include "sjudge_call.h"
 
 namespace fs = std::filesystem;
 
@@ -19,14 +20,18 @@ using RunExecutableCaseFn = RunnerCaseResult (*)(
     const RunnerCaseInput &test_case,
     const fs::path &user_output_path);
 
+using RunSjudgerFn = judge_result (*)(const judge_config &config);
+
 void test_runner_support_header_exposes_expected_helpers() {
     const CompileCppSourceFileFn compile_fn = &compile_cpp_source_file;
     const CompareCaseOutputFn compare_fn = &compare_case_output;
     const RunExecutableCaseFn run_fn = &run_executable_case;
+    const RunSjudgerFn sjudger_fn = &run_sjudger;
 
     (void)compile_fn;
     (void)compare_fn;
     (void)run_fn;
+    (void)sjudger_fn;
 }
 
 } // namespace
