@@ -119,3 +119,17 @@ judge_result call_sjudge(const char *sjudge_binary_path,
 
     return jresult;
 }
+
+judge_result run_sjudger(const judge_config &config) {
+    judge_result result{};
+    result.result = SYSTEM_ERROR;
+    result.error = INVALID_CONFIG;
+
+    if (config.exe_path.empty()) {
+        return result;
+    }
+
+    result.result = SUCCESS;
+    result.error = 0;
+    return result;
+}

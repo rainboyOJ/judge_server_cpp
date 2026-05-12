@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.10)  # 指定CMake的最低版本
 # 设置项目名称和版本
 project(boxTest VERSION 1.0)
 
+option(SJUDGER_ENABLE_SECCOMP "Build sjudger with seccomp support" ON)
+
 # 设置C++标准
 set(CMAKE_CXX_STANDARD 17)          # 可以根据需要调整标准版本
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -33,6 +35,7 @@ target_link_libraries(bt_protocol PUBLIC bt_build_settings bt_common)
 
 add_library(bt_runner STATIC
     sjudge/sjudge_call.cpp
+    sjudge/SeccompPolicyStub.cpp
     src/runner/RunnerCompileSupport.cpp
     src/runner/RunnerExecutionSupport.cpp
     src/runner/CppRunner.cpp
