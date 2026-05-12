@@ -24,6 +24,7 @@ set(TEST_SOURCES
     test_runner_support_compile.cpp
     test_sjudger_result_mapper.cpp
     test_sjudger.cpp
+    ../sjudge/tests/test_judger_ported_cases.cpp
     test_submission_event_responder.cpp
     test_submission_queue.cpp
     test_submission_request_handler.cpp

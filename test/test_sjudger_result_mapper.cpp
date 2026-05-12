@@ -51,6 +51,19 @@ void test_cpu_time_maps_to_cpu_time_limit() {
          CPU_TIME_LIMIT_EXCEEDED);
 }
 
+void test_cpu_time_takes_precedence_over_memory_signal_fallback() {
+  judge_config config = make_config();
+  config.max_cpu_time_ms = 10;
+  config.max_memory_bytes = 64 * 1024 * 1024;
+  monitor_result monitor{};
+  monitor.cpu_time_ms = 1000;
+  monitor.memory_bytes = 1024 * 1024;
+  monitor.signal = SIGKILL;
+
+  assert(map_monitor_result_to_judge_code(config, monitor) ==
+         CPU_TIME_LIMIT_EXCEEDED);
+}
+
 void test_non_zero_exit_maps_to_runtime_error() {
   const judge_config config = make_config();
   monitor_result monitor{};
@@ -73,6 +86,7 @@ int main() {
   test_memory_peak_maps_to_mle();
   test_memory_signal_maps_to_mle_when_memory_limit_is_set();
   test_cpu_time_maps_to_cpu_time_limit();
+  test_cpu_time_takes_precedence_over_memory_signal_fallback();
   test_non_zero_exit_maps_to_runtime_error();
   test_clean_exit_maps_to_success();
   return 0;

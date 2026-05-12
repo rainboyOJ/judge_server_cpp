@@ -50,6 +50,18 @@ void redirect_fd_or_exit(const std::string &path, int open_flags,
  */
 void redirect_standard_streams_or_exit(const judge_config &config) {
   redirect_fd_or_exit(config.input_path, O_RDONLY, STDIN_FILENO);
+  if (config.output_path == config.error_path) {
+    // stdout/stderr 指向同一个文件时只能打开并截断一次；dup2 共享同一个
+    // open file description，两个 fd 写入时会沿用同一个文件偏移。
+    const int fd =
+        open(config.output_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0 || dup2(fd, STDOUT_FILENO) < 0 || dup2(fd, STDERR_FILENO) < 0) {
+      _exit(DUP2_FAILED);
+    }
+    close(fd);
+    return;
+  }
+
   redirect_fd_or_exit(config.output_path, O_WRONLY | O_CREAT | O_TRUNC,
                       STDOUT_FILENO);
   redirect_fd_or_exit(config.error_path, O_WRONLY | O_CREAT | O_TRUNC,
