@@ -3,6 +3,7 @@
  * @brief TCP 连接管理、协议接入与异步结果回推实现。
  */
 
+#include <arpa/inet.h>
 #include <sys/select.h>
 
 #include <errno.h>
@@ -12,6 +13,7 @@
 #include <cctype>
 #include <exception>
 #include <memory>
+#include <string>
 
 #include "common/Logger.h"
 #include "dispatch/JudgeWorkerPool.h"
@@ -21,6 +23,54 @@
 
 namespace {
 
+std::string make_protocol_frame(const std::string &body) {
+  const uint32_t body_size = htonl(static_cast<uint32_t>(body.size()));
+
+  std::string frame;
+  frame.append(reinterpret_cast<const char *>(&body_size), sizeof(body_size));
+  frame += body;
+  return frame;
+}
+
+void send_connection_limit_error_and_close(int client_socket,
+                                           const JudgeProtocol &protocol) {
+  const std::string response =
+      protocol.encodeError("judge server is busy, too many active connections");
+  const std::string frame = make_protocol_frame(response);
+
+  std::size_t written = 0;
+  while (written < frame.size()) {
+    const ssize_t bytes =
+        write(client_socket, frame.data() + written, frame.size() - written);
+    if (bytes > 0) {
+      written += static_cast<std::size_t>(bytes);
+      continue;
+    }
+
+    if (bytes < 0 && errno == EINTR) {
+      continue;
+    }
+
+    break;
+  }
+
+  if (written < frame.size()) {
+    LOG_DEBUG("connection limit error response partially sent to socket %d, "
+              "written=%zu, expected=%zu, errno=%d",
+              client_socket, written, frame.size(), errno);
+  }
+
+  close(client_socket);
+}
+
+/**
+ * @brief 清理用于日志输出的题目/提交标识，避免异常字符污染日志格式。
+ *
+ * pid 来自客户端请求，理论上可以包含任意字符。日志里直接输出原始 pid，
+ * 可能导致换行、控制字符或分隔符把一条日志拆乱，影响排查问题。这里保留
+ * 常见的字母、数字和少量安全分隔符，其它字符统一替换成 '_'，并限制最大
+ * 输出长度，保证日志可读且不会被超长字段刷屏。
+ */
 std::string sanitize_pid_for_log(const std::string &pid) {
   constexpr std::size_t kMaxPidLogLength = 32;
 
@@ -65,9 +115,7 @@ void ClientSockets::register_client_socket(int client_socket) {
   if (slot_id < 0) {
     LOG_DEBUG("connection registry is FULL, disconnect socket %d",
               client_socket);
-    // TODO 发送评测已经满的信息
-    //  并关闭连接
-    close(client_socket);
+    send_connection_limit_error_and_close(client_socket, protocol_);
   } else {
     LOG_DEBUG("add socket %d to logical slot %d", client_socket, slot_id);
   }
