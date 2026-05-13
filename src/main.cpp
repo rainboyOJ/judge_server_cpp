@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
   Config &config = Config::getInstance();
   config.loadFromFile(config_file);
 
-  std::cout << "=== BoxTest Server Starting ===" << std::endl;
+  std::cout << "=== Judger Server Starting ===" << std::endl;
   std::cout << "Config file: " << config_file << std::endl;
   std::cout << "Server port: " << config.getServerPort() << std::endl;
   std::cout << "Worker threads: " << config.getWorkerThreadCount() << std::endl;
