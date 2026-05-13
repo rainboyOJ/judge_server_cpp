@@ -60,7 +60,6 @@ int main(int argc, char *argv[]) {
                                        judge_verdict_reducer);
 
   try {
-    ClientSockets *client_sockets_ptr = nullptr;
     std::unique_ptr<TcpServer> server;
     std::function<void()> wake_server;
 
@@ -75,24 +74,23 @@ int main(int argc, char *argv[]) {
     // 2. 创建评测池
     JudgeWorkerPool judge_worker_pool(config.getWorkerThreadCount(),
                                       submission_service, &client_sockets);
-    client_sockets_ptr = &client_sockets;
     client_sockets.set_pool(&judge_worker_pool);
 
     // 3. 创建TCP服务器，使用配置中的端口
     server = std::make_unique<TcpServer>(
         config.getServerPort(),
         // 接受新连接的回调
-        [&client_sockets_ptr](int client_fd) {
-          client_sockets_ptr->add_socket(client_fd);
+        [&client_sockets](int client_fd) {
+          client_sockets.add_socket(client_fd);
           LOG_INFO("Accepted connection, fd: %d", client_fd);
         },
         // 处理客户端事件的回调
-        [&client_sockets_ptr](fd_set &read_fds, fd_set &write_fds) {
-          client_sockets_ptr->deal_events(read_fds, write_fds);
+        [&client_sockets](fd_set &read_fds, fd_set &write_fds) {
+          client_sockets.deal_events(read_fds, write_fds);
         },
         // 加入socket到fd_set中
-        [&client_sockets_ptr](fd_set &read_fds, fd_set &write_fds) {
-          client_sockets_ptr->add_to_sets(read_fds, write_fds);
+        [&client_sockets](fd_set &read_fds, fd_set &write_fds) {
+          client_sockets.add_to_sets(read_fds, write_fds);
         });
     wake_server = [server_ptr = server.get()]() { server_ptr->wake(); };
 
