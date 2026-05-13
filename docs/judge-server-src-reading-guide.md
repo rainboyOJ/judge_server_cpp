@@ -227,8 +227,8 @@ src/network/TcpServer.cpp
 
 | 回调 | 谁提供 | 作用 |
 | --- | --- | --- |
-| `on_accept` | `main.cpp` | 新连接到来时交给 `ClientSockets::add_socket()` |
-| `on_client_event` | `main.cpp` | select 返回后交给 `ClientSockets::deal_events()` |
+| `on_accept` | `main.cpp` | 新连接到来时交给 `ClientSockets::register_client_socket()` |
+| `on_client_event` | `main.cpp` | select 返回后交给 `ClientSockets::handle_ready_events()` |
 | `populate_socket_sets` | `main.cpp` | 每轮 select 前让 `ClientSockets` 填充 read/write fd_set |
 
 ### 为什么有 eventfd
@@ -688,7 +688,7 @@ client sends submit frame
 TcpServer::select returns readable fd
   |
   v
-ClientSockets::deal_events
+ClientSockets::handle_ready_events
   |
   v
 ConnectionSlot::read_message

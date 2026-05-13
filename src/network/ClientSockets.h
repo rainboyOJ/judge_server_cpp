@@ -45,12 +45,12 @@ public:
   ClientSockets(std::size_t slot_count, SubmissionService &submission_service,
                 WakeCallback wake_callback = nullptr);
   /** @brief 注册一个新的 client socket。 */
-  void add_socket(int);
+  void register_client_socket(int);
 
   /**
    * @brief 把当前所有活跃连接加入 read/write fd_set，并返回最大 fd。
    */
-  int add_to_sets(fd_set &read_sets, fd_set &write_sets);
+  int populate_socket_sets(fd_set &read_sets, fd_set &write_sets);
 
   /** @brief 根据逻辑槽位索引获得对应 fd。 */
   int id_to_fd(const int id) const { return connection_registry_.id_to_fd(id); }
@@ -58,10 +58,10 @@ public:
   /**
    * @brief 处理一轮 select 返回的读写事件。
    */
-  void deal_events(const fd_set &read_sets, const fd_set &write_sets);
+  void handle_ready_events(const fd_set &read_sets, const fd_set &write_sets);
 
   /** @brief 删除并回收一个连接槽位。 */
-  void del_socket(int slot_id);
+  void release_connection(int slot_id);
 
   /** @brief 暴露内部 SubmissionService，供 worker/notifier 协作使用。 */
   SubmissionService &submission_service() { return submission_service_; }

@@ -27,7 +27,7 @@
  * 它是 ClientSockets 和底层 socket 连接之间的中间层：
  * - 槽位预分配：构造时创建固定数量的 ConnectionSlot。
  * - 生命周期：init_slot / clear_slot 对应新连接接入 / 断连。
- * - select 参与：add_to_sets 决定哪些 fd 应该进入本轮的 read_fd_set 和 write_fd_set。
+ * - select 参与：populate_socket_sets 决定哪些 fd 应该进入本轮的 read_fd_set 和 write_fd_set。
  */
 class ConnectionRegistry {
 public:
@@ -67,7 +67,7 @@ public:
    * - WRITABLE 的槽位加入 write_fds
    * - 跳过 fd == 0 的空槽位
    */
-  int add_to_sets(fd_set &read_sets, fd_set &write_sets) const;
+  int populate_socket_sets(fd_set &read_sets, fd_set &write_sets) const;
 
 private:
   std::vector<std::unique_ptr<ConnectionSlot>> slots_;

@@ -39,7 +39,7 @@ cmake --build build -j
 - `test/test_integration_tcp_cpp_python.cpp`
 
 注意：
-- `submit` 和 `query_result` 都由 `ClientSockets::deal_events()` 直接分流。
+- `submit` 和 `query_result` 都由 `ClientSockets::handle_ready_events()` 直接分流。
 - `encodeResult()` 会根据终态/非终态自动在 `submission_update` 与 `submission_finished` 之间切换。
 - 错误包仍走兼容格式，不要误以为所有响应都有 `type`。
 

@@ -53,13 +53,13 @@ ClientSockets::ClientSockets(std::size_t slot_count,
       submission_event_responder_(submission_service_, protocol_),
       wake_callback_(std::move(wake_callback)) {}
 
-/** @copydoc ClientSockets::add_to_sets */
-int ClientSockets::add_to_sets(fd_set &read_sets, fd_set &write_sets) {
-  return connection_registry_.add_to_sets(read_sets, write_sets);
+/** @copydoc ClientSockets::populate_socket_sets */
+int ClientSockets::populate_socket_sets(fd_set &read_sets, fd_set &write_sets) {
+  return connection_registry_.populate_socket_sets(read_sets, write_sets);
 }
 
-/** @copydoc ClientSockets::add_socket */
-void ClientSockets::add_socket(int client_socket) {
+/** @copydoc ClientSockets::register_client_socket */
+void ClientSockets::register_client_socket(int client_socket) {
   const int slot_id =
       connection_registry_.acquire_slot(client_socket, next_session_id_++);
   if (slot_id < 0) {
@@ -73,13 +73,13 @@ void ClientSockets::add_socket(int client_socket) {
   }
 }
 
-/** @copydoc ClientSockets::del_socket */
-void ClientSockets::del_socket(int slot_id) {
+/** @copydoc ClientSockets::release_connection */
+void ClientSockets::release_connection(int slot_id) {
   connection_registry_.release_slot(static_cast<std::size_t>(slot_id));
 }
 
-/** @copydoc ClientSockets::deal_events */
-void ClientSockets::deal_events(const fd_set &read_sets,
+/** @copydoc ClientSockets::handle_ready_events */
+void ClientSockets::handle_ready_events(const fd_set &read_sets,
                                 const fd_set &write_sets) {
 
   for (std::size_t i = 0; i < connection_registry_.size(); i++) {
@@ -104,15 +104,15 @@ void ClientSockets::handle_read_event(ConnectionSlot &slot, int slot_id) {
   const bool has_complete_message = slot.read_message(bytes_read, message_body);
   if (bytes_read == 0) {
     LOG_INFO("Connection closed : %d\n", client_socket);
-    del_socket(slot_id);
+    release_connection(slot_id);
   } else if (bytes_read < 0) {
     LOG_ERROR("Failed to read from socket: %d\n", client_socket);
-    del_socket(slot_id);
+    release_connection(slot_id);
   } else if (has_complete_message) { // 没有发生错误
     handle_complete_message(slot, slot_id, message_body);
   } // 没有读取发生错误else end
   else {
-    LOG_DEBUG("read bytes_read = %d, but not get All testProblem data",
+    LOG_DEBUG("read bytes_read = %d, but not get complete message",
               bytes_read);
   }
 }
@@ -139,7 +139,7 @@ void ClientSockets::handle_write_event(ConnectionSlot &slot, int slot_id) {
       return;
     }
     LOG_ERROR("Failed to send response to socket %d", client_socket);
-    del_socket(slot_id);
+    release_connection(slot_id);
     return;
   }
 

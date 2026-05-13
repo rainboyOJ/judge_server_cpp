@@ -81,16 +81,16 @@ int main(int argc, char *argv[]) {
         config.getServerPort(),
         // 接受新连接的回调
         [&client_sockets](int client_fd) {
-          client_sockets.add_socket(client_fd);
+          client_sockets.register_client_socket(client_fd);
           LOG_INFO("Accepted connection, fd: %d", client_fd);
         },
         // 处理客户端事件的回调
         [&client_sockets](fd_set &read_fds, fd_set &write_fds) {
-          client_sockets.deal_events(read_fds, write_fds);
+          client_sockets.handle_ready_events(read_fds, write_fds);
         },
         // 每轮 select 前把客户端 socket 加入 fd_set
         [&client_sockets](fd_set &read_fds, fd_set &write_fds) {
-          client_sockets.add_to_sets(read_fds, write_fds);
+          client_sockets.populate_socket_sets(read_fds, write_fds);
         });
     wake_server = [server_ptr = server.get()]() { server_ptr->wake(); };
 

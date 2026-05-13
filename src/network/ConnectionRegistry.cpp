@@ -50,7 +50,7 @@ int ConnectionRegistry::id_to_fd(std::size_t id) const {
   return slots_.at(id)->get_fd();
 }
 
-int ConnectionRegistry::add_to_sets(fd_set &read_sets, fd_set &write_sets) const {
+int ConnectionRegistry::populate_socket_sets(fd_set &read_sets, fd_set &write_sets) const {
   int max_fd = 0;
   for (const auto &slot : slots_) {
     const int fd = slot->get_fd();

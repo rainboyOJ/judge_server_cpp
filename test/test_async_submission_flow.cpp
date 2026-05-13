@@ -67,7 +67,7 @@ private:
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) == 0);
     client_fd_ = sockets[0];
     server_fd_ = sockets[1];
-    client_sockets_.add_socket(server_fd_);
+    client_sockets_.register_client_socket(server_fd_);
   }
 
 public:
@@ -136,14 +136,14 @@ private:
     FD_ZERO(&read_sets);
     FD_ZERO(&write_sets);
 
-    const int max_fd = client_sockets_.add_to_sets(read_sets, write_sets);
+    const int max_fd = client_sockets_.populate_socket_sets(read_sets, write_sets);
     timeval timeout{};
     timeout.tv_usec = kPollTimeoutUsec;
     const int ready =
         select(max_fd + 1, &read_sets, &write_sets, nullptr, &timeout);
     assert(ready >= 0);
     if (ready > 0) {
-      client_sockets_.deal_events(read_sets, write_sets);
+      client_sockets_.handle_ready_events(read_sets, write_sets);
     }
   }
 

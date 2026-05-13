@@ -62,7 +62,7 @@ public:
   /**
    * @brief 用新的 fd 和 session_id 初始化槽位。
    *
-   * 通常在 ClientSockets::add_socket() 中调用。
+   * 通常在 ClientSockets::register_client_socket() 中调用。
    * 会清空所有旧状态（输入缓冲、待发送响应、读写偏移）。
    */
   void init(int fd, uint64_t session_id);
