@@ -11,11 +11,11 @@
 #include <stdexcept>
 #include <string_view>
 
-std::string Popen(const char* cmd) {
+std::string run_command_capture_stdout(const char *command) {
     std::array<char, 128> buffer;
     std::string result;
 
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command, "r"), pclose);
     if (!pipe) {
         throw std::runtime_error("popen() failed!");
     }
@@ -27,34 +27,34 @@ std::string Popen(const char* cmd) {
     return result;
 }
 
-static bool hasEnding(std::string const &fullString, std::string_view const &ending) {
-    if (fullString.length() >= ending.length()) {
-        return (0 == fullString.compare(fullString.length() - ending.length(), ending.length(), ending));
+static bool has_suffix(std::string const &value, std::string_view const &suffix) {
+    if (value.length() >= suffix.length()) {
+        return (0 == value.compare(value.length() - suffix.length(), suffix.length(), suffix));
     } else {
         return false;
     }
 }
 
-Data_list_t scan_data_list(const fs::path &directoryPath) {
-    Data_list_t filePairs;
+TestDataFilePairs scan_test_data_file_pairs(const fs::path &directory_path) {
+    TestDataFilePairs file_pairs;
 
     using namespace std::literals;
     try {
-        for (const auto& entry : fs::directory_iterator(directoryPath)) {
+        for (const auto& entry : fs::directory_iterator(directory_path)) {
             if (entry.is_regular_file()) {
-                std::string fileName = entry.path().filename().string();
+                std::string file_name = entry.path().filename().string();
 
-                if (hasEnding(fileName, ".in"sv)) {
-                    std::string outFileName = fileName;
-                    outFileName.replace(outFileName.end() - 3, outFileName.end(), ".out");
-                    if (fs::exists(entry.path().parent_path() / outFileName)) {
-                        filePairs.emplace_back(fileName, outFileName);
+                if (has_suffix(file_name, ".in"sv)) {
+                    std::string output_file_name = file_name;
+                    output_file_name.replace(output_file_name.end() - 3, output_file_name.end(), ".out");
+                    if (fs::exists(entry.path().parent_path() / output_file_name)) {
+                        file_pairs.emplace_back(file_name, output_file_name);
                     }
                 }
             }
         }
 
-        for (const auto& pair : filePairs) {
+        for (const auto& pair : file_pairs) {
             std::cout << pair.first << " <-> " << pair.second << std::endl;
         }
 
@@ -64,5 +64,5 @@ Data_list_t scan_data_list(const fs::path &directoryPath) {
         std::cerr << "Error: " << e.what() << std::endl;
     }
 
-    return filePairs;
+    return file_pairs;
 }

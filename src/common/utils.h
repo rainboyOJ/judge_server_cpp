@@ -11,7 +11,7 @@
 
 namespace fs = std::filesystem;
 
-std::string Popen(const char* cmd);
+std::string run_command_capture_stdout(const char *command);
 
-using Data_list_t = std::vector<std::pair<std::string, std::string>>;
-Data_list_t scan_data_list(const fs::path &directoryPath);
+using TestDataFilePairs = std::vector<std::pair<std::string, std::string>>;
+TestDataFilePairs scan_test_data_file_pairs(const fs::path &directory_path);

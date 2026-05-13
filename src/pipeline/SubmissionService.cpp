@@ -129,7 +129,7 @@ std::vector<SubmissionCaseSpec> load_cases_for_problem(const std::string &pid) {
     return cases;
   }
 
-  const Data_list_t file_pairs = scan_data_list(data_path);
+  const TestDataFilePairs file_pairs = scan_test_data_file_pairs(data_path);
   int seq_id = 1;
   for (const auto &pair : file_pairs) {
     SubmissionCaseSpec spec;

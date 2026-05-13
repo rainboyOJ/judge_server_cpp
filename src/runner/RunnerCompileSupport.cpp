@@ -11,18 +11,18 @@
 namespace fs = std::filesystem;
 
 /** @copydoc compile_cpp_source_file */
-bool compile_cpp_source_file(const fs::path &sourceFile,
-                             const fs::path &executableFile,
-                             const fs::path &compileLogFile,
-                             std::string &compileOutput) {
-    const std::string compileCmd =
-        "g++ -std=c++17 -O2 -DONLINE_JUDGE  -o " + executableFile.string() +
-        " " + sourceFile.string() + " 2> " + compileLogFile.string();
+bool compile_cpp_source_file(const fs::path &source_file,
+                             const fs::path &executable_file,
+                             const fs::path &compile_log_file,
+                             std::string &compile_output) {
+    const std::string compile_command =
+        "g++ -std=c++17 -O2 -DONLINE_JUDGE  -o " + executable_file.string() +
+        " " + source_file.string() + " 2> " + compile_log_file.string();
     try {
-        compileOutput = Popen(compileCmd.c_str());
-        return fs::exists(executableFile);
+        compile_output = run_command_capture_stdout(compile_command.c_str());
+        return fs::exists(executable_file);
     } catch (const std::exception &) {
-        compileOutput.clear();
+        compile_output.clear();
         return false;
     }
 }
