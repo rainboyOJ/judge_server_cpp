@@ -1,0 +1,11 @@
+.git/
+.agents/
+.cache/
+.codex/
+.vscode/
+build/
+checker/build/
+Judger/
+**/__pycache__/
+*.o
+*.a

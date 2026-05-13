@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.1)
+cmake_minimum_required(VERSION 3.10)
 project(checker)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/output)
@@ -20,4 +20,3 @@ foreach(f ${SOURCE})
 endforeach(f)
 
 #install(DIRECOTRY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/  RUNTIME DESTINATION /judge/checker)
-
