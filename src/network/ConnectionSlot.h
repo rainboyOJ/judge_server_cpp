@@ -56,6 +56,7 @@ public:
 
   /** @brief 获取当前 socket fd，0 表示槽位空闲。 */
   int get_fd() const { return fd_; }
+
   /** @brief 获取当前会话 id，用于防止 fd 复用后错发消息。 */
   uint64_t get_session_id() const { return session_id_; }
 
@@ -66,6 +67,7 @@ public:
    * 会清空所有旧状态（输入缓冲、待发送响应、读写偏移）。
    */
   void init(int fd, uint64_t session_id);
+
   /**
    * @brief 关闭 fd 并清空槽位状态，使槽位可被复用。
    */
@@ -73,12 +75,17 @@ public:
 
   /** @brief 当前是否应加入 read_fd_set。 */
   bool is_readable();
+
   /** @brief 当前是否应加入 write_fd_set。 */
   bool is_writable();
+
   /** @brief 将槽位切到可写状态（有待发送数据）。 */
+
   void set_writable();
+
   /** @brief 将槽位切回可读状态（发送完成）。 */
   void set_readable();
+
   /**
    * @brief 将槽位切到空闲状态。
    *
@@ -96,6 +103,7 @@ public:
    * 该函数仅在 select 主线程调用，不加锁。
    */
   bool read_message(int &read_size, std::string &message_body);
+
   /**
    * @brief 把一段二进制数据写回 socket。
    * @return int 实际写出的字节数，<0 表示 send 出错。
@@ -106,6 +114,7 @@ public:
    * @brief 设置待发送协议响应（已包含 4 字节长度前缀的完整 frame）。
    */
   void set_pending_response(std::string response);
+
   /**
    * @brief 仅当当前 session 匹配时才设置待发送响应。
    * @param expected_session_id 期望的会话 id。
@@ -118,10 +127,13 @@ public:
    */
   bool set_pending_response_if_session(uint64_t expected_session_id,
                                        std::string response);
+
   /** @brief 当前是否还有未发完的协议响应。 */
   bool has_pending_response();
+
   /** @brief 复制尚未发完的剩余部分（不移除）。 */
   std::string copy_pending_response();
+
   /**
    * @brief 消费掉已发送完成的前缀。
    * @return true 本次调用后该响应已全部发完。
