@@ -4,7 +4,7 @@
 
 1. `judge_server` 启动后创建了哪些核心对象。
 2. 一个 `submit` 请求如何从 TCP 连接进入系统。
-3. 任务如何进入队列、被 worker 消费、执行 runner。
+3. 任务如何进入 `SubmissionService` 内部队列、被 worker 消费、执行 runner。
 4. 结果如何保存、查询、回推给客户端。
 5. 每个 `src/` 子目录分别负责什么。
 
@@ -16,9 +16,9 @@ src/common/SubmissionTypes.h
 src/network/TcpServer.*
 src/network/ClientSockets.*
 src/protocol/JudgeProtocol.*
-src/dispatch/SubmissionQueue.*
-src/dispatch/JudgeWorkerPool.*
 src/pipeline/SubmissionService.*
+src/dispatch/JudgeWorkerPool.*
+src/dispatch/SubmissionQueue.*
 src/runner/*
 src/pipeline/ResultStore.*
 src/pipeline/JudgeCore.*
@@ -31,11 +31,10 @@ src/pipeline/JudgeCore.*
 1. 网络线程
    - 负责 TCP 连接。
    - 解析请求。
-   - 创建 submission。
-   - 把任务放入队列。
+   - 调用 `SubmissionService::submitAsync()` 创建 submission 并投递内部队列。
    - 发送 ack、查询结果、回推最终结果。
 2. worker 线程
-   - 从队列取任务。
+   - 通过 `SubmissionService::waitTask()` 从内部队列取任务。
    - 调用 `SubmissionService::processSubmission()`。
    - 编译、运行、汇总结果。
    - 把结果写入 `ResultStore`。
@@ -59,13 +58,13 @@ JudgeProtocol
   +-- submit
   |     |
   |     v
-  |   SubmissionService::createSubmission
+  |   SubmissionService::submitAsync
   |     |
   |     v
   |   ResultStore: QUEUED
   |     |
   |     v
-  |   SubmissionQueue::push
+  |   SubmissionService internal queue
   |     |
   |     v
   |   immediate submission_ack
@@ -115,13 +114,12 @@ src/main.cpp
 
 1. 读取配置文件。
 2. 创建全局核心对象。
-3. 把网络层、队列、worker、service 接起来。
+3. 把网络层、service、worker 接起来。
 4. 启动 TCP 事件循环。
 
 核心对象创建顺序：
 
 ```cpp
-SubmissionQueue submission_queue;
 ResultStore result_store;
 RunnerFactory runner_factory;
 JudgeCore judge_core;
@@ -140,9 +138,8 @@ server->start();
 | --- | --- |
 | `TcpServer` | 监听端口，跑 `select` 事件循环 |
 | `ClientSockets` | 管理客户端连接、协议分发、异步回包 |
-| `SubmissionQueue` | 网络线程和 worker 线程之间的任务队列 |
 | `JudgeWorkerPool` | 后台 worker 线程池 |
-| `SubmissionService` | 评测流程编排 |
+| `SubmissionService` | 提交服务入口、内部队列和评测流程编排 |
 | `RunnerFactory` | 根据语言创建 runner |
 | `JudgeCore` | 汇总多个测试点 verdict |
 | `ResultStore` | 保存 submission 最新快照 |
@@ -365,10 +362,10 @@ src/network/QueryRequestHandler.*
 
 submit 的核心动作：
 
-1. `SubmissionService::createSubmission(request)`
+1. `SubmissionService::submitAsync(request, reply_channel_id)`
 2. `ResultStore` 创建 `QUEUED` 记录
-3. 构造 `SubmissionTask`
-4. `SubmissionQueue::push(task)`
+3. `SubmissionService` 构造 `SubmissionTask`
+4. 写入 `SubmissionService` 内部队列
 5. 返回 `submission_ack`
 
 如果入队失败，会返回错误响应。
@@ -446,18 +443,18 @@ src/dispatch/SubmissionNotifier.h
 
 ### SubmissionQueue
 
-这是网络线程和 worker 线程之间的阻塞队列。
+这是 `SubmissionService` 内部使用的阻塞队列。网络层和 `main.cpp` 不直接持有它。
 
-网络线程：
+`SubmissionService::submitAsync()`：
 
 ```cpp
-queue.push(task);
+queue_.push(task);
 ```
 
-worker 线程：
+worker 线程通过 `SubmissionService::waitTask()` 间接调用：
 
 ```cpp
-while (queue.pop(task)) {
+while (service.waitTask(task)) {
     ...
 }
 ```
@@ -706,13 +703,13 @@ JudgeProtocol::decodeRequest
 SubmissionRequestHandler::handleSubmit
   |
   v
-SubmissionService::createSubmission
+SubmissionService::submitAsync
   |
   v
 ResultStore::createSubmission -> QUEUED
   |
   v
-SubmissionQueue::push
+SubmissionService internal queue push
   |
   v
 ClientSockets queues submission_ack
@@ -721,7 +718,7 @@ ClientSockets queues submission_ack
 TcpServer sends ack
   |
   v
-JudgeWorkerPool::workerLoop pops task
+JudgeWorkerPool::workerLoop waits task from SubmissionService
   |
   v
 SubmissionService::processSubmission
@@ -814,7 +811,7 @@ submission_finished
 
 ### 网络线程不执行评测
 
-网络线程只入队和回包。真正执行在 worker 线程。
+网络线程只调用 `SubmissionService::submitAsync()` 并回包。真正执行在 worker 线程。
 
 这是系统能同时处理多个连接的关键。
 
@@ -828,7 +825,7 @@ runner 执行成功后还要比较输出。
 
 理解源码时也要知道当前边界：
 
-1. `SubmissionQueue` 是内存无界队列。
+1. `SubmissionService` 内部队列是内存无界队列。
 2. `ResultStore` 是内存存储，进程退出结果会丢失。
 3. worker 没有任务取消、重试、优先级。
 4. 测试点限制目前在 `SubmissionService::load_cases_for_problem()` 里硬编码。
@@ -852,6 +849,7 @@ runner 执行成功后还要比较输出。
 5. `src/dispatch/JudgeWorkerPool.cpp`
    - 看 `workerLoop()`
 6. `src/pipeline/SubmissionService.cpp`
+   - 看 `submitAsync()`
    - 看 `processSubmission()`
 7. `src/runner/RunnerExecutionSupport.cpp`
    - 看 `run_executable_case()`
@@ -859,4 +857,3 @@ runner 执行成功后还要比较输出。
    - 看 `createSubmission()` / `updateResult()` / `getResult()`
 
 读完这 8 个点，就能把 judge_server 主流程串起来。
-

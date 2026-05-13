@@ -4,7 +4,7 @@
  *
  * 当前主程序负责组装：
  * - TCP/select 网络外壳
- * - SubmissionQueue 任务队列
+ * - SubmissionService 内部异步任务队列
  * - JudgeWorkerPool 后台 worker
  * - ClientSockets 协议接入与回包协调
  */
@@ -22,12 +22,11 @@
 #include <unistd.h>
 #include <vector>
 
-#include "network/TcpServer.h"
-#include "network/ClientSockets.h"
 #include "common/Config.h"
 #include "common/Logger.h"
 #include "dispatch/JudgeWorkerPool.h"
-#include "dispatch/SubmissionQueue.h"
+#include "network/ClientSockets.h"
+#include "network/TcpServer.h"
 #include "pipeline/JudgeCore.h"
 #include "pipeline/ResultStore.h"
 #include "pipeline/SubmissionService.h"
@@ -54,11 +53,11 @@ int main(int argc, char *argv[]) {
   std::cout << "Test data path: " << config.getTestDataPath() << std::endl;
   std::cout << "================================" << std::endl;
 
-  SubmissionQueue submission_queue;
   ResultStore result_store;
   RunnerFactory runner_factory;
   JudgeCore judge_core;
-  SubmissionService submission_service(result_store, runner_factory, judge_core);
+  SubmissionService submission_service(result_store, runner_factory,
+                                       judge_core);
 
   try {
     ClientSockets *client_sockets_ptr = nullptr;
@@ -66,18 +65,16 @@ int main(int argc, char *argv[]) {
     std::function<void()> wake_server;
 
     // 1. 创建连接管理器
-    ClientSockets client_sockets(config.getMaxConcurrentTests(), submission_queue,
-                                 submission_service,
-                                 [&wake_server]() {
+    ClientSockets client_sockets(config.getMaxConcurrentTests(),
+                                 submission_service, [&wake_server]() {
                                    if (wake_server) {
                                      wake_server();
                                    }
                                  });
 
     // 2. 创建评测池
-    JudgeWorkerPool judge_worker_pool(
-        config.getWorkerThreadCount(), submission_queue,
-        submission_service, &client_sockets);
+    JudgeWorkerPool judge_worker_pool(config.getWorkerThreadCount(),
+                                      submission_service, &client_sockets);
     client_sockets_ptr = &client_sockets;
     client_sockets.set_pool(&judge_worker_pool);
 

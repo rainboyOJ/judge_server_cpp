@@ -12,10 +12,9 @@
 
 /** @copydoc JudgeWorkerPool::JudgeWorkerPool */
 JudgeWorkerPool::JudgeWorkerPool(std::size_t worker_count,
-                                 SubmissionQueue &queue,
                                  SubmissionService &service,
                                  SubmissionNotifier *notifier)
-    : queue_(queue), service_(service), notifier_(notifier) {
+    : service_(service), notifier_(notifier) {
   workers_.reserve(worker_count);
   for (std::size_t i = 0; i < worker_count; ++i) {
     workers_.emplace_back(&JudgeWorkerPool::workerLoop, this);
@@ -32,7 +31,7 @@ void JudgeWorkerPool::stop() {
     return;
   }
 
-  queue_.shutdown();
+  service_.shutdownQueue();
   for (std::thread &worker : workers_) {
     if (worker.joinable()) {
       worker.join();
@@ -53,7 +52,7 @@ void JudgeWorkerPool::workerLoop() {
   const std::string worker_id = worker_id_stream.str();
 
   SubmissionTask task{};
-  while (queue_.pop(task)) {
+  while (service_.waitTask(task)) {
     LOG_DEBUG("worker start worker_id=%s submission_id=%d reply_channel=%s",
               worker_id.c_str(), task.submission_id,
               task.reply_channel_id.c_str());

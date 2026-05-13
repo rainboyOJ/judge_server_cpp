@@ -1,6 +1,8 @@
 #pragma once
 
 #include "common/SubmissionTypes.h"
+#include "dispatch/SubmissionQueue.h"
+#include "dispatch/SubmissionTask.h"
 
 class JudgeCore;
 class ResultStore;
@@ -26,6 +28,25 @@ public:
    * @brief 创建一条新的 submission 记录，并返回服务端生成的 submission_id。
    */
   int createSubmission(const SubmissionRequest &request);
+
+  /**
+   * @brief 创建 submission 并投递到内部异步队列。
+   *
+   * 网络层只需要表达“提交这份代码，并把后续消息回推到哪个 reply channel”，
+   * 不需要知道后台队列的存在。
+   */
+  int submitAsync(const SubmissionRequest &request,
+                  const std::string &reply_channel_id);
+
+  /** @brief worker 从内部队列阻塞获取任务。 */
+  bool waitTask(SubmissionTask &task);
+
+  /** @brief 关闭内部队列并唤醒 worker。 */
+  void shutdownQueue();
+
+  /** @brief 暴露队列长度，主要用于测试和运行时观测。 */
+  std::size_t queuedTaskCount() const;
+
   /**
    * @brief 执行一份 submission 的完整评测流程。
    * @param submission_id 由服务端生成的唯一 submission 编号。
@@ -48,4 +69,5 @@ private:
   ResultStore &result_store_;
   RunnerFactory &runner_factory_;
   JudgeCore &judge_core_;
+  SubmissionQueue queue_;
 };

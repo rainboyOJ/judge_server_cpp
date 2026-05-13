@@ -5,15 +5,15 @@
 本项目是一个 async OJ 判题后端，所有源码位于单一 `src/` 目录树下。当前主线已经收敛为 `network + dispatch + pipeline + runner + protocol` 的组合式结构：
 
 - `TcpServer`：基于 `select` + `eventfd` 的事件循环外壳。
-- `ClientSockets`：协议接入、submission 入队、查询分流、结果回包桥接。
+- `ClientSockets`：协议接入、调用 `SubmissionService` 提交任务、查询分流、结果回包桥接。
 - `ConnectionRegistry` / `ConnectionSlot`：连接槽位、session、待发送缓冲与 `fd_set` 参与逻辑。
-- `SubmissionService`：拆成 `createSubmission()`（建单据）和 `processSubmission()`（跑评测）两段。
-- `SubmissionQueue`：线程安全待评测任务队列。
-- `JudgeWorkerPool`：后台线程消费队列并调用 `processSubmission()`。
+- `SubmissionService`：提交服务入口，内部持有任务队列，并拆成 `submitAsync()`（建单并入队）和 `processSubmission()`（跑评测）两段。
+- `SubmissionQueue`：`SubmissionService` 内部使用的线程安全待评测任务队列。
+- `JudgeWorkerPool`：后台线程从 `SubmissionService` 获取任务并调用 `processSubmission()`。
 - `SubmissionNotifier`：worker 生命周期事件回传给 socket 层。
 - `ResultStore`：线程安全保存提交快照，`query_result` 和最终推送都从这里读取最新状态。
 
-核心入口：`main.cpp` 读取 `config/config.json`，构造 `SubmissionQueue`、`SubmissionService`、`ClientSockets`、`JudgeWorkerPool`，再启动 `TcpServer`。
+核心入口：`main.cpp` 读取 `config/config.json`，构造 `SubmissionService`、`ClientSockets`、`JudgeWorkerPool`，再启动 `TcpServer`。`SubmissionQueue` 被收在 `SubmissionService` 内部，不再作为 main 层概念暴露。
 
 ## 目录结构
 
@@ -21,7 +21,7 @@
 |---|---|
 | `src/common/` | 共享数据结构（SubmissionTypes.h）、配置（Config）、日志（Logger）、基础类型（Types.h、Result.h） |
 | `src/network/` | TCP Server（TcpServer）、客户端连接管理（ClientSockets）、连接注册表（ConnectionRegistry） |
-| `src/dispatch/` | 任务队列（SubmissionQueue）、Worker 线程池（JudgeWorkerPool）、通知接口（SubmissionNotifier） |
+| `src/dispatch/` | Worker 线程池（JudgeWorkerPool）、内部任务队列实现（SubmissionQueue）、通知接口（SubmissionNotifier） |
 | `src/runner/` | 语言 Runner 接口与实现（CppRunner、PythonRunner）、工厂（RunnerFactory）、运行支撑（RunnerSupport） |
 | `src/pipeline/` | 评测编排（SubmissionService）、判题归并（JudgeCore）、结果存储（ResultStore） |
 | `src/protocol/` | JSON 协议编解码（JudgeProtocol） |
@@ -62,13 +62,14 @@
 - 内部是 `std::queue<SubmissionTask>` + `mutex` + `condition_variable`。
 - `push()` 在队列关闭后返回 `false`。
 - `pop()` 阻塞等待任务；若 shutdown 后队列为空则返回 `false`，worker 退出。
+- 它是 `SubmissionService` 的内部实现，网络层和 `main.cpp` 不直接持有它。
 
 ### JudgeWorkerPool
 
 - 启动时按 `worker_count` 创建后台线程。
-- 每个 worker 在 `workerLoop()` 中循环消费 `SubmissionTask`。
+- 每个 worker 在 `workerLoop()` 中通过 `SubmissionService::waitTask()` 循环消费 `SubmissionTask`。
 - 每个任务执行顺序固定为：`onSubmissionStarted(task)` → `service_.processSubmission(...)` → `onSubmissionFinished(task)`。
-- `stop()` 先关闭 `SubmissionQueue`，再 `join` 全部线程。
+- `stop()` 通过 `SubmissionService::shutdownQueue()` 关闭内部队列，再 `join` 全部线程。
 
 ### SubmissionNotifier
 
@@ -78,10 +79,11 @@
 
 ## 管道层 (src/pipeline/)
 
-`SubmissionService` 职责拆成两段：
+`SubmissionService` 是 submit 请求的人类可读入口，网络层只和它交互。它的职责拆成三段：
 
 1. `createSubmission(request)`：向 `ResultStore` 创建初始记录，返回服务端生成的 `submission_id`，初始状态 `QUEUED`。
-2. `processSubmission(submission_id, request)`：真正执行评测，依次推进 `PREPARING → COMPILING → RUNNING → FINISHED/FAILED`，每次跑完测试点就把 `case_results` 快照写回 `ResultStore`。
+2. `submitAsync(request, reply_channel_id)`：创建 submission，组装 `SubmissionTask`，写入内部队列。
+3. `processSubmission(submission_id, request)`：真正执行评测，依次推进 `PREPARING → COMPILING → RUNNING → FINISHED/FAILED`，每次跑完测试点就把 `case_results` 快照写回 `ResultStore`。
 
 `submit(request)` 仍保留为兼容包装，但异步主线不再走它。
 
@@ -107,11 +109,11 @@ client
   → TCP framed JSON (type=submit)
   → ClientSockets::read_message
   → JudgeProtocol::decodeRequest
-  → SubmissionService::createSubmission
+  → SubmissionService::submitAsync
   → ResultStore (QUEUED)
-  → SubmissionQueue::push
+  → SubmissionService internal queue push
   → immediate submission_ack
-  → JudgeWorkerPool worker pop task
+  → JudgeWorkerPool worker waits task from SubmissionService
   → SubmissionNotifier hooks
   → SubmissionService::processSubmission
   → ResultStore snapshots updated
@@ -143,7 +145,7 @@ client
 
 `AckBarrier` 保证 ack 顺序：
 
-- 任务刚入队时先把 channel 标记为 `awaiting_ack`。
+- 任务通过 `SubmissionService::submitAsync()` 入队前，先把 channel 标记为 `awaiting_ack`。
 - notifier 在 ack 尚未发出前产生的协议消息会先被延迟。
 - ack 发出后，再把这些延迟消息回灌到正常发送路径。
 
@@ -159,7 +161,7 @@ client
 - `onSubmissionStarted()` 发生在 `processSubmission()` 之前，当前 `ClientSockets` 会跳过 `QUEUED` 快照，因此大多数实际连接看到的是 `submission_ack` 然后直接 `submission_finished`。
 - `query_result` 只能按 `submission_id` 拉取"当前最新快照"，没有订阅、长轮询或批量查询接口。
 - 没有任务取消、重试、优先级、背压指标或队列持久化；进程退出后内存队列和结果都会丢失。
-- `SubmissionQueue` 是无界内存队列，没有显式容量限制。
+- `SubmissionService` 内部队列是无界内存队列，没有显式容量限制。
 - `RunnerFactory` 只支持 C++/Python；`SubmissionLanguage::C` 仍是保留值。
 - 测试点时间/内存限制硬编码在 `SubmissionService::load_cases_for_problem()`，尚未从题目配置读取。
 - fallback 执行路径不是完整沙箱；没有 `/usr/bin/sjudge` 时只保证基础真实时间超时。

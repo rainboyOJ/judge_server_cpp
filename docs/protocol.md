@@ -59,7 +59,7 @@ TCP 协议使用统一 framing：
 
 ### 1. `submission_ack`
 
-`submit` 请求创建成功且任务成功入队后，服务端立即返回：
+`submit` 请求由 `SubmissionService::submitAsync()` 成功创建 submission 并写入内部队列后，服务端立即返回：
 
 ```json
 {
@@ -74,7 +74,7 @@ TCP 协议使用统一 framing：
 
 语义：
 
-- 表示 submission 已在 `ResultStore` 创建，并且 `SubmissionQueue::push()` 成功。
+- 表示 submission 已在 `ResultStore` 创建，并且已投递到 `SubmissionService` 的内部异步队列。
 - 它不表示编译或运行已经开始。
 
 ### 2. `submission_update`
@@ -162,7 +162,7 @@ TCP 协议使用统一 framing：
 - `submit` / `query_result` 请求字段缺失
 - `submission_id` 不存在
 - 提交创建失败
-- 队列已关闭导致无法入队
+- `SubmissionService` 内部队列已关闭导致无法入队
 
 ## 状态值
 

@@ -13,9 +13,9 @@
 #include <exception>
 #include <memory>
 
-#include "network/ClientSockets.h"
 #include "common/Logger.h"
 #include "dispatch/JudgeWorkerPool.h"
+#include "network/ClientSockets.h"
 #include "network/ReplyChannel.h"
 #include "protocol/JudgeProtocol.h"
 
@@ -45,13 +45,10 @@ std::string sanitize_pid_for_log(const std::string &pid) {
 
 /** @copydoc ClientSockets::ClientSockets */
 ClientSockets::ClientSockets(std::size_t slot_count,
-                             SubmissionQueue &submission_queue,
                              SubmissionService &submission_service,
                              WakeCallback wake_callback)
-    : submission_queue_(submission_queue), connection_registry_(slot_count),
-      submission_service_(submission_service),
-      submission_request_handler_(submission_queue_, submission_service_,
-                                  protocol_, ack_barrier_),
+    : connection_registry_(slot_count), submission_service_(submission_service),
+      submission_request_handler_(submission_service_, protocol_, ack_barrier_),
       query_request_handler_(submission_service_, protocol_),
       submission_event_responder_(submission_service_, protocol_),
       wake_callback_(std::move(wake_callback)) {}
@@ -66,7 +63,8 @@ void ClientSockets::add_socket(int client_socket) {
   const int slot_id =
       connection_registry_.acquire_slot(client_socket, next_session_id_++);
   if (slot_id < 0) {
-    LOG_DEBUG("connection registry is FULL, disconnect socket %d", client_socket);
+    LOG_DEBUG("connection registry is FULL, disconnect socket %d",
+              client_socket);
     // TODO 发送评测已经满的信息
     //  并关闭连接
     close(client_socket);
@@ -87,7 +85,8 @@ void ClientSockets::deal_events(const fd_set &read_sets,
   for (std::size_t i = 0; i < connection_registry_.size(); i++) {
     ConnectionSlot &slot = connection_registry_.slot(i);
     int client_socket = slot.get_fd();
-    if (client_socket == 0) continue;
+    if (client_socket == 0)
+      continue;
     int slot_id = static_cast<int>(i);
     if (FD_ISSET(client_socket, &read_sets)) {
       handle_read_event(slot, slot_id);
@@ -151,8 +150,8 @@ void ClientSockets::handle_write_event(ConnectionSlot &slot, int slot_id) {
   slot.set_readable(); // 转入readable 的状态
 }
 
-void ClientSockets::handle_query_or_bad_request(ConnectionSlot &slot,
-                                                const std::string &message_body) {
+void ClientSockets::handle_query_or_bad_request(
+    ConnectionSlot &slot, const std::string &message_body) {
   QueryResultRequest query_request{};
   if (protocol_.decodeQueryRequest(message_body, query_request)) {
     handle_query_message(slot, query_request);

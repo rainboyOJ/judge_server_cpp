@@ -14,15 +14,14 @@
 #include <vector>
 
 #include "dispatch/SubmissionNotifier.h"
-#include "dispatch/SubmissionQueue.h"
+#include "network/AckBarrier.h"
 #include "network/ConnectionRegistry.h"
 #include "network/QueryRequestHandler.h"
-#include "network/AckBarrier.h"
 #include "network/ReplyChannel.h"
 #include "network/SubmissionEventResponder.h"
 #include "network/SubmissionRequestHandler.h"
-#include "protocol/JudgeProtocol.h"
 #include "pipeline/SubmissionService.h"
+#include "protocol/JudgeProtocol.h"
 
 class JudgeWorkerPool;
 
@@ -43,8 +42,7 @@ public:
   /**
    * @brief 构造连接管理器。
    */
-  ClientSockets(std::size_t slot_count, SubmissionQueue &submission_queue,
-                SubmissionService &submission_service,
+  ClientSockets(std::size_t slot_count, SubmissionService &submission_service,
                 WakeCallback wake_callback = nullptr);
   /** @brief 注册一个新的 client socket。 */
   void add_socket(int);
@@ -79,7 +77,6 @@ public:
   void onSubmissionFinished(const SubmissionTask &task) override;
 
 private:
-  SubmissionQueue &submission_queue_;
   ConnectionRegistry connection_registry_;
   SubmissionService &submission_service_;
   JudgeProtocol protocol_;

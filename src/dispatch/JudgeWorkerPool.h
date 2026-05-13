@@ -6,14 +6,13 @@
 #include <vector>
 
 #include "dispatch/SubmissionNotifier.h"
-#include "dispatch/SubmissionQueue.h"
 
 class SubmissionService;
 
 /**
  * @brief 后台异步评测 worker 线程池。
  *
- * 它持续从 @ref SubmissionQueue 中消费 @ref SubmissionTask，
+ * 它持续从 @ref SubmissionService 内部队列中消费 @ref SubmissionTask，
  * 再调用 @ref SubmissionService::processSubmission 执行完整评测流程。
  */
 class JudgeWorkerPool {
@@ -21,8 +20,7 @@ public:
   /**
    * @brief 构造并立即启动固定数量的 worker 线程。
    */
-  JudgeWorkerPool(std::size_t worker_count, SubmissionQueue &queue,
-                  SubmissionService &service,
+  JudgeWorkerPool(std::size_t worker_count, SubmissionService &service,
                   SubmissionNotifier *notifier = nullptr);
   ~JudgeWorkerPool();
 
@@ -47,7 +45,6 @@ private:
    */
   void workerLoop();
 
-  SubmissionQueue &queue_;
   SubmissionService &service_;
   SubmissionNotifier *notifier_;
   std::vector<std::thread> workers_;

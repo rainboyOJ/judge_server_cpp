@@ -7,11 +7,10 @@
 
 #include "dispatch/JudgeWorkerPool.h"
 #include "dispatch/SubmissionNotifier.h"
-#include "dispatch/SubmissionQueue.h"
 #include "pipeline/JudgeCore.h"
-#include "runner/RunnerFactory.h"
-#include "pipeline/SubmissionService.h"
 #include "pipeline/ResultStore.h"
+#include "pipeline/SubmissionService.h"
+#include "runner/RunnerFactory.h"
 
 namespace {
 
@@ -144,46 +143,45 @@ FakeSubmissionService::FakeSubmissionService()
                         fake_judge_core()) {}
 
 void test_worker_pool_consumes_queued_task() {
-  SubmissionQueue queue;
   FakeSubmissionService service;
   RecordingNotifier notifier;
 
   {
-    JudgeWorkerPool pool(1, queue, service, &notifier);
-    queue.push(make_task(321, 654, "reply-consume"));
+    JudgeWorkerPool pool(1, service, &notifier);
+    service.submitAsync(make_task(321, 654, "reply-consume").request,
+                        "reply-consume");
 
     assert(service.waitForCallCount(1, std::chrono::milliseconds(1000)));
-    assert(queue.size() == 0);
+    assert(service.queuedTaskCount() == 0);
   }
 }
 
 void test_worker_pool_invokes_processing_and_notifier() {
-  SubmissionQueue queue;
   FakeSubmissionService service;
   RecordingNotifier notifier;
 
   {
-    JudgeWorkerPool pool(1, queue, service, &notifier);
-    queue.push(make_task(777, 888, "reply-notify"));
+    JudgeWorkerPool pool(1, service, &notifier);
+    const int submission_id = service.submitAsync(
+        make_task(777, 888, "reply-notify").request, "reply-notify");
 
     assert(service.waitForCallCount(1, std::chrono::milliseconds(1000)));
     assert(notifier.waitForFinishedCount(1, std::chrono::milliseconds(1000)));
     assert(service.callCount() >= 1);
-    assert(service.lastSubmissionId() == 777);
+    assert(service.lastSubmissionId() == submission_id);
     assert(service.lastRequestUuid() == 888);
     assert(notifier.startedCount() == 1);
     assert(notifier.finishedCount() == 1);
-    assert(notifier.lastStartedSubmissionId() == 777);
-    assert(notifier.lastFinishedSubmissionId() == 777);
+    assert(notifier.lastStartedSubmissionId() == submission_id);
+    assert(notifier.lastFinishedSubmissionId() == submission_id);
   }
 }
 
 void test_is_stopping_after_stop() {
-  SubmissionQueue queue;
   FakeSubmissionService service;
   RecordingNotifier notifier;
 
-  JudgeWorkerPool pool(1, queue, service, &notifier);
+  JudgeWorkerPool pool(1, service, &notifier);
   assert(!pool.is_stopping());
 
   pool.stop();

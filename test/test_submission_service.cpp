@@ -2,9 +2,9 @@
 #include <string>
 
 #include "pipeline/JudgeCore.h"
-#include "runner/RunnerFactory.h"
-#include "pipeline/SubmissionService.h"
 #include "pipeline/ResultStore.h"
+#include "pipeline/SubmissionService.h"
+#include "runner/RunnerFactory.h"
 
 namespace {
 
@@ -47,6 +47,27 @@ void test_create_submission_persists_queued_snapshot_before_processing() {
   assert(stored.status == SubmissionStatus::QUEUED);
   assert(stored.verdict == SubmissionVerdict::PENDING);
   assert(stored.case_results.empty());
+}
+
+void test_submit_async_creates_submission_and_hides_queue_details() {
+  ResultStore store;
+  RunnerFactory factory;
+  JudgeCore judge_core;
+  SubmissionService service = make_service(store, factory, judge_core);
+
+  const SubmissionRequest request = make_python_request(93005, "print(1)\n");
+  const int submission_id = service.submitAsync(request, "reply-service");
+
+  SubmissionTask task{};
+  SubmissionResult stored{};
+  assert(submission_id > 0);
+  assert(service.queuedTaskCount() == 1);
+  assert(service.query(submission_id, stored));
+  assert(stored.status == SubmissionStatus::QUEUED);
+  assert(service.waitTask(task));
+  assert(task.submission_id == submission_id);
+  assert(task.reply_channel_id == "reply-service");
+  assert(task.request.uuid == 93005);
 }
 
 void test_process_submission_finishes_with_aggregated_ac_verdict() {
@@ -121,6 +142,7 @@ void test_query_returns_false_for_missing_submission() {
 
 int main() {
   test_create_submission_persists_queued_snapshot_before_processing();
+  test_submit_async_creates_submission_and_hides_queue_details();
   test_process_submission_finishes_with_aggregated_ac_verdict();
   test_compile_failure_finishes_with_ce();
   test_unsupported_language_finishes_as_deterministic_system_failure();

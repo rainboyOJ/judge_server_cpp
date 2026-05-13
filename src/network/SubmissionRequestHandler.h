@@ -7,7 +7,6 @@
 
 class AckBarrier;
 class JudgeProtocol;
-class SubmissionQueue;
 class SubmissionService;
 
 /**
@@ -23,8 +22,7 @@ public:
     std::vector<std::string> deferred_messages;
   };
 
-  SubmissionRequestHandler(SubmissionQueue &submission_queue,
-                           SubmissionService &submission_service,
+  SubmissionRequestHandler(SubmissionService &submission_service,
                            JudgeProtocol &protocol, AckBarrier &ack_barrier);
 
   /** @brief 处理一条 submit 请求。 */
@@ -32,7 +30,6 @@ public:
                                   const std::string &reply_channel_id);
 
 private:
-  SubmissionQueue &submission_queue_;
   SubmissionService &submission_service_;
   JudgeProtocol &protocol_;
   AckBarrier &ack_barrier_;

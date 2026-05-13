@@ -10,11 +10,11 @@
 
 #include "common/Config.h"
 #include "common/Logger.h"
+#include "common/utils.h"
 #include "pipeline/JudgeCore.h"
+#include "pipeline/ResultStore.h"
 #include "runner/ILanguageRunner.h"
 #include "runner/RunnerFactory.h"
-#include "pipeline/ResultStore.h"
-#include "common/utils.h"
 
 namespace fs = std::filesystem;
 
@@ -70,16 +70,15 @@ bool persist_result(ResultStore &store, int submission_id,
 
 bool persist_result_logged(ResultStore &store, int submission_id,
                            const SubmissionResult &result,
-                           const std::string &log_pid,
-                           const char *transition) {
+                           const std::string &log_pid, const char *transition) {
   if (persist_result(store, submission_id, result)) {
     return true;
   }
 
-  LOG_ERROR(
-      "submission persist failed submission_id=%d pid=%s transition=%s status=%d verdict=%d",
-      submission_id, log_pid.c_str(), transition,
-      static_cast<int>(result.status), static_cast<int>(result.verdict));
+  LOG_ERROR("submission persist failed submission_id=%d pid=%s transition=%s "
+            "status=%d verdict=%d",
+            submission_id, log_pid.c_str(), transition,
+            static_cast<int>(result.status), static_cast<int>(result.verdict));
   return false;
 }
 
@@ -160,6 +159,33 @@ int SubmissionService::createSubmission(const SubmissionRequest &request) {
   return result_store_.createSubmission(request);
 }
 
+int SubmissionService::submitAsync(const SubmissionRequest &request,
+                                   const std::string &reply_channel_id) {
+  const int submission_id = createSubmission(request);
+  if (submission_id <= 0) {
+    return -1;
+  }
+
+  SubmissionTask task{};
+  task.submission_id = submission_id;
+  task.request = request;
+  task.reply_channel_id = reply_channel_id;
+
+  if (!queue_.push(task)) {
+    return -1;
+  }
+
+  return submission_id;
+}
+
+bool SubmissionService::waitTask(SubmissionTask &task) {
+  return queue_.pop(task);
+}
+
+void SubmissionService::shutdownQueue() { queue_.shutdown(); }
+
+std::size_t SubmissionService::queuedTaskCount() const { return queue_.size(); }
+
 /** @copydoc SubmissionService::processSubmission */
 void SubmissionService::processSubmission(int submission_id,
                                           const SubmissionRequest &request) {
@@ -174,23 +200,22 @@ void SubmissionService::processSubmission(int submission_id,
     // PREPARING，后续任何系统级异常都基于这个提交单据回写。
     LOG_DEBUG("submission prepare enter submission_id=%d pid=%s", submission_id,
               log_pid.c_str());
-    if (!persist_result_logged(
-            result_store_, submission_id,
-            make_result(submission_id, SubmissionStatus::PREPARING,
-                        SubmissionVerdict::PENDING),
-            log_pid, "preparing")) {
+    if (!persist_result_logged(result_store_, submission_id,
+                               make_result(submission_id,
+                                           SubmissionStatus::PREPARING,
+                                           SubmissionVerdict::PENDING),
+                               log_pid, "preparing")) {
       return;
     }
 
     const std::shared_ptr<ILanguageRunner> runner =
         runner_factory_.createRunner(request.language);
     if (runner == nullptr) {
-      LOG_ERROR(
-          "submission runner missing submission_id=%d pid=%s reason=unsupported_language",
-          submission_id, log_pid.c_str());
+      LOG_ERROR("submission runner missing submission_id=%d pid=%s "
+                "reason=unsupported_language",
+                submission_id, log_pid.c_str());
       persist_result_logged(result_store_, submission_id,
-                            make_result(submission_id,
-                                        SubmissionStatus::FAILED,
+                            make_result(submission_id, SubmissionStatus::FAILED,
                                         SubmissionVerdict::SYSTEM_ERROR,
                                         "unsupported language"),
                             log_pid, "runner_missing");
@@ -205,13 +230,13 @@ void SubmissionService::processSubmission(int submission_id,
     const RunnerPrepareResult prepare_result =
         runner->prepare(execution_request);
     if (!prepare_result.ok) {
-      LOG_ERROR("submission prepare failed submission_id=%d pid=%s reason=prepare_failed",
+      LOG_ERROR("submission prepare failed submission_id=%d pid=%s "
+                "reason=prepare_failed",
                 submission_id, log_pid.c_str());
       log_failure_detail("submission prepare failed", submission_id,
                          prepare_result.message);
       persist_result_logged(result_store_, submission_id,
-                            make_result(submission_id,
-                                        SubmissionStatus::FAILED,
+                            make_result(submission_id, SubmissionStatus::FAILED,
                                         SubmissionVerdict::SYSTEM_ERROR,
                                         prepare_result.message),
                             log_pid, "prepare_failed");
@@ -220,48 +245,47 @@ void SubmissionService::processSubmission(int submission_id,
 
     // 中文注释：prepare 成功后进入 COMPILING；解释型语言也统一走 compile
     // 阶段，保持状态机一致。
-    if (!persist_result_logged(
-            result_store_, submission_id,
-            make_result(submission_id, SubmissionStatus::COMPILING,
-                        SubmissionVerdict::PENDING),
-            log_pid, "compiling")) {
+    if (!persist_result_logged(result_store_, submission_id,
+                               make_result(submission_id,
+                                           SubmissionStatus::COMPILING,
+                                           SubmissionVerdict::PENDING),
+                               log_pid, "compiling")) {
       return;
     }
 
     const RunnerCompileResult compile_result =
         runner->compile(execution_request);
     if (!compile_result.ok) {
-      LOG_ERROR("submission compile failed submission_id=%d pid=%s verdict=%d reason=compile_failed",
+      LOG_ERROR("submission compile failed submission_id=%d pid=%s verdict=%d "
+                "reason=compile_failed",
                 submission_id, log_pid.c_str(),
                 static_cast<int>(compile_result.verdict));
       log_failure_detail("submission compile failed", submission_id,
                          compile_result.message);
-      persist_result_logged(result_store_, submission_id,
-                            make_result(submission_id,
-                                        SubmissionStatus::FINISHED,
-                                        compile_result.verdict,
-                                        compile_result.message),
-                            log_pid, "compile_failed");
+      persist_result_logged(
+          result_store_, submission_id,
+          make_result(submission_id, SubmissionStatus::FINISHED,
+                      compile_result.verdict, compile_result.message),
+          log_pid, "compile_failed");
       return;
     }
 
-    if (!persist_result_logged(
-            result_store_, submission_id,
-            make_result(submission_id, SubmissionStatus::RUNNING,
-                        SubmissionVerdict::PENDING),
-            log_pid, "running")) {
+    if (!persist_result_logged(result_store_, submission_id,
+                               make_result(submission_id,
+                                           SubmissionStatus::RUNNING,
+                                           SubmissionVerdict::PENDING),
+                               log_pid, "running")) {
       return;
     }
 
     const std::vector<SubmissionCaseSpec> cases =
         load_cases_for_problem(request.pid);
     if (cases.empty()) {
-      LOG_ERROR(
-          "submission cases missing submission_id=%d pid=%s reason=problem_cases_missing",
-          submission_id, log_pid.c_str());
+      LOG_ERROR("submission cases missing submission_id=%d pid=%s "
+                "reason=problem_cases_missing",
+                submission_id, log_pid.c_str());
       persist_result_logged(result_store_, submission_id,
-                            make_result(submission_id,
-                                        SubmissionStatus::FAILED,
+                            make_result(submission_id, SubmissionStatus::FAILED,
                                         SubmissionVerdict::SYSTEM_ERROR,
                                         "failed to load problem cases"),
                             log_pid, "problem_cases_missing");
@@ -291,14 +315,15 @@ void SubmissionService::processSubmission(int submission_id,
                                log_pid, "finished")) {
       return;
     }
-    LOG_INFO("submission verdict final submission_id=%d pid=%s status=%d verdict=%d",
-             submission_id, log_pid.c_str(),
-             static_cast<int>(finished_result.status),
-             static_cast<int>(finished_result.verdict));
+    LOG_INFO(
+        "submission verdict final submission_id=%d pid=%s status=%d verdict=%d",
+        submission_id, log_pid.c_str(),
+        static_cast<int>(finished_result.status),
+        static_cast<int>(finished_result.verdict));
   } catch (const std::exception &ex) {
-    LOG_ERROR(
-        "submission terminal exception submission_id=%d pid=%s reason=terminal_exception",
-        submission_id, log_pid.c_str());
+    LOG_ERROR("submission terminal exception submission_id=%d pid=%s "
+              "reason=terminal_exception",
+              submission_id, log_pid.c_str());
     log_failure_detail("submission terminal exception", submission_id,
                        ex.what());
     persist_result_logged(result_store_, submission_id,

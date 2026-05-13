@@ -5,7 +5,7 @@
 本项目已从"socket 线程里同步跑完整次评测"切到"旧 TCP 外壳 + 新异步判题后端"：
 
 - 前台接入：`TcpServer`、`ConnectionRegistry`、`ClientSockets`、`JudgeProtocol`
-- 异步调度：`SubmissionQueue`、`JudgeWorkerPool`、`SubmissionNotifier`
+- 异步调度：`SubmissionService` 内部队列、`JudgeWorkerPool`、`SubmissionNotifier`
 - 判题主链路：`SubmissionService`、`RunnerFactory`、`JudgeCore`、`ResultStore`
 - 旧兼容层：`testBox`、`resultContainer`、部分 `ClientSockets` 逻辑
 
@@ -58,10 +58,10 @@ cmake --build build -j
 
 建议按这个脑图理解：
 - `ConnectionRegistry` 管理连接槽位 / session / 待发送 frame
-- `ClientSockets` 创建 `submission_id`
-- 组装 `SubmissionTask{submission_id, request, reply_channel_id}`
-- 入 `SubmissionQueue`
-- `JudgeWorkerPool` 后台消费
+- `ClientSockets` 把 submit 交给 `SubmissionRequestHandler`
+- `SubmissionRequestHandler` 调用 `SubmissionService::submitAsync()`
+- `SubmissionService` 创建 `submission_id`，组装 `SubmissionTask{submission_id, request, reply_channel_id}`，写入内部队列
+- `JudgeWorkerPool` 通过 `SubmissionService::waitTask()` 后台消费
 - notifier 把生命周期事件回调给 `ClientSockets`
 - `ClientSockets` 再决定是即时发送还是先 defer 到 ack 后发送
 
@@ -79,6 +79,7 @@ cmake --build build -j
 
 关键约束：
 - `createSubmission()` 只建单据，不跑评测。
+- `submitAsync()` 是 async 主流程入口：建单据并投递到 `SubmissionService` 内部队列。
 - `processSubmission()` 才推进状态机并写中间快照。
 - `submit()` 只是兼容性的同步包装，不是 async 主流程入口。
 
@@ -120,7 +121,7 @@ cmake --build build -j
 
 ### 改异步调度
 
-改 `SubmissionQueue` 或 `JudgeWorkerPool` 后，必跑 `test_judge_worker_pool` 和 `test_async_submission_flow`。
+改 `SubmissionService` 内部队列接口或 `JudgeWorkerPool` 后，必跑 `test_judge_worker_pool`、`test_submission_request_handler` 和 `test_async_submission_flow`。
 
 ### 改评测流程
 
@@ -151,6 +152,6 @@ cmake --build build -j
 
 - notifier 目前只有 started/finished 两个时机，没有逐 case 或逐状态回调；如果要做实时进度推送，接口本身需要扩展。
 - `onSubmissionStarted()` 回调发生在 `processSubmission()` 之前，所以当前 push 路径通常不会主动发出有内容的 `submission_update`。
-- `SubmissionQueue` 是内存无界队列，没有容量限制、持久化、重试和优先级调度。
+- `SubmissionService` 内部队列是内存无界队列，没有容量限制、持久化、重试和优先级调度。
 - `ClientSockets` 已经比之前更聚焦业务桥接，但连接槽位、fd 生命周期和旧 `testBox` 仍然有兼容性耦合。
 - 当前题目限制没有配置化；如果要做真正的题目模型扩展，不能只在 runner 里硬编码。

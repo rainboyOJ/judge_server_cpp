@@ -8,10 +8,9 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "network/ClientSockets.h"
 #include "dispatch/JudgeWorkerPool.h"
-#include "dispatch/SubmissionQueue.h"
 #include "json.hpp"
+#include "network/ClientSockets.h"
 #include "pipeline/JudgeCore.h"
 #include "pipeline/ResultStore.h"
 #include "pipeline/SubmissionService.h"
@@ -51,8 +50,8 @@ class SocketHarness {
 public:
   SocketHarness()
       : submission_service_(result_store_, runner_factory_, judge_core_),
-        client_sockets_(4, submission_queue_, submission_service_),
-        worker_pool_(1, submission_queue_, submission_service_, &client_sockets_) {
+        client_sockets_(4, submission_service_),
+        worker_pool_(1, submission_service_, &client_sockets_) {
     int sockets[2] = {-1, -1};
     assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sockets) == 0);
     client_fd_ = sockets[0];
@@ -115,7 +114,6 @@ private:
     }
   }
 
-  SubmissionQueue submission_queue_;
   ResultStore result_store_;
   RunnerFactory runner_factory_;
   JudgeCore judge_core_;

@@ -3,7 +3,7 @@
 
 #include "json.hpp"
 
-#include "dispatch/SubmissionQueue.h"
+#include "dispatch/SubmissionTask.h"
 #include "network/AckBarrier.h"
 #include "network/SubmissionRequestHandler.h"
 #include "pipeline/JudgeCore.h"
@@ -26,14 +26,13 @@ SubmissionRequest make_submit_request() {
 }
 
 void test_handle_submit_returns_submission_ack_and_queues_task_for_same_reply_channel() {
-  SubmissionQueue queue;
   ResultStore store;
   RunnerFactory factory;
   JudgeCore judge_core;
   SubmissionService service(store, factory, judge_core);
   JudgeProtocol protocol;
   AckBarrier ack_barrier;
-  SubmissionRequestHandler handler(queue, service, protocol, ack_barrier);
+  SubmissionRequestHandler handler(service, protocol, ack_barrier);
 
   const std::string reply_channel_id = "slot-7:session-11";
   const SubmissionRequestHandler::HandleSubmitResult result =
@@ -47,20 +46,19 @@ void test_handle_submit_returns_submission_ack_and_queues_task_for_same_reply_ch
   assert(submission_id > 0);
 
   SubmissionTask task{};
-  assert(queue.pop(task));
+  assert(service.waitTask(task));
   assert(task.reply_channel_id == reply_channel_id);
   assert(task.submission_id == submission_id);
 }
 
 void test_handle_submit_releases_ack_barrier_and_returns_deferred_messages() {
-  SubmissionQueue queue;
   ResultStore store;
   RunnerFactory factory;
   JudgeCore judge_core;
   SubmissionService service(store, factory, judge_core);
   JudgeProtocol protocol;
   AckBarrier ack_barrier;
-  SubmissionRequestHandler handler(queue, service, protocol, ack_barrier);
+  SubmissionRequestHandler handler(service, protocol, ack_barrier);
 
   const std::string reply_channel_id = "slot-8:session-21";
   ack_barrier.mark_waiting(reply_channel_id);
@@ -76,17 +74,16 @@ void test_handle_submit_releases_ack_barrier_and_returns_deferred_messages() {
   assert(!ack_barrier.try_defer(reply_channel_id, "late-update"));
 }
 
-void test_handle_submit_returns_queue_unavailable_error_when_queue_is_shutdown() {
-  SubmissionQueue queue;
+void test_handle_submit_returns_queue_unavailable_error_when_service_queue_is_shutdown() {
   ResultStore store;
   RunnerFactory factory;
   JudgeCore judge_core;
   SubmissionService service(store, factory, judge_core);
   JudgeProtocol protocol;
   AckBarrier ack_barrier;
-  SubmissionRequestHandler handler(queue, service, protocol, ack_barrier);
+  SubmissionRequestHandler handler(service, protocol, ack_barrier);
 
-  queue.shutdown();
+  service.shutdownQueue();
 
   const SubmissionRequestHandler::HandleSubmitResult result =
       handler.handleSubmit(make_submit_request(), "slot-9:session-2");
@@ -103,6 +100,6 @@ void test_handle_submit_returns_queue_unavailable_error_when_queue_is_shutdown()
 int main() {
   test_handle_submit_returns_submission_ack_and_queues_task_for_same_reply_channel();
   test_handle_submit_releases_ack_barrier_and_returns_deferred_messages();
-  test_handle_submit_returns_queue_unavailable_error_when_queue_is_shutdown();
+  test_handle_submit_returns_queue_unavailable_error_when_service_queue_is_shutdown();
   return 0;
 }

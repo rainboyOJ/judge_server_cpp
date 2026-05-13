@@ -10,11 +10,11 @@ CTest 当前重点覆盖同步判题内核和新的异步调度链路：
 - `test/test_runner_factory.cpp`：语言到 runner 的映射。
 - `test/test_cpp_runner.cpp`：C++ `prepare/compile/run`。
 - `test/test_python_runner.cpp`：Python `prepare/compile/run`。
-- `test/test_submission_service.cpp`：`SubmissionService::processSubmission()` 的完整编排。
-- `test/test_judge_worker_pool.cpp`：`SubmissionQueue` + `JudgeWorkerPool` + `SubmissionNotifier` 协作。
+- `test/test_submission_service.cpp`：`SubmissionService::submitAsync()` 和 `processSubmission()` 的完整编排。
+- `test/test_judge_worker_pool.cpp`：`SubmissionService` 内部队列 + `JudgeWorkerPool` + `SubmissionNotifier` 协作。
 - `test/test_async_submission_flow.cpp`：异步 ack 后通过 `query_result` 拿当前或最终快照，以及断线后恢复最终结果。
 - `test/test_integration_tcp_cpp_python.cpp`：TCP framed JSON 端到端链路，验证"先 ack、后 finished 推送"。
-- `test/test_submission_queue.cpp`：`SubmissionQueue` push/pop/shutdown 行为。
+- `test/test_submission_queue.cpp`：`SubmissionQueue` push/pop/shutdown 行为；它现在是 `SubmissionService` 的内部队列实现。
 - `test/test_connection_registry.cpp`：连接注册表单元测试。
 - `test/test_tcp_server_eventfd.cpp`：TcpServer eventfd 唤醒机制。
 - `test/test_json_simple.cpp`：简单 JSON 解析。

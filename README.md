@@ -35,7 +35,7 @@ cmake --build build -j
 
 ```text
 src/
-├── main.cpp                                  # 程序入口，组装队列、服务、网络层和 worker pool
+├── main.cpp                                  # 程序入口，组装服务、网络层和 worker pool
 ├── json.hpp                                  # vendored 的 nlohmann/json 单头文件库
 ├── common/
 │   ├── Config.h                              # 配置读取接口
@@ -52,11 +52,11 @@ src/
 │   └── utils.cpp                             # 通用辅助函数实现，如扫描测试数据文件
 ├── dispatch/
 │   ├── JudgeWorkerPool.h                     # 后台评测线程池接口
-│   ├── JudgeWorkerPool.cpp                   # worker 线程消费 submission 队列并驱动评测
+│   ├── JudgeWorkerPool.cpp                   # worker 线程从 SubmissionService 取任务并驱动评测
 │   ├── SubmissionNotifier.h                  # worker 生命周期通知接口
-│   ├── SubmissionQueue.h                     # 线程安全 submission 阻塞队列接口
+│   ├── SubmissionQueue.h                     # SubmissionService 内部使用的线程安全阻塞队列
 │   ├── SubmissionQueue.cpp                   # submission 队列实现
-│   └── SubmissionTask.h                      # 队列中流转的任务结构
+│   └── SubmissionTask.h                      # 后台 worker 流转的任务结构
 ├── network/
 │   ├── AckBarrier.h                          # ack 与后续异步消息顺序保护器接口
 │   ├── AckBarrier.cpp                        # ack 屏障实现，负责 defer/release 协议消息
@@ -75,7 +75,7 @@ src/
 │   ├── SubmissionEventResponder.h            # worker 事件转协议消息的接口
 │   ├── SubmissionEventResponder.cpp          # started/finished 事件到协议响应的翻译实现
 │   ├── SubmissionRequestHandler.h            # submit 请求处理器接口
-│   ├── SubmissionRequestHandler.cpp          # submit 建单、入队、ack release 逻辑实现
+│   ├── SubmissionRequestHandler.cpp          # submit 调用 SubmissionService、ack release 逻辑实现
 │   ├── TcpServer.h                           # 基于 select 的 TCP server 接口
 │   └── TcpServer.cpp                         # accept/select/eventfd 主循环实现
 ├── pipeline/
@@ -84,7 +84,7 @@ src/
 │   ├── ResultStore.h                         # submission 快照存储接口
 │   ├── ResultStore.cpp                       # 线程安全结果存储与惰性清理实现
 │   ├── SubmissionService.h                   # submission 编排服务接口
-│   └── SubmissionService.cpp                 # 建单、状态推进、runner 调用与结果持久化实现
+│   └── SubmissionService.cpp                 # 建单、内部入队、状态推进、runner 调用与结果持久化实现
 ├── protocol/
 │   ├── JudgeProtocol.h                       # JSON 协议编解码接口
 │   └── JudgeProtocol.cpp                     # submit/query 请求与结果响应编码实现
@@ -103,7 +103,7 @@ src/
 
 ## 诚实说明
 
-- socket 层通过 `detach` 线程把请求从 `select` 事件循环移开，但线程内部的 `SubmissionService::submit()` 仍是同步执行，当前不是队列化异步判题系统。
+- `SubmissionQueue` 是 `SubmissionService` 的内部实现细节；网络层只和 `SubmissionService` 交互。
 - 如果机器上没有 `/usr/bin/sjudge`，会走 fallback 执行路径：只强制真实时间限制，不做真正的 CPU/内存隔离；`cpu_time_ms` 直接复用 `real_time_ms`。
 - 输出比较优先调用 `/judge/checker/fcmp2`；如果没有部署 checker，会退化为内置的按行比较（忽略行尾空白和末尾空行）。
 - `test/nodejs/` 下既有新的 JSON 协议库，也保留了旧脚本和旧命名；`package.json` 的 npm scripts 目前仍指向旧入口，需要按文档手动选择脚本。

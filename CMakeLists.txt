@@ -75,12 +75,12 @@ add_library(bt_pipeline STATIC
     src/pipeline/JudgeCore.cpp
     src/pipeline/ResultStore.cpp
     src/pipeline/SubmissionService.cpp
+    src/dispatch/SubmissionQueue.cpp
 )
 target_link_libraries(bt_pipeline PUBLIC bt_build_settings bt_common bt_runner)
 
 add_library(bt_dispatch STATIC
     src/dispatch/JudgeWorkerPool.cpp
-    src/dispatch/SubmissionQueue.cpp
 )
 target_link_libraries(bt_dispatch PUBLIC bt_build_settings bt_common bt_pipeline)
 
