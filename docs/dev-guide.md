@@ -6,7 +6,7 @@
 
 - 前台接入：`TcpServer`、`ConnectionRegistry`、`ClientSockets`、`JudgeProtocol`
 - 异步调度：`SubmissionService` 内部队列、`JudgeWorkerPool`、`SubmissionNotifier`
-- 判题主链路：`SubmissionService`、`RunnerFactory`、`JudgeCore`、`ResultStore`
+- 判题主链路：`SubmissionService`、`RunnerFactory`、`SubmissionVerdictReducer`、`ResultStore`
 - 旧兼容层：`testBox`、`resultContainer`、部分 `ClientSockets` 逻辑
 
 所有源文件在单一 `src/` 目录树下，`#include` 以 `src/` 为根（如 `#include "network/TcpServer.h"`）。
@@ -71,11 +71,11 @@ cmake --build build -j
 - `src/pipeline/SubmissionService.cpp`
 - `src/pipeline/ResultStore.h`
 - `src/pipeline/ResultStore.cpp`
-- `src/pipeline/JudgeCore.h`
-- `src/pipeline/JudgeCore.cpp`
+- `src/pipeline/SubmissionVerdictReducer.h`
+- `src/pipeline/SubmissionVerdictReducer.cpp`
 - `test/test_submission_service.cpp`
 - `test/test_result_store.cpp`
-- `test/test_judge_core.cpp`
+- `test/test_judge_verdict_reducer.cpp`
 
 关键约束：
 - `createSubmission()` 只建单据，不跑评测。
@@ -125,7 +125,7 @@ cmake --build build -j
 
 ### 改评测流程
 
-改 `SubmissionService` 或 `ResultStore` 后，必跑 `test_submission_service`、`test_result_store` 和 `test_judge_core`。
+改 `SubmissionService` 或 `ResultStore` 后，必跑 `test_submission_service`、`test_result_store` 和 `test_judge_verdict_reducer`。
 
 ### 加新语言
 

@@ -1,9 +1,9 @@
 /**
- * @file JudgeCore.cpp
+ * @file SubmissionVerdictReducer.cpp
  * @brief 最终 verdict 汇总规则实现。
  */
 
-#include "pipeline/JudgeCore.h"
+#include "pipeline/SubmissionVerdictReducer.h"
 
 namespace {
 
@@ -37,10 +37,11 @@ int verdict_priority(SubmissionVerdict verdict) {
 
 } // namespace
 
-/** @copydoc JudgeCore::summarize */
+/** @copydoc SubmissionVerdictReducer::summarize */
 SubmissionVerdict
-JudgeCore::summarize(const std::vector<SubmissionCaseResult> &case_results,
-                     SubmissionVerdict default_verdict) const {
+SubmissionVerdictReducer::summarize(
+    const std::vector<SubmissionCaseResult> &case_results,
+    SubmissionVerdict default_verdict) const {
     // 中文注释：空输入直接返回调用方给出的默认值，避免在还没有任何测试点结果时
     // 人为制造一个“伪最终结论”。
     if (case_results.empty()) {

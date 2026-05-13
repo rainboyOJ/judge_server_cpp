@@ -23,6 +23,7 @@ cmake --build build -j
 ## 文档
 
 - `docs/architecture.md`：当前分层架构与请求生命周期
+- `docs/完整评测的流程.md`：一次 submit 从 TCP 请求到最终结果回推的完整链路
 - `docs/protocol.md`：TCP framing、JSON 结构、状态与判题结果
 - `docs/runner-extension.md`：如何新增一种语言 runner
 - `docs/testing.md`：CTest、单测、Node 脚本与端到端验证
@@ -79,8 +80,8 @@ src/
 │   ├── TcpServer.h                           # 基于 select 的 TCP server 接口
 │   └── TcpServer.cpp                         # accept/select/eventfd 主循环实现
 ├── pipeline/
-│   ├── JudgeCore.h                           # 判题结果归并接口
-│   ├── JudgeCore.cpp                         # 多个 case verdict 汇总实现
+│   ├── SubmissionVerdictReducer.h                           # 判题结果归并接口
+│   ├── SubmissionVerdictReducer.cpp                         # 多个 case verdict 汇总实现
 │   ├── ResultStore.h                         # submission 快照存储接口
 │   ├── ResultStore.cpp                       # 线程安全结果存储与惰性清理实现
 │   ├── SubmissionService.h                   # submission 编排服务接口

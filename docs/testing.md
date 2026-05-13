@@ -6,7 +6,7 @@ CTest 当前重点覆盖同步判题内核和新的异步调度链路：
 
 - `test/test_protocol_codec.cpp`：`submit` / `query_result` 解码，以及 `submission_ack` / `submission_update` / `submission_finished` 编码形状。
 - `test/test_result_store.cpp`：`createSubmission()`、快照读写、状态机前进约束。
-- `test/test_judge_core.cpp`：verdict 汇总优先级。
+- `test/test_judge_verdict_reducer.cpp`：verdict 汇总优先级。
 - `test/test_runner_factory.cpp`：语言到 runner 的映射。
 - `test/test_cpp_runner.cpp`：C++ `prepare/compile/run`。
 - `test/test_python_runner.cpp`：Python `prepare/compile/run`。

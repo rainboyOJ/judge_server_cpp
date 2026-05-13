@@ -10,7 +10,7 @@
 #include "dispatch/JudgeWorkerPool.h"
 #include "json.hpp"
 #include "network/ClientSockets.h"
-#include "pipeline/JudgeCore.h"
+#include "pipeline/SubmissionVerdictReducer.h"
 #include "pipeline/ResultStore.h"
 #include "pipeline/SubmissionService.h"
 #include "runner/RunnerFactory.h"
@@ -48,7 +48,7 @@ void write_framed_message(int fd, const std::string &body) {
 class AsyncFlowHarness {
 public:
   explicit AsyncFlowHarness(std::atomic<int> *wake_count = nullptr)
-      : submission_service_(result_store_, runner_factory_, judge_core_),
+      : submission_service_(result_store_, runner_factory_, judge_verdict_reducer_),
         client_sockets_(4, submission_service_,
                         [wake_count]() {
                           if (wake_count != nullptr) {
@@ -149,7 +149,7 @@ private:
 
   ResultStore result_store_;
   RunnerFactory runner_factory_;
-  JudgeCore judge_core_;
+  SubmissionVerdictReducer judge_verdict_reducer_;
   SubmissionService submission_service_;
   ClientSockets client_sockets_;
   JudgeWorkerPool worker_pool_;

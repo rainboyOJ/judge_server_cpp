@@ -1,7 +1,7 @@
 #include <cassert>
 #include <string>
 
-#include "pipeline/JudgeCore.h"
+#include "pipeline/SubmissionVerdictReducer.h"
 #include "pipeline/ResultStore.h"
 #include "pipeline/SubmissionService.h"
 #include "runner/RunnerFactory.h"
@@ -27,15 +27,15 @@ SubmissionRequest make_unsupported_request(int uuid) {
 }
 
 SubmissionService make_service(ResultStore &store, RunnerFactory &factory,
-                               JudgeCore &judge_core) {
-  return SubmissionService(store, factory, judge_core);
+                               SubmissionVerdictReducer &judge_verdict_reducer) {
+  return SubmissionService(store, factory, judge_verdict_reducer);
 }
 
 void test_create_submission_persists_queued_snapshot_before_processing() {
   ResultStore store;
   RunnerFactory factory;
-  JudgeCore judge_core;
-  SubmissionService service = make_service(store, factory, judge_core);
+  SubmissionVerdictReducer judge_verdict_reducer;
+  SubmissionService service = make_service(store, factory, judge_verdict_reducer);
 
   const int submission_id = service.createSubmission(make_python_request(
       93001, "a, b = map(int, input().split())\nprint(a + b)\n"));
@@ -52,8 +52,8 @@ void test_create_submission_persists_queued_snapshot_before_processing() {
 void test_submit_async_creates_submission_and_hides_queue_details() {
   ResultStore store;
   RunnerFactory factory;
-  JudgeCore judge_core;
-  SubmissionService service = make_service(store, factory, judge_core);
+  SubmissionVerdictReducer judge_verdict_reducer;
+  SubmissionService service = make_service(store, factory, judge_verdict_reducer);
 
   const SubmissionRequest request = make_python_request(93005, "print(1)\n");
   const int submission_id = service.submitAsync(request, "reply-service");
@@ -73,8 +73,8 @@ void test_submit_async_creates_submission_and_hides_queue_details() {
 void test_process_submission_finishes_with_aggregated_ac_verdict() {
   ResultStore store;
   RunnerFactory factory;
-  JudgeCore judge_core;
-  SubmissionService service = make_service(store, factory, judge_core);
+  SubmissionVerdictReducer judge_verdict_reducer;
+  SubmissionService service = make_service(store, factory, judge_verdict_reducer);
 
   const SubmissionRequest request = make_python_request(
       93002, "a, b = map(int, input().split())\nprint(a + b)\n");
@@ -93,8 +93,8 @@ void test_process_submission_finishes_with_aggregated_ac_verdict() {
 void test_compile_failure_finishes_with_ce() {
   ResultStore store;
   RunnerFactory factory;
-  JudgeCore judge_core;
-  SubmissionService service = make_service(store, factory, judge_core);
+  SubmissionVerdictReducer judge_verdict_reducer;
+  SubmissionService service = make_service(store, factory, judge_verdict_reducer);
 
   const SubmissionRequest request =
       make_python_request(93003, "def broken(:\n    pass\n");
@@ -113,8 +113,8 @@ void test_compile_failure_finishes_with_ce() {
 void test_unsupported_language_finishes_as_deterministic_system_failure() {
   ResultStore store;
   RunnerFactory factory;
-  JudgeCore judge_core;
-  SubmissionService service = make_service(store, factory, judge_core);
+  SubmissionVerdictReducer judge_verdict_reducer;
+  SubmissionService service = make_service(store, factory, judge_verdict_reducer);
 
   const SubmissionRequest request = make_unsupported_request(93004);
   const int submission_id = service.createSubmission(request);
@@ -131,8 +131,8 @@ void test_unsupported_language_finishes_as_deterministic_system_failure() {
 void test_query_returns_false_for_missing_submission() {
   ResultStore store;
   RunnerFactory factory;
-  JudgeCore judge_core;
-  SubmissionService service = make_service(store, factory, judge_core);
+  SubmissionVerdictReducer judge_verdict_reducer;
+  SubmissionService service = make_service(store, factory, judge_verdict_reducer);
 
   SubmissionResult missing{};
   assert(!service.query(404404, missing));

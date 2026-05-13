@@ -7,7 +7,7 @@
 
 #include "dispatch/JudgeWorkerPool.h"
 #include "dispatch/SubmissionNotifier.h"
-#include "pipeline/JudgeCore.h"
+#include "pipeline/SubmissionVerdictReducer.h"
 #include "pipeline/ResultStore.h"
 #include "pipeline/SubmissionService.h"
 #include "runner/RunnerFactory.h"
@@ -133,14 +133,14 @@ RunnerFactory &fake_runner_factory() {
   return factory;
 }
 
-JudgeCore &fake_judge_core() {
-  static JudgeCore judge_core;
-  return judge_core;
+SubmissionVerdictReducer &fake_judge_verdict_reducer() {
+  static SubmissionVerdictReducer judge_verdict_reducer;
+  return judge_verdict_reducer;
 }
 
 FakeSubmissionService::FakeSubmissionService()
     : SubmissionService(fake_result_store(), fake_runner_factory(),
-                        fake_judge_core()) {}
+                        fake_judge_verdict_reducer()) {}
 
 void test_worker_pool_consumes_queued_task() {
   FakeSubmissionService service;

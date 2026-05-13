@@ -72,7 +72,7 @@ if(SECCOMP_LIB)
 endif()
 
 add_library(bt_pipeline STATIC
-    src/pipeline/JudgeCore.cpp
+    src/pipeline/SubmissionVerdictReducer.cpp
     src/pipeline/ResultStore.cpp
     src/pipeline/SubmissionService.cpp
     src/dispatch/SubmissionQueue.cpp

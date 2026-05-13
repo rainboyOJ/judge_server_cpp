@@ -11,7 +11,7 @@
 #include "common/Config.h"
 #include "common/Logger.h"
 #include "common/utils.h"
-#include "pipeline/JudgeCore.h"
+#include "pipeline/SubmissionVerdictReducer.h"
 #include "pipeline/ResultStore.h"
 #include "runner/ILanguageRunner.h"
 #include "runner/RunnerFactory.h"
@@ -150,9 +150,9 @@ std::vector<SubmissionCaseSpec> load_cases_for_problem(const std::string &pid) {
 /** @copydoc SubmissionService::SubmissionService */
 SubmissionService::SubmissionService(ResultStore &result_store,
                                      RunnerFactory &runner_factory,
-                                     JudgeCore &judge_core)
+                                     SubmissionVerdictReducer &judge_verdict_reducer)
     : result_store_(result_store), runner_factory_(runner_factory),
-      judge_core_(judge_core) {}
+      judge_verdict_reducer_(judge_verdict_reducer) {}
 
 /** @copydoc SubmissionService::createSubmission */
 int SubmissionService::createSubmission(const SubmissionRequest &request) {
@@ -308,7 +308,7 @@ void SubmissionService::processSubmission(int submission_id,
 
     SubmissionResult finished_result =
         make_result(submission_id, SubmissionStatus::FINISHED,
-                    judge_core_.summarize(running_result.case_results),
+                    judge_verdict_reducer_.summarize(running_result.case_results),
                     running_result.message);
     finished_result.case_results = running_result.case_results;
     if (!persist_result_logged(result_store_, submission_id, finished_result,

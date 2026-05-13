@@ -6,7 +6,7 @@
 #include "dispatch/SubmissionTask.h"
 #include "network/AckBarrier.h"
 #include "network/SubmissionRequestHandler.h"
-#include "pipeline/JudgeCore.h"
+#include "pipeline/SubmissionVerdictReducer.h"
 #include "pipeline/ResultStore.h"
 #include "pipeline/SubmissionService.h"
 #include "protocol/JudgeProtocol.h"
@@ -28,8 +28,8 @@ SubmissionRequest make_submit_request() {
 void test_handle_submit_returns_submission_ack_and_queues_task_for_same_reply_channel() {
   ResultStore store;
   RunnerFactory factory;
-  JudgeCore judge_core;
-  SubmissionService service(store, factory, judge_core);
+  SubmissionVerdictReducer judge_verdict_reducer;
+  SubmissionService service(store, factory, judge_verdict_reducer);
   JudgeProtocol protocol;
   AckBarrier ack_barrier;
   SubmissionRequestHandler handler(service, protocol, ack_barrier);
@@ -54,8 +54,8 @@ void test_handle_submit_returns_submission_ack_and_queues_task_for_same_reply_ch
 void test_handle_submit_releases_ack_barrier_and_returns_deferred_messages() {
   ResultStore store;
   RunnerFactory factory;
-  JudgeCore judge_core;
-  SubmissionService service(store, factory, judge_core);
+  SubmissionVerdictReducer judge_verdict_reducer;
+  SubmissionService service(store, factory, judge_verdict_reducer);
   JudgeProtocol protocol;
   AckBarrier ack_barrier;
   SubmissionRequestHandler handler(service, protocol, ack_barrier);
@@ -77,8 +77,8 @@ void test_handle_submit_releases_ack_barrier_and_returns_deferred_messages() {
 void test_handle_submit_returns_queue_unavailable_error_when_service_queue_is_shutdown() {
   ResultStore store;
   RunnerFactory factory;
-  JudgeCore judge_core;
-  SubmissionService service(store, factory, judge_core);
+  SubmissionVerdictReducer judge_verdict_reducer;
+  SubmissionService service(store, factory, judge_verdict_reducer);
   JudgeProtocol protocol;
   AckBarrier ack_barrier;
   SubmissionRequestHandler handler(service, protocol, ack_barrier);

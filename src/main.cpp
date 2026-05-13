@@ -27,7 +27,7 @@
 #include "dispatch/JudgeWorkerPool.h"
 #include "network/ClientSockets.h"
 #include "network/TcpServer.h"
-#include "pipeline/JudgeCore.h"
+#include "pipeline/SubmissionVerdictReducer.h"
 #include "pipeline/ResultStore.h"
 #include "pipeline/SubmissionService.h"
 #include "runner/RunnerFactory.h"
@@ -55,9 +55,9 @@ int main(int argc, char *argv[]) {
 
   ResultStore result_store;
   RunnerFactory runner_factory;
-  JudgeCore judge_core;
+  SubmissionVerdictReducer judge_verdict_reducer;
   SubmissionService submission_service(result_store, runner_factory,
-                                       judge_core);
+                                       judge_verdict_reducer);
 
   try {
     ClientSockets *client_sockets_ptr = nullptr;

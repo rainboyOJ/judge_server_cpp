@@ -4,7 +4,7 @@
 #include "dispatch/SubmissionQueue.h"
 #include "dispatch/SubmissionTask.h"
 
-class JudgeCore;
+class SubmissionVerdictReducer;
 class ResultStore;
 class RunnerFactory;
 
@@ -21,7 +21,7 @@ class RunnerFactory;
 class SubmissionService {
 public:
   SubmissionService(ResultStore &result_store, RunnerFactory &runner_factory,
-                    JudgeCore &judge_core);
+                    SubmissionVerdictReducer &judge_verdict_reducer);
   virtual ~SubmissionService() = default;
 
   /**
@@ -68,6 +68,6 @@ public:
 private:
   ResultStore &result_store_;
   RunnerFactory &runner_factory_;
-  JudgeCore &judge_core_;
+  SubmissionVerdictReducer &judge_verdict_reducer_;
   SubmissionQueue queue_;
 };

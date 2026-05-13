@@ -11,7 +11,7 @@
 #include "dispatch/JudgeWorkerPool.h"
 #include "json.hpp"
 #include "network/ClientSockets.h"
-#include "pipeline/JudgeCore.h"
+#include "pipeline/SubmissionVerdictReducer.h"
 #include "pipeline/ResultStore.h"
 #include "pipeline/SubmissionService.h"
 #include "runner/RunnerFactory.h"
@@ -49,7 +49,7 @@ void write_framed_message(int fd, const std::string &body) {
 class SocketHarness {
 public:
   SocketHarness()
-      : submission_service_(result_store_, runner_factory_, judge_core_),
+      : submission_service_(result_store_, runner_factory_, judge_verdict_reducer_),
         client_sockets_(4, submission_service_),
         worker_pool_(1, submission_service_, &client_sockets_) {
     int sockets[2] = {-1, -1};
@@ -116,7 +116,7 @@ private:
 
   ResultStore result_store_;
   RunnerFactory runner_factory_;
-  JudgeCore judge_core_;
+  SubmissionVerdictReducer judge_verdict_reducer_;
   SubmissionService submission_service_;
   ClientSockets client_sockets_;
   JudgeWorkerPool worker_pool_;

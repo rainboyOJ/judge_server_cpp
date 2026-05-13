@@ -196,7 +196,7 @@ TCP 协议使用统一 framing：
 - `UNKNOWN`
 - `SYSTEM_ERROR`
 
-`JudgeCore` 当前采用固定优先级归并：
+`SubmissionVerdictReducer` 当前采用固定优先级归并：
 
 `CE > SYSTEM_ERROR > TLE > RE/MLE/OLE > WA/PE > UNKNOWN > AC > PENDING`
 

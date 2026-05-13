@@ -21,7 +21,7 @@ src/dispatch/JudgeWorkerPool.*
 src/dispatch/SubmissionQueue.*
 src/runner/*
 src/pipeline/ResultStore.*
-src/pipeline/JudgeCore.*
+src/pipeline/SubmissionVerdictReducer.*
 ```
 
 ## 1. 总体理解
@@ -122,8 +122,8 @@ src/main.cpp
 ```cpp
 ResultStore result_store;
 RunnerFactory runner_factory;
-JudgeCore judge_core;
-SubmissionService submission_service(result_store, runner_factory, judge_core);
+SubmissionVerdictReducer judge_verdict_reducer;
+SubmissionService submission_service(result_store, runner_factory, judge_verdict_reducer);
 ClientSockets client_sockets(...);
 JudgeWorkerPool judge_worker_pool(...);
 TcpServer server(...);
@@ -141,7 +141,7 @@ server->start();
 | `JudgeWorkerPool` | 后台 worker 线程池 |
 | `SubmissionService` | 提交服务入口、内部队列和评测流程编排 |
 | `RunnerFactory` | 根据语言创建 runner |
-| `JudgeCore` | 汇总多个测试点 verdict |
+| `SubmissionVerdictReducer` | 汇总多个测试点 verdict |
 | `ResultStore` | 保存 submission 最新快照 |
 
 ## 3. 共享数据模型：common/
@@ -530,7 +530,7 @@ void processSubmission(int submission_id, const SubmissionRequest &request);
 8. 从 `testData/<pid>/data` 扫描测试点。
 9. 逐个调用 `runner->runCase()`。
 10. 每跑完一个 case，就把当前 `case_results` 写回 `ResultStore`。
-11. 调用 `JudgeCore::summarize()` 汇总最终 verdict。
+11. 调用 `SubmissionVerdictReducer::summarize()` 汇总最终 verdict。
 12. 写入 `FINISHED` 快照。
 
 如果中途系统错误，会写入 `FAILED` 或带错误 verdict 的终态。
@@ -562,16 +562,16 @@ ResultStore::isValidTransition()
 
 如果状态跳转非法，`updateResult()` 会失败。
 
-## 12. verdict 汇总：pipeline/JudgeCore
+## 12. verdict 汇总：pipeline/SubmissionVerdictReducer
 
 核心文件：
 
 ```text
-src/pipeline/JudgeCore.h
-src/pipeline/JudgeCore.cpp
+src/pipeline/SubmissionVerdictReducer.h
+src/pipeline/SubmissionVerdictReducer.cpp
 ```
 
-`JudgeCore` 不执行程序，只汇总多个测试点结果。
+`SubmissionVerdictReducer` 不执行程序，只汇总多个测试点结果。
 
 当前优先级大致是：
 

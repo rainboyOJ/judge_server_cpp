@@ -23,7 +23,7 @@
 | `src/network/` | TCP Server（TcpServer）、客户端连接管理（ClientSockets）、连接注册表（ConnectionRegistry） |
 | `src/dispatch/` | Worker 线程池（JudgeWorkerPool）、内部任务队列实现（SubmissionQueue）、通知接口（SubmissionNotifier） |
 | `src/runner/` | 语言 Runner 接口与实现（CppRunner、PythonRunner）、工厂（RunnerFactory）、运行支撑（RunnerSupport） |
-| `src/pipeline/` | 评测编排（SubmissionService）、判题归并（JudgeCore）、结果存储（ResultStore） |
+| `src/pipeline/` | 评测编排（SubmissionService）、判题归并（SubmissionVerdictReducer）、结果存储（ResultStore） |
 | `src/protocol/` | JSON 协议编解码（JudgeProtocol） |
 ## 网络层 (src/network/)
 
@@ -87,7 +87,7 @@
 
 `submit(request)` 仍保留为兼容包装，但异步主线不再走它。
 
-`JudgeCore` 按固定优先级归并 case verdict：
+`SubmissionVerdictReducer` 按固定优先级归并 case verdict：
 
 `CE > SYSTEM_ERROR > TLE > RE/MLE/OLE > WA/PE > UNKNOWN > AC > PENDING`
 

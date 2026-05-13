@@ -4,7 +4,7 @@
 #include "json.hpp"
 
 #include "network/QueryRequestHandler.h"
-#include "pipeline/JudgeCore.h"
+#include "pipeline/SubmissionVerdictReducer.h"
 #include "pipeline/ResultStore.h"
 #include "pipeline/SubmissionService.h"
 #include "protocol/JudgeProtocol.h"
@@ -26,8 +26,8 @@ SubmissionRequest make_submit_request() {
 void test_handle_query_returns_encoded_snapshot_for_existing_submission() {
   ResultStore store;
   RunnerFactory factory;
-  JudgeCore judge_core;
-  SubmissionService service(store, factory, judge_core);
+  SubmissionVerdictReducer judge_verdict_reducer;
+  SubmissionService service(store, factory, judge_verdict_reducer);
   JudgeProtocol protocol;
   QueryRequestHandler handler(service, protocol);
 
@@ -47,8 +47,8 @@ void test_handle_query_returns_encoded_snapshot_for_existing_submission() {
 void test_handle_query_returns_submission_not_found_error_for_missing_submission() {
   ResultStore store;
   RunnerFactory factory;
-  JudgeCore judge_core;
-  SubmissionService service(store, factory, judge_core);
+  SubmissionVerdictReducer judge_verdict_reducer;
+  SubmissionService service(store, factory, judge_verdict_reducer);
   JudgeProtocol protocol;
   QueryRequestHandler handler(service, protocol);
 

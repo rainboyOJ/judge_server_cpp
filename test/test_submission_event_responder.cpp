@@ -6,7 +6,7 @@
 
 #include "dispatch/SubmissionTask.h"
 #include "network/SubmissionEventResponder.h"
-#include "pipeline/JudgeCore.h"
+#include "pipeline/SubmissionVerdictReducer.h"
 #include "pipeline/ResultStore.h"
 #include "pipeline/SubmissionService.h"
 #include "protocol/JudgeProtocol.h"
@@ -49,8 +49,8 @@ void require_status_transition(ResultStore &store, int submission_id,
 void test_started_event_for_queued_submission_returns_no_message() {
   ResultStore store;
   RunnerFactory factory;
-  JudgeCore judge_core;
-  SubmissionService service(store, factory, judge_core);
+  SubmissionVerdictReducer judge_verdict_reducer;
+  SubmissionService service(store, factory, judge_verdict_reducer);
   JudgeProtocol protocol;
   SubmissionEventResponder responder(service, protocol);
 
@@ -65,8 +65,8 @@ void test_started_event_for_queued_submission_returns_no_message() {
 void test_started_event_for_running_submission_returns_submission_update() {
   ResultStore store;
   RunnerFactory factory;
-  JudgeCore judge_core;
-  SubmissionService service(store, factory, judge_core);
+  SubmissionVerdictReducer judge_verdict_reducer;
+  SubmissionService service(store, factory, judge_verdict_reducer);
   JudgeProtocol protocol;
   SubmissionEventResponder responder(service, protocol);
 
@@ -91,8 +91,8 @@ void test_started_event_for_running_submission_returns_submission_update() {
 void test_finished_event_for_finished_submission_returns_submission_finished() {
   ResultStore store;
   RunnerFactory factory;
-  JudgeCore judge_core;
-  SubmissionService service(store, factory, judge_core);
+  SubmissionVerdictReducer judge_verdict_reducer;
+  SubmissionService service(store, factory, judge_verdict_reducer);
   JudgeProtocol protocol;
   SubmissionEventResponder responder(service, protocol);
 
@@ -118,8 +118,8 @@ void test_finished_event_for_finished_submission_returns_submission_finished() {
 void test_missing_submission_returns_no_message() {
   ResultStore store;
   RunnerFactory factory;
-  JudgeCore judge_core;
-  SubmissionService service(store, factory, judge_core);
+  SubmissionVerdictReducer judge_verdict_reducer;
+  SubmissionService service(store, factory, judge_verdict_reducer);
   JudgeProtocol protocol;
   SubmissionEventResponder responder(service, protocol);
 

@@ -13,7 +13,7 @@ set(TEST_SOURCES
     test_connection_registry.cpp
     test_cpp_runner.cpp
     test_integration_tcp_cpp_python.cpp
-    test_judge_core.cpp
+    test_judge_verdict_reducer.cpp
     test_judge_worker_pool.cpp
     test_protocol_codec.cpp
     test_python_runner.cpp

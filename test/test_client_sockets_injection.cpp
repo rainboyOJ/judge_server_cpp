@@ -1,7 +1,7 @@
 #include <cassert>
 
 #include "network/ClientSockets.h"
-#include "pipeline/JudgeCore.h"
+#include "pipeline/SubmissionVerdictReducer.h"
 #include "pipeline/ResultStore.h"
 #include "pipeline/SubmissionService.h"
 #include "runner/RunnerFactory.h"
@@ -11,9 +11,9 @@ namespace {
 void test_client_sockets_accepts_injected_submission_service() {
   ResultStore result_store;
   RunnerFactory runner_factory;
-  JudgeCore judge_core;
+  SubmissionVerdictReducer judge_verdict_reducer;
   SubmissionService submission_service(result_store, runner_factory,
-                                       judge_core);
+                                       judge_verdict_reducer);
 
   ClientSockets client_sockets(16, submission_service);
 

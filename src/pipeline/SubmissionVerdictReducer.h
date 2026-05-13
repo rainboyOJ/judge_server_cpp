@@ -9,7 +9,7 @@
  *
  * 它不关心代码如何执行，只关心已有 case 结果的归并规则。
  */
-class JudgeCore {
+class SubmissionVerdictReducer {
   public:
     /**
      * @brief 汇总多个测试点结果。
