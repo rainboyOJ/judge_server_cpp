@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
         [&client_sockets](fd_set &read_fds, fd_set &write_fds) {
           client_sockets.deal_events(read_fds, write_fds);
         },
-        // 加入socket到fd_set中
+        // 每轮 select 前把客户端 socket 加入 fd_set
         [&client_sockets](fd_set &read_fds, fd_set &write_fds) {
           client_sockets.add_to_sets(read_fds, write_fds);
         });

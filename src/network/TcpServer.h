@@ -7,7 +7,7 @@ class TcpServer {
 public:
     using AcceptCallback = std::function<void(int client_fd)>;
     using ClientEventCallback = std::function<void(fd_set&, fd_set&)>;
-    using ReNewSocketSets = std::function<void(fd_set&, fd_set&)>;
+    using PopulateSocketSetsCallback = std::function<void(fd_set&, fd_set&)>;
 
     // 构造函数：创建并初始化服务器socket
     // 参数：port 监听端口，on_accept 接受连接回调，on_client_event 客户端事件回调
@@ -15,8 +15,8 @@ public:
     TcpServer(int port, 
                 AcceptCallback on_accept, 
                 ClientEventCallback on_client_event = nullptr, 
-                // 加入socket到fd_set中
-                ReNewSocketSets renew_socket_sets = nullptr,
+                // 每轮 select 前填充当前活跃 socket 到 fd_set
+                PopulateSocketSetsCallback populate_socket_sets = nullptr,
               bool nonblock = true, bool reuseaddr = true);
     
     ~TcpServer();
@@ -42,7 +42,7 @@ private:
     std::atomic<bool> running_;
     AcceptCallback on_accept_;
     ClientEventCallback on_client_event_;
-    ReNewSocketSets renew_socket_sets_;
+    PopulateSocketSetsCallback populate_socket_sets_;
     
     // 创建并配置服务器socket
     bool create_and_bind_socket(int port, bool nonblock, bool reuseaddr);

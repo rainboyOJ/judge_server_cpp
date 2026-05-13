@@ -16,8 +16,8 @@
 #include "network/TcpServer.h"
 
 TcpServer::TcpServer(int port, AcceptCallback on_accept, ClientEventCallback on_client_event, 
-                     ReNewSocketSets renew_socket_sets, bool nonblock, bool reuseaddr)
-    : server_fd_(-1), wake_fd_(-1), running_(false), on_accept_(on_accept), on_client_event_(on_client_event), renew_socket_sets_(renew_socket_sets) {
+                     PopulateSocketSetsCallback populate_socket_sets, bool nonblock, bool reuseaddr)
+    : server_fd_(-1), wake_fd_(-1), running_(false), on_accept_(on_accept), on_client_event_(on_client_event), populate_socket_sets_(populate_socket_sets) {
     
     if (!create_wake_fd()) {
         throw std::runtime_error("Failed to create wake fd");
@@ -104,9 +104,9 @@ void TcpServer::start() {
         FD_SET(server_fd_, &read_fds);
         FD_SET(wake_fd_, &read_fds);
 
-        // 客户端 把相应的 socketfd 加入到对应的fd_set中
-        if (renew_socket_sets_) {
-            renew_socket_sets_(read_fds, write_fds);
+        // 客户端层把相应的 socketfd 加入到对应的 fd_set 中。
+        if (populate_socket_sets_) {
+            populate_socket_sets_(read_fds, write_fds);
         }
 
         // 计算最大fd

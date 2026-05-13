@@ -229,7 +229,7 @@ src/network/TcpServer.cpp
 | --- | --- | --- |
 | `on_accept` | `main.cpp` | 新连接到来时交给 `ClientSockets::add_socket()` |
 | `on_client_event` | `main.cpp` | select 返回后交给 `ClientSockets::deal_events()` |
-| `renew_socket_sets` | `main.cpp` | 每轮 select 前让 `ClientSockets` 填充 read/write fd_set |
+| `populate_socket_sets` | `main.cpp` | 每轮 select 前让 `ClientSockets` 填充 read/write fd_set |
 
 ### 为什么有 eventfd
 
