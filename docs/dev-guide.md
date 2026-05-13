@@ -91,6 +91,9 @@ cmake --build build -j
 - `src/runner/CppRunner.h` / `src/runner/CppRunner.cpp`
 - `src/runner/PythonRunner.h` / `src/runner/PythonRunner.cpp`
 - `src/runner/RunnerSupport.h` — runner 共用支撑接口
+- `src/runner/RunnerCompileSupport.cpp` — `compile_cpp_source_file()`，组装 `compile_command` 并调用 `run_command_capture_stdout()`
+- `src/runner/RunnerExecutionSupport.cpp` — `run_executable_case()`、`compare_case_output()`
+- `src/common/utils.h` / `src/common/utils.cpp` — `scan_test_data_file_pairs()` 和 `TestDataFilePairs`
 - `test/test_runner_factory.cpp`
 - `test/test_cpp_runner.cpp`
 - `test/test_python_runner.cpp`

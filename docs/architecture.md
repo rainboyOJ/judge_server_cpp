@@ -99,6 +99,8 @@
 - `RunnerFactory`：当前支持 C++（lang=0）和 Python（lang=2）。
 - `CppRunner` / `PythonRunner`：约定工作目录 `/tmp/oj_compile_<submission_id>`。
 - `RunnerSupport` / `RunnerCompileSupport` / `RunnerExecutionSupport`：runner 共用的编译、执行与输出比较支撑代码。
+- `RunnerCompileSupport` 中的 `compile_cpp_source_file()` 负责组装 `compile_command`，并通过 `run_command_capture_stdout()` 执行外部编译命令。
+- 测试数据扫描由 `scan_test_data_file_pairs()` 返回 `TestDataFilePairs`，供 `SubmissionService` 组装测试点路径和默认限制。
 
 ## 请求生命周期
 

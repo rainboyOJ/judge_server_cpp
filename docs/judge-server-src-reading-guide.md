@@ -623,8 +623,10 @@ PREPARING -> COMPILING -> RUNNING
 C++ runner 的流程：
 
 1. `prepare()`：创建 `/tmp/oj_compile_<submission_id>`，写入 `solution.cpp`。
-2. `compile()`：调用 g++ 编译成 `solution`。
+2. `compile()`：通过 `compile_cpp_source_file()` 调用 g++ 编译成 `solution`。
 3. `runCase()`：调用 `run_executable_case()` 执行编译产物。
+
+`compile_cpp_source_file()` 的实现位于 `RunnerCompileSupport.cpp`。它会组装 `compile_command`，再调用 `run_command_capture_stdout()` 执行外部命令并捕获 stdout；编译器 stderr 会被重定向到 `compile_log_file`。
 
 ### PythonRunner
 
@@ -655,6 +657,18 @@ sjudger SUCCESS != 最终 AC
 ```
 
 `SUCCESS` 只表示程序正常执行结束。输出还要和标准答案比较，可能得到 WA。
+
+### 测试数据扫描工具
+
+`SubmissionService::load_cases_for_problem()` 不直接手写目录扫描细节，而是调用 `scan_test_data_file_pairs()`：
+
+```text
+scan_test_data_file_pairs(testData/<pid>/data)
+  -> TestDataFilePairs
+  -> pair<input_file_name, output_file_name>
+```
+
+这个工具函数只负责找到成对存在的 `.in` / `.out` 文件。后续把文件名转换成完整路径、设置测试点序号和默认资源限制，仍然由 `SubmissionService` 完成。
 
 ## 14. sjudge/ 和 src/ 的关系
 
