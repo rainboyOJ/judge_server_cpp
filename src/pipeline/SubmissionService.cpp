@@ -171,6 +171,9 @@ int SubmissionService::submitAsync(const SubmissionRequest &request,
   task.request = request;
   task.reply_channel_id = reply_channel_id;
 
+  // 这里就是把任务正式移交给后台调度层的时刻：
+  // 网络线程只负责 push 进 SubmissionQueue，真正的消费方是
+  // JudgeWorkerPool::workerLoop() 中的 service_.waitTask()/queue_.pop()。
   if (!queue_.push(task)) {
     return -1;
   }

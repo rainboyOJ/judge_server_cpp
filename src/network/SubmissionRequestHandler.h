@@ -41,6 +41,14 @@ public:
   /**
    * @brief 处理一条 submit 请求。
    *
+   * 调用顺序很关键：
+   * - 先通过 AckBarrier::mark_waiting() 把当前 reply channel 标记为“等待 ack”
+   * - 再调用 SubmissionService::submitAsync() 把任务放入后台队列
+   * - JudgeWorkerPool 的 worker 线程随后会通过 waitTask()/queue.pop() 取走任务
+   * - 若 worker 在 ack 发出前产生异步状态消息，这些消息会在 ClientSockets 中被
+   *   AckBarrier::try_defer() 暂存
+   * - 当前函数生成 ack 后再 release()，调用方据此保证 ack 先发、异步消息后发
+   *
    * @param request 已解码的提交请求。
    * @param reply_channel_id 用于后续异步回推结果的 reply channel 标识。
    * @return HandleSubmitResult 立即响应与可释放的延迟消息集合。

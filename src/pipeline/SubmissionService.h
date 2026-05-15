@@ -34,6 +34,10 @@ public:
    *
    * 网络层只需要表达“提交这份代码，并把后续消息回推到哪个 reply channel”，
    * 不需要知道后台队列的存在。
+   *
+   * 这里是“网络线程把评测任务交给后台 worker”的真正边界：
+   * submitAsync() 会创建 SubmissionTask 并压入 SubmissionQueue，
+   * 后续由 JudgeWorkerPool 的 worker 线程通过 waitTask()/pop() 取走执行。
    */
   int submitAsync(const SubmissionRequest &request,
                   const std::string &reply_channel_id);

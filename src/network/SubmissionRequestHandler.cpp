@@ -25,8 +25,10 @@ SubmissionRequestHandler::submitEnsuringAckFirst(
   // 不会抢在 submission_ack 之前发给客户端。
   ack_barrier_.mark_waiting(reply_channel_id);
 
+  // 核心: 提交任务到 submission_service_。
   const int submission_id =
       submission_service_.submitAsync(request, reply_channel_id);
+
   if (submission_id <= 0) {
     LOG_ERROR("submit async failed reply_channel=%s", reply_channel_id.c_str());
     result.response = protocol_.encodeError("submission queue unavailable");
