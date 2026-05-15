@@ -36,7 +36,7 @@ void test_handle_submit_returns_submission_ack_and_queues_task_for_same_reply_ch
 
   const std::string reply_channel_id = "slot-7:session-11";
   const SubmissionRequestHandler::HandleSubmitResult result =
-      handler.handleSubmit(make_submit_request(), reply_channel_id);
+      handler.submitEnsuringAckFirst(make_submit_request(), reply_channel_id);
 
   const json encoded = json::parse(result.response);
   assert(encoded.at("type") == "submission_ack");
@@ -65,7 +65,7 @@ void test_handle_submit_releases_ack_barrier_and_returns_deferred_messages() {
   assert(ack_barrier.try_defer(reply_channel_id, "deferred-update"));
 
   const SubmissionRequestHandler::HandleSubmitResult result =
-      handler.handleSubmit(make_submit_request(), reply_channel_id);
+      handler.submitEnsuringAckFirst(make_submit_request(), reply_channel_id);
 
   const json encoded = json::parse(result.response);
   assert(encoded.at("type") == "submission_ack");
@@ -86,7 +86,7 @@ void test_handle_submit_returns_queue_unavailable_error_when_service_queue_is_sh
   service.shutdownQueue();
 
   const SubmissionRequestHandler::HandleSubmitResult result =
-      handler.handleSubmit(make_submit_request(), "slot-9:session-2");
+      handler.submitEnsuringAckFirst(make_submit_request(), "slot-9:session-2");
 
   const json encoded = json::parse(result.response);
   assert(encoded.at("submission_id") == -1);

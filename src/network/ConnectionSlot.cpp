@@ -87,6 +87,8 @@ bool ConnectionSlot::read_message(int &tot_read, std::string &message_body) {
     return false;
   }
 
+  // framing 协议的前 4 字节是消息体长度；如果头都没收完整，
+  // 这次只能继续等待下一批 TCP 数据，不能提前解析。
   if (input_buffer_.readableBytes() < sizeof(uint32_t)) {
     return false;
   }

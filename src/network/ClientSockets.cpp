@@ -235,7 +235,8 @@ void ClientSockets::handle_submit_message(ConnectionSlot &slot, int slot_id,
             static_cast<int>(request.language));
 
   const auto submit_result =
-      submission_request_handler_.handleSubmit(request, reply_channel_id);
+      submission_request_handler_.submitEnsuringAckFirst(request,
+                                                         reply_channel_id);
   queue_immediate_response(slot, submit_result.response);
   for (const std::string &msg : submit_result.deferred_messages) {
     queue_protocol_response_for_channel(reply_channel_id, msg);
