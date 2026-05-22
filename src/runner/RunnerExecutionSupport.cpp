@@ -60,6 +60,12 @@ SubmissionVerdict map_judge_result_to_verdict(int result_code) {
 
 } // namespace
 
+/** @copydoc runner_work_dir_for */
+fs::path runner_work_dir_for(const SubmissionRequest &request) {
+  return fs::temp_directory_path() /
+         ("oj_compile_" + std::to_string(request.uuid));
+}
+
 /** @copydoc compare_case_output */
 SubmissionVerdict compare_case_output(const fs::path &input_path,
                                       const fs::path &expected_output,

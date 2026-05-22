@@ -32,6 +32,7 @@ public:
   std::string getTestDataPath() const;
   int getResultRetentionSeconds() const;
   int getMaxStoredResults() const;
+  bool getKeepRunnerWorkDir() const;
 
   // 性能设置
   size_t getBufferSize() const;

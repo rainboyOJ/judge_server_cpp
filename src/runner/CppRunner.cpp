@@ -25,8 +25,7 @@ namespace {
 
 /** @brief 根据 submission 计算 C++ runner 的工作目录。 */
 fs::path work_dir_for(const SubmissionRequest &request) {
-    return fs::temp_directory_path() /
-           ("oj_compile_" + std::to_string(request.uuid));
+    return runner_work_dir_for(request);
 }
 
 /** @brief C++ 源文件路径。 */

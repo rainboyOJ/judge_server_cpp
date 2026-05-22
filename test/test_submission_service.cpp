@@ -1,10 +1,17 @@
 #include <cassert>
+#include <filesystem>
+#include <fstream>
 #include <string>
+#include <system_error>
 
+#include "common/Config.h"
 #include "pipeline/SubmissionVerdictReducer.h"
 #include "pipeline/ResultStore.h"
 #include "pipeline/SubmissionService.h"
 #include "runner/RunnerFactory.h"
+#include "runner/RunnerSupport.h"
+
+namespace fs = std::filesystem;
 
 namespace {
 
@@ -24,6 +31,26 @@ SubmissionRequest make_unsupported_request(int uuid) {
   request.language = SubmissionLanguage::C;
   request.code = "int main(){return 0;}\n";
   return request;
+}
+
+void load_keep_work_dir_config(bool keep_work_dir) {
+  const fs::path config_path =
+      fs::temp_directory_path() /
+      (keep_work_dir ? "boxTest_keep_work_dir_true.json"
+                     : "boxTest_keep_work_dir_false.json");
+  std::ofstream config_stream(config_path);
+  config_stream << "{"
+                << "\"testing\":{"
+                << "\"test_data_path\":\"../testData\","
+                << "\"keep_work_dir\":" << (keep_work_dir ? "true" : "false")
+                << "}"
+                << "}";
+  config_stream.close();
+
+  assert(Config::getInstance().loadFromFile(config_path.string()));
+
+  std::error_code ec;
+  fs::remove(config_path, ec);
 }
 
 SubmissionService make_service(ResultStore &store, RunnerFactory &factory,
@@ -71,6 +98,8 @@ void test_submit_async_creates_submission_and_hides_queue_details() {
 }
 
 void test_process_submission_finishes_with_aggregated_ac_verdict() {
+  load_keep_work_dir_config(false);
+
   ResultStore store;
   RunnerFactory factory;
   SubmissionVerdictReducer judge_verdict_reducer;
@@ -91,6 +120,8 @@ void test_process_submission_finishes_with_aggregated_ac_verdict() {
 }
 
 void test_compile_failure_finishes_with_ce() {
+  load_keep_work_dir_config(false);
+
   ResultStore store;
   RunnerFactory factory;
   SubmissionVerdictReducer judge_verdict_reducer;
@@ -110,7 +141,51 @@ void test_compile_failure_finishes_with_ce() {
   assert(stored.case_results.empty());
 }
 
+void test_process_submission_cleans_work_dir_by_default() {
+  load_keep_work_dir_config(false);
+
+  ResultStore store;
+  RunnerFactory factory;
+  SubmissionVerdictReducer judge_verdict_reducer;
+  SubmissionService service = make_service(store, factory, judge_verdict_reducer);
+
+  const SubmissionRequest request = make_python_request(
+      93006, "a, b = map(int, input().split())\nprint(a + b)\n");
+  const int submission_id = service.createSubmission(request);
+
+  service.processSubmission(submission_id, request);
+
+  SubmissionRequest execution_request = request;
+  execution_request.uuid = submission_id;
+  assert(!fs::exists(runner_work_dir_for(execution_request)));
+}
+
+void test_process_submission_keeps_work_dir_when_configured() {
+  load_keep_work_dir_config(true);
+
+  ResultStore store;
+  RunnerFactory factory;
+  SubmissionVerdictReducer judge_verdict_reducer;
+  SubmissionService service = make_service(store, factory, judge_verdict_reducer);
+
+  const SubmissionRequest request = make_python_request(
+      93007, "a, b = map(int, input().split())\nprint(a + b)\n");
+  const int submission_id = service.createSubmission(request);
+
+  service.processSubmission(submission_id, request);
+
+  SubmissionRequest execution_request = request;
+  execution_request.uuid = submission_id;
+  const fs::path work_dir = runner_work_dir_for(execution_request);
+  assert(fs::exists(work_dir));
+
+  std::error_code ec;
+  fs::remove_all(work_dir, ec);
+}
+
 void test_unsupported_language_finishes_as_deterministic_system_failure() {
+  load_keep_work_dir_config(false);
+
   ResultStore store;
   RunnerFactory factory;
   SubmissionVerdictReducer judge_verdict_reducer;
@@ -145,6 +220,8 @@ int main() {
   test_submit_async_creates_submission_and_hides_queue_details();
   test_process_submission_finishes_with_aggregated_ac_verdict();
   test_compile_failure_finishes_with_ce();
+  test_process_submission_cleans_work_dir_by_default();
+  test_process_submission_keeps_work_dir_when_configured();
   test_unsupported_language_finishes_as_deterministic_system_failure();
   test_query_returns_false_for_missing_submission();
   return 0;

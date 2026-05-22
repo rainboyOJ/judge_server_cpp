@@ -15,6 +15,7 @@
 #include "pipeline/ResultStore.h"
 #include "runner/ILanguageRunner.h"
 #include "runner/RunnerFactory.h"
+#include "runner/RunnerSupport.h"
 
 namespace fs = std::filesystem;
 
@@ -81,6 +82,31 @@ bool persist_result_logged(ResultStore &store, int submission_id,
             static_cast<int>(result.status), static_cast<int>(result.verdict));
   return false;
 }
+
+class RunnerWorkDirCleanupGuard {
+public:
+  RunnerWorkDirCleanupGuard(int submission_id, const fs::path &work_dir)
+      : submission_id_(submission_id), work_dir_(work_dir),
+        keep_work_dir_(Config::getInstance().getKeepRunnerWorkDir()) {}
+
+  ~RunnerWorkDirCleanupGuard() {
+    if (keep_work_dir_ || work_dir_.empty()) {
+      return;
+    }
+
+    std::error_code ec;
+    fs::remove_all(work_dir_, ec);
+    if (ec) {
+      LOG_ERROR("runner work dir cleanup failed submission_id=%d path=%s error=%s",
+                submission_id_, work_dir_.string().c_str(), ec.message().c_str());
+    }
+  }
+
+private:
+  int submission_id_{};
+  fs::path work_dir_;
+  bool keep_work_dir_{};
+};
 
 /** @brief 解析测试数据根目录。 */
 fs::path resolve_test_data_root() {
@@ -229,6 +255,8 @@ void SubmissionService::processSubmission(int submission_id,
     // 中文注释：执行阶段统一改用服务端生成的 submission_id 作为工作目录键，
     // 避免多个客户端复用同一个 uuid 时互相覆盖编译产物。
     execution_request.uuid = submission_id;
+    const RunnerWorkDirCleanupGuard work_dir_cleanup_guard(
+        submission_id, runner_work_dir_for(execution_request));
 
     const RunnerPrepareResult prepare_result =
         runner->prepare(execution_request);

@@ -26,6 +26,7 @@
 
 - 配置：`config/config.json`
 - 测试数据：优先尝试仓库内 `testData/`，其次尝试当前工作目录相对路径和配置项
+- runner 工作目录：默认创建在系统临时目录下，形如 `/tmp/oj_compile_<submission_id>`，评测结束后自动删除
 - checker：`/judge/checker/fcmp2`
 - sjudge：`/usr/bin/sjudge`
 
@@ -55,13 +56,21 @@ cmake --build build -j
   "testing": {
     "worker_thread_count": 4,
     "max_concurrent_tests": 4,
-    "test_data_path": "../testData"
+    "test_data_path": "../testData",
+    "result_retention_seconds": 600,
+    "max_stored_results": 1000,
+    "keep_work_dir": false
   },
   "performance": {
     "buffer_size": 8192
   }
 }
 ```
+
+`testing.keep_work_dir` 控制评测临时目录是否保留：
+
+- `false`：默认值。每次 submission 结束、失败或异常退出评测流程时，删除对应 `/tmp/oj_compile_<submission_id>`。
+- `true`：保留源码、编译产物、用户输出和错误输出，便于本地调试；生产环境不建议长期打开，否则 `/tmp` 会持续增长。
 
 ## 部署 checker
 

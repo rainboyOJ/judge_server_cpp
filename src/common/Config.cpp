@@ -93,6 +93,11 @@ int Config::getMaxStoredResults() const {
   return get<int>(testing, "max_stored_results", 1000);
 }
 
+bool Config::getKeepRunnerWorkDir() const {
+  const json testing = configSection(config_data_, "testing");
+  return get<bool>(testing, "keep_work_dir", false);
+}
+
 size_t Config::getBufferSize() const {
   const json performance = configSection(config_data_, "performance");
   return get<size_t>(performance, "buffer_size", 8192);

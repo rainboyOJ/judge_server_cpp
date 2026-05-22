@@ -107,4 +107,5 @@ src/
 - `SubmissionQueue` 是 `SubmissionService` 的内部实现细节；网络层只和 `SubmissionService` 交互。
 - 如果机器上没有 `/usr/bin/sjudge`，会走 fallback 执行路径：只强制真实时间限制，不做真正的 CPU/内存隔离；`cpu_time_ms` 直接复用 `real_time_ms`。
 - 输出比较优先调用 `/judge/checker/fcmp2`；如果没有部署 checker，会退化为内置的按行比较（忽略行尾空白和末尾空行）。
+- runner 工作目录默认在评测结束后删除；调试时可在 `config/config.json` 中设置 `testing.keep_work_dir=true` 保留 `/tmp/oj_compile_<submission_id>`。
 - `test/nodejs/` 下既有新的 JSON 协议库，也保留了旧脚本和旧命名；`package.json` 的 npm scripts 目前仍指向旧入口，需要按文档手动选择脚本。

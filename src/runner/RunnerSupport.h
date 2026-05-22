@@ -25,6 +25,9 @@ bool compile_cpp_source_file(const fs::path &source_file,
                              const fs::path &compile_log_file,
                              std::string &compile_output);
 
+/** @brief 计算某次 submission 的 runner 工作目录。 */
+fs::path runner_work_dir_for(const SubmissionRequest &request);
+
 /** @brief 比较用户输出与标准输出。 */
 SubmissionVerdict compare_case_output(const fs::path &input_path,
                                       const fs::path &expected_output,

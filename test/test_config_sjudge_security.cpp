@@ -25,6 +25,9 @@ fs::path write_test_config() {
     "cgroup_pids_max": 32,
     "cgroup_cpu_max_quota_us": 50000,
     "cgroup_cpu_max_period_us": 100000
+  },
+  "testing": {
+    "keep_work_dir": true
   }
 })";
   return path;
@@ -46,6 +49,7 @@ void test_sjudge_security_config_accessors() {
   assert(config.getSjudgeCgroupPidsMax() == 32);
   assert(config.getSjudgeCgroupCpuMaxQuotaUs() == 50000);
   assert(config.getSjudgeCgroupCpuMaxPeriodUs() == 100000);
+  assert(config.getKeepRunnerWorkDir());
 
   std::error_code ec;
   fs::remove(config_path, ec);
