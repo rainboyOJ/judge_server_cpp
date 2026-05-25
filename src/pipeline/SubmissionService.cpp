@@ -110,26 +110,26 @@ private:
 
 /** @brief 解析测试数据根目录。 */
 fs::path resolve_test_data_root() {
+  try {
+    const fs::path configured_path = Config::getInstance().getTestDataPath();
+    if (!configured_path.empty() && fs::exists(configured_path)) {
+      return fs::weakly_canonical(configured_path);
+    }
+  } catch (const std::exception &) {
+    // 中文注释：配置未加载时继续回退到仓库内置路径，不让配置异常中断评测主流程。
+  }
+
   const fs::path project_root_data = fs::path(PROJECT_ROOT_DIR) / "testData";
   if (fs::exists(project_root_data)) {
-    return project_root_data;
+    return fs::weakly_canonical(project_root_data);
   }
 
   for (const fs::path &candidate :
        {fs::path("testData"), fs::path("../testData"),
         fs::path("../../testData")}) {
     if (fs::exists(candidate)) {
-      return candidate;
+      return fs::weakly_canonical(candidate);
     }
-  }
-
-  try {
-    const fs::path configured_path = Config::getInstance().getTestDataPath();
-    if (!configured_path.empty() && fs::exists(configured_path)) {
-      return configured_path;
-    }
-  } catch (const std::exception &) {
-    // 中文注释：配置未加载时直接回退到仓库内置路径，不让配置异常中断评测主流程。
   }
 
   return {};
