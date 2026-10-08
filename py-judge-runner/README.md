@@ -148,6 +148,34 @@ Python 父进程大内存影响。cgroup 内存计量不依赖这个 RSS 修正�
 cgroup 需要外部隔离。CPU 仍由直接子进程的 `wait4`/`RLIMIT_CPU` 管理，不使用 cgroup CPU
 配额，也不把它当成任意进程树的 CPU 总额。
 
+## local_judge.py 独立使用说明
+
+本目录除了提供给 Judge Server 用的 `runner.py` 底层执行器外，还提供了一个面向开发者的单机测试脚本：`local_judge.py`。
+它可以自动寻找测试数据目录下的用例，对单份代码进行编译、运行测试，并比对答案（提供最终的 AC/WA/TLE/MLE 等结论）。
+
+### 基本用法
+
+```bash
+# 自动在默认测试数据目录 (`../testData` 或 `testData`) 寻找题目 1000 的数据进行测试
+python3 local_judge.py --pid 1000 solution.cpp
+
+# 指定测试数据目录
+python3 local_judge.py --pid 1000 solution.py --testdata /path/to/testData
+
+# 只跑特定的测试用例 (比如 testData/1000/data/1.in 和 2.in)
+python3 local_judge.py --pid 1000 solution.cpp --cases 1 2
+
+# 修改时间限制(1000ms)和空间限制(256MB)
+python3 local_judge.py --pid 1000 solution.cpp --time 1000 --memory 256
+```
+
+### local_judge.py 执行逻辑
+
+1. **编译 (Compile)**：C++ 代码会被编译（使用 `g++ -std=c++17 -O2 -DONLINE_JUDGE`），Python 等解释型代码会进行语法检查。
+2. **执行 (Run)**：调用底层的 `runner.py`（以及 cgroup v2 等）执行测试数据中的每一个 `.in` 文件。如果系统没有 cgroup v2 权限，也会降级运行（并提示部分资源超限可能无法准确判定）。
+3. **比对 (Compare)**：运行结束后，比对产生的用户输出与 `data` 目录中的标准 `.out`/`.ans` 文件。默认会尝试使用专门的 checker（如 `fcmp2`），如果没有则按行对比，忽略行尾空格。
+4. **汇总 (Summary)**：终端打印每个测试点的耗时、内存和状态（AC / WA / TLE 等）。
+
 ## 其他参数
 
 `--stack` 默认 64MiB，`--output-limit` 默认单文件 64MiB，`--nproc` 默认关闭。
