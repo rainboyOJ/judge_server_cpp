@@ -30,6 +30,13 @@ python3 local_judge.py --list           # 列出 testData 下可用题目
 python3 local_judge.py --pid 1000 solution.cpp
 ```
 
+也可以一行命令装到用户目录（克隆、构建、冒烟测试、放启动器都由脚本完成）：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rainboyOJ/judge_server_cpp/master/py-judge-runner/install.sh | bash
+cd 你的项目 && py-judge-runner --pid 1000 solution.cpp
+```
+
 它把三件事串起来：编译提交、逐个跑 `testData/<pid>/data/*.in|*.out`、比对答案并汇总。
 输出形如：
 

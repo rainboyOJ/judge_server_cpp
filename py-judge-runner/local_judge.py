@@ -5,6 +5,9 @@
     python3 local_judge.py --pid 1000 solution.cpp
     python3 local_judge.py --pid 1000 solution.py --testdata ../testData
 
+测试数据默认自动查找：包上级目录、当前目录、当前目录的上级，任一个
+`testData/` 存在就用它；也可以用 `--testdata` 直接指定。
+
 它把三件事串起来，让用户不用起 judge_server 就能自己验一份代码：
 
 1. 编译：C++ 用和 judge_server 相同的 `g++ -std=c++17 -O2 -DONLINE_JUDGE`；
@@ -42,7 +45,6 @@ from runner import CaseResult, Limits, Verdict, _child_env, _set_verdict, run_ca
 
 PACKAGE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = PACKAGE_DIR.parent
-DEFAULT_TESTDATA = PROJECT_ROOT / "testData"
 DEFAULT_CGROUP_ROOT = Path("/sys/fs/cgroup/roj-judge")
 CHECKER_PATH = Path("/judge/checker/fcmp2")
 COMPILE_TIMEOUT_S = 120
@@ -76,6 +78,35 @@ def load_cases(data_dir: Path) -> list[tuple[str, Path, Path]]:
         if out_path.exists():
             cases.append((in_path.stem, in_path, out_path))
     return sorted(cases, key=lambda case: _natural_key(case[0]))
+
+
+def resolve_testdata(explicit: Optional[Path]) -> tuple[Optional[Path], list[Path]]:
+    """确定测试数据根目录，返回 (目录, 尝试过的路径)。
+
+    安装到 ~/.local/share/py-judge-runner 后并没有 package/../testData，所以除了
+    仓库布局，还要在当前目录和其上级找，用户在自己的项目里直接运行就能命中。
+    """
+    cwd = Path.cwd()
+    candidates = [explicit, PROJECT_ROOT / "testData", cwd / "testData", cwd.parent / "testData"]
+    tried: list[Path] = []
+    for candidate in candidates:
+        if candidate is None:
+            continue
+        path = Path(candidate).resolve()
+        if path in tried:
+            continue
+        tried.append(path)
+        if path.is_dir():
+            return path, tried
+    return None, tried
+
+
+def report_missing_testdata(tried: list[Path]) -> int:
+    print("找不到测试数据目录，已尝试：", file=sys.stderr)
+    for path in tried:
+        print(f"  - {path}", file=sys.stderr)
+    print("请用 --testdata 指定，或把题目数据放在当前目录的 testData/ 下。", file=sys.stderr)
+    return 2
 
 
 def load_problem_meta(problem_dir: Path) -> tuple[str, int, int]:
@@ -372,10 +403,9 @@ def describe(result: CaseResult, verdict: str, expected_path: Path,
     return result.message
 
 
-def list_problems(testdata_root: Path) -> int:
+def list_problems(testdata_root: Path, tried: list[Path]) -> int:
     if not testdata_root.is_dir():
-        print(f"测试数据目录不存在：{testdata_root}", file=sys.stderr)
-        return 2
+        return report_missing_testdata(tried)
     print(f"测试数据目录：{testdata_root}")
     for problem_dir in sorted(testdata_root.iterdir(), key=lambda p: _natural_key(p.name)):
         if not problem_dir.is_dir():
@@ -406,8 +436,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pid", help="题目编号，对应 testData/<pid>/")
     parser.add_argument("--lang", choices=("auto", "cpp", "python"), default="auto",
                         help="提交语言，默认按后缀判断")
-    parser.add_argument("--testdata", type=Path, default=DEFAULT_TESTDATA,
-                        help=f"测试数据根目录，默认 {DEFAULT_TESTDATA}")
+    parser.add_argument("--testdata", type=Path, default=None,
+                        help="测试数据根目录；默认依次尝试 ../testData、./testData、./../testData")
     parser.add_argument("--time", type=int, help="CPU 限制 ms，覆盖题目 config.json")
     parser.add_argument("--memory", type=int, help="内存限制 MiB，覆盖题目 config.json")
     parser.add_argument("--checker", default="auto",
@@ -444,9 +474,9 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    testdata_root = Path(args.testdata).resolve()
+    testdata_root, tried = resolve_testdata(args.testdata)
     if args.list:
-        return list_problems(testdata_root)
+        return list_problems(testdata_root, tried) if testdata_root else report_missing_testdata(tried)
 
     if not args.pid:
         parser.error("请用 --pid 指定题目编号，或先用 --list 查看可用题目")
@@ -467,7 +497,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     if not data_dir.is_dir():
         print(f"找不到测试数据：{data_dir}", file=sys.stderr)
         print(f"可用题目：{', '.join(p.name for p in sorted(testdata_root.iterdir()))}"
-              if testdata_root.is_dir() else f"测试数据目录不存在：{testdata_root}", file=sys.stderr)
+              if testdata_root.is_dir() else "", file=sys.stderr)
         return 2
     cases = load_cases(data_dir)
     if not cases:

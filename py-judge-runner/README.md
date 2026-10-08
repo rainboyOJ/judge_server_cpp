@@ -17,6 +17,7 @@ Linux 单程序资源执行器：启动已存在的程序，重定向标准流�
 - [local_judge.py 独立使用说明](#local_judgepy-独立使用说明)
   - [基本用法](#基本用法)
   - [local_judge.py 执行逻辑](#local_judgepy-执行逻辑)
+- [安装脚本](#安装脚本)
 - [其他参数](#其他参数)
 - [验证](#验证)
 
@@ -26,7 +27,9 @@ Linux 单程序资源执行器：启动已存在的程序，重定向标准流�
 
 ### A. 评测我自己的代码（最常用）
 
-不用启 `judge_server`，也不要求事先配好 cgroup：
+不用启 `judge_server`，也不要求事先配好 cgroup。
+
+**方式一：就用本仓库里的这份**
 
 ```bash
 cd py-judge-runner
@@ -34,6 +37,26 @@ make                                            # 首次构建 C helper
 python3 local_judge.py --pid 1000 solution.cpp  # 跑 testData/1000/data 下的全部测试点
 python3 local_judge.py --list                   # 看本地有哪些题
 ```
+
+**方式二：一行命令装到用户目录，随处可用**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rainboyOJ/judge_server_cpp/master/py-judge-runner/install.sh | bash
+```
+
+装完得到 `~/.local/share/py-judge-runner/` 和启动器 `~/.local/bin/py-judge-runner`
+（安装脚本会自己克隆、构建、跑冒烟测试；详细参数见 [安装脚本](#安装脚本)）：
+
+```bash
+cd 你的项目                # 目录下有 testData/ 就行
+py-judge-runner --list
+py-judge-runner --pid 1000 solution.cpp
+```
+
+装出来的包不含题目数据，所以测试数据靠自动查找：依次看包上级目录、当前目录、
+当前目录的上级，都没有就用 `--testdata` 指定。
+
+上面两种方式的输出一样：
 
 ```text
 题目 1000  A+B问题
@@ -49,7 +72,7 @@ python3 local_judge.py --list                   # 看本地有哪些题
 结果：AC  通过 10/10  用时 0.05s
 ```
 
-`--pid` 对应仓库里的 `testData/<pid>/data`。隔离默认依次尝试 cgroup v2、
+`--pid` 对应 `testData/<pid>/data`。隔离默认依次尝试 cgroup v2、
 `systemd-run` 委派 scope，都不可用时降级为 wall 超时加 `RLIMIT_CPU` 并明确提示。
 完整参数见 [local_judge.py 独立使用说明](#local_judgepy-独立使用说明)。
 
@@ -278,6 +301,42 @@ python3 local_judge.py --list
 4. **汇总 (Summary)**：终端打印每个测试点的耗时、内存和状态（AC / WA / TLE / MLE / RE）。
 
 退出码：`0` 全部 AC，`1` 有非 AC 结果，`2` 编译失败或工具/环境错误。
+
+## 安装脚本
+
+`install.sh` 从 GitHub 克隆仓库、只取本目录、构建 C helper、跑冒烟测试，
+最后安装到用户目录并在 `~/.local/bin` 放一个启动器：
+
+```bash
+# 默认装 master 到 ~/.local/share/py-judge-runner
+curl -fsSL https://raw.githubusercontent.com/rainboyOJ/judge_server_cpp/master/py-judge-runner/install.sh | bash
+
+# 带参数：`| bash` 时参数要放在 -s -- 后面
+curl -fsSL <同上> | bash -s -- --ref v0.1.0 --force
+```
+
+| 参数 | 说明 |
+|---|---|
+| `--ref <ref>` | 安装的分支、tag 或 commit，默认 `master` |
+| `--dir <path>` | 安装目录，默认 `~/.local/share/py-judge-runner` |
+| `--bin-dir <path>` | 启动器目录，默认 `~/.local/bin` |
+| `--repo <owner/name>` | 仓库，便于装自己的 fork |
+| `--mirror <prefix>` / `--no-mirror` | 镜像前缀，默认 `https://gh-proxy.com`，直连失败才回退 |
+| `--testdata <path>` | 只用于安装后的冒烟测试 |
+| `--no-build` / `--no-smoke` / `--no-launcher` | 跳过对应步骤 |
+| `-f, --force` | 目标目录已存在时覆盖 |
+
+行为说明：
+
+- **不做交互提问**：`curl | bash` 时 stdin 是脚本本身，所有选择只能由参数决定。
+- **失败不留半个目录**：先在同级暂存目录里克隆、构建、冒烟，全部成功才整体搬进目标目录。
+- **冒烟测试**包含模块导入、`make check`（纯逻辑用例）、cgroup 可用性探测，
+  以及能找到测试数据时跑一次 `local_judge.py --list`。
+- 需要 `git` 和 `python3 >= 3.8`；构建时还需要 `make` 和一个 C 编译器（`--no-build` 可跳过）。
+- 目标目录已存在时默认报错退出，加 `--force` 才覆盖。
+
+安装脚本本身也在包里，所以装完可以直接用
+`~/.local/share/py-judge-runner/install.sh` 重装或装到别的目录。
 
 ## 其他参数
 
