@@ -4,6 +4,94 @@ Linux 单程序资源执行器：启动已存在的程序，重定向标准流�
 用 `wait4` 统计 CPU，用 wall-clock 看门狗防止卡死，最后返回 JSON 结果。
 不编译提交、不比较答案。`OK` 只表示正常执行。
 
+## 目录
+
+- [快速使用](#快速使用)
+  - [A. 评测我自己的代码](#a-评测我自己的代码最常用)
+  - [B. 当作执行器或库](#b-把-runner-当作执行器或库)
+- [先理解两个限制](#先理解两个限制)
+- [构建与权限](#构建与权限)
+- [Python 接口](#python-接口)
+- [结果与分类](#结果与分类)
+- [读代码的顺序](#读代码的顺序)
+- [local_judge.py 独立使用说明](#local_judgepy-独立使用说明)
+  - [基本用法](#基本用法)
+  - [local_judge.py 执行逻辑](#local_judgepy-执行逻辑)
+- [其他参数](#其他参数)
+- [验证](#验证)
+
+## 快速使用
+
+先看你要做哪件事，两条路径互不影响。
+
+### A. 评测我自己的代码（最常用）
+
+不用启 `judge_server`，也不要求事先配好 cgroup：
+
+```bash
+cd py-judge-runner
+make                                            # 首次构建 C helper
+python3 local_judge.py --pid 1000 solution.cpp  # 跑 testData/1000/data 下的全部测试点
+python3 local_judge.py --list                   # 看本地有哪些题
+```
+
+```text
+题目 1000  A+B问题
+提交 solution.cpp（cpp）
+限制 CPU 1000ms / 内存 128MiB / wall 1500ms
+执行 cgroup 隔离，root=/sys/fs/cgroup/...
+比较 内置按行比较（未找到 /judge/checker/fcmp2）
+
+编译通过
+  #1   problem1     AC         2ms    0.8MiB
+  #2   problem2     AC         1ms    0.5MiB
+  ...
+结果：AC  通过 10/10  用时 0.05s
+```
+
+`--pid` 对应仓库里的 `testData/<pid>/data`。隔离默认依次尝试 cgroup v2、
+`systemd-run` 委派 scope，都不可用时降级为 wall 超时加 `RLIMIT_CPU` 并明确提示。
+完整参数见 [local_judge.py 独立使用说明](#local_judgepy-独立使用说明)。
+
+### B. 把 runner 当作执行器或库
+
+自己控制输入输出和判定时直接用 `runner.py`。它必须有**已委派且启用 memory
+controller 的 cgroup v2 父目录**，否则直接返回 `SYSTEM_ERROR`（不会退回无内存
+限制的运行）。最省事的方式是用自带示例包一层：
+
+```bash
+systemd-run --user --quiet --scope -p Delegate=yes -- \
+  python3 examples/delegated.py python3 runner.py \
+  --input 1.in --output 1.user.out --time 1000 --memory 128 -- ./solution
+```
+
+或者先自己准备好委派目录（见 [构建与权限](#构建与权限)），再直接调用：
+
+```bash
+python3 runner.py --cgroup-root /sys/fs/cgroup/your-delegated-parent \
+  --input 1.in --output 1.user.out --time 1000 --memory 128 -- ./solution
+```
+
+结果是一份 JSON：
+
+```json
+{
+  "verdict": "OK",
+  "cpu_time_us": 1265,
+  "cpu_time_ms": 1,
+  "real_time_ms": 9,
+  "memory_kb": 768,
+  "memory_peak_bytes": 786432,
+  "oom_events": 0,
+  "timed_out": false,
+  "exit_code": 0,
+  "message": ""
+}
+```
+
+也可以在 Python 里当成库调用，见 [Python 接口](#python-接口)。
+注意：只有 A（`local_judge.py`）具备 cgroup 不可用时的自动降级。
+
 ## 先理解两个限制
 
 **题目阈值用于最终判定，保护上限用于阻止失控。** 两者分开，让稍微超限的程序
