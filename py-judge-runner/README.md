@@ -156,25 +156,40 @@ cgroup 需要外部隔离。CPU 仍由直接子进程的 `wait4`/`RLIMIT_CPU` �
 ### 基本用法
 
 ```bash
-# 自动在默认测试数据目录 (`../testData` 或 `testData`) 寻找题目 1000 的数据进行测试
+# 默认在仓库的 testData/ 下找题目 1000 的数据（相对本目录即 ../testData）
 python3 local_judge.py --pid 1000 solution.cpp
 
 # 指定测试数据目录
 python3 local_judge.py --pid 1000 solution.py --testdata /path/to/testData
 
-# 只跑特定的测试用例 (比如 testData/1000/data/1.in 和 2.in)
-python3 local_judge.py --pid 1000 solution.cpp --cases 1 2
-
 # 修改时间限制(1000ms)和空间限制(256MB)
 python3 local_judge.py --pid 1000 solution.cpp --time 1000 --memory 256
+
+# 查看本地有哪些题目、各有多少测试点
+python3 local_judge.py --list
 ```
+
+常用参数：
+
+| 参数 | 说明 |
+|---|---|
+| `--pid <编号>` | 题目编号，对应 `testData/<pid>/data` |
+| `--list` | 列出可用题目、测试点数量与限制 |
+| `--testdata <dir>` | 测试数据根目录，默认本目录的 `../testData` |
+| `--time <ms>` / `--memory <MiB>` | 覆盖题目 `config.json` 的 `time` / `memory` |
+| `--lang auto\|cpp\|python` | 提交语言，默认按后缀判断 |
+| `--checker auto\|none\|<path>` | 输出比较器，默认 `auto` |
+| `--no-cgroup` | 跳过 cgroup，直接走降级模式 |
+| `--keep-work-dir` | 保留临时工作目录，便于查看输出和编译日志 |
 
 ### local_judge.py 执行逻辑
 
-1. **编译 (Compile)**：C++ 代码会被编译（使用 `g++ -std=c++17 -O2 -DONLINE_JUDGE`），Python 等解释型代码会进行语法检查。
-2. **执行 (Run)**：调用底层的 `runner.py`（以及 cgroup v2 等）执行测试数据中的每一个 `.in` 文件。如果系统没有 cgroup v2 权限，也会降级运行（并提示部分资源超限可能无法准确判定）。
-3. **比对 (Compare)**：运行结束后，比对产生的用户输出与 `data` 目录中的标准 `.out`/`.ans` 文件。默认会尝试使用专门的 checker（如 `fcmp2`），如果没有则按行对比，忽略行尾空格。
-4. **汇总 (Summary)**：终端打印每个测试点的耗时、内存和状态（AC / WA / TLE 等）。
+1. **编译 (Compile)**：C++ 用 `g++ -std=c++17 -O2 -DONLINE_JUDGE`（与 judge_server 同一组参数），Python 用 `py_compile` 做语法检查，把解释型语言统一映射到“编译阶段”。
+2. **执行 (Run)**：对 `data` 目录里每个配对的 `.in` 调用底层 `runner.py`。隔离依次尝试 cgroup v2、`systemd-run` 委派 scope，都不可用时降级为 wall 超时加 `RLIMIT_CPU`，并明确提示 MLE 无法判定。
+3. **比对 (Compare)**：把用户输出与同名的标准 `.out` 比较。默认优先用 `/judge/checker/fcmp2`（若已部署），否则按行比较，忽略行尾空白和末尾空行。
+4. **汇总 (Summary)**：终端打印每个测试点的耗时、内存和状态（AC / WA / TLE / MLE / RE）。
+
+退出码：`0` 全部 AC，`1` 有非 AC 结果，`2` 编译失败或工具/环境错误。
 
 ## 其他参数
 
