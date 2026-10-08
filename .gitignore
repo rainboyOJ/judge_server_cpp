@@ -10,3 +10,32 @@ sjudge/*.o
 sjudge/*.a
 sjudge/test_sjudge_call
 docs/superpowers/
+
+
+config/config_for_test.json
+
+# ---------------------------------------------------------------------------
+# 以下内容仅本地保留，不入版本控制
+# ---------------------------------------------------------------------------
+
+# 本地工具残留（codex resume <uuid>）
+codex_resume
+
+# 第三方参考代码：QingdaoU/Judger 的嵌套 clone，构建不引用它
+Judger/
+
+# 已迁移到 roj2 的 packages/judge-driver，此处仅作历史参考
+# 正本：roj_codex/packages/judge-driver/
+drivers/
+
+# roj2 的设计文档，正本在 roj_codex 仓库
+# 正本：roj_codex/docs/oj-nodejs-ts-mongodb-plan.md
+docs/oj-nodejs-ts-mongodb-plan.md
+
+# 题目数据默认不入库（judge_server 运行时只需 <pid>/data/*.in|*.out）
+# 只保留 testData/1000/data 作为 CTest 夹具
+# 新增题目请在部署目录提供，或临时用 git add -f 强制提交
+testData/*
+!testData/1000/
+testData/1000/*
+!testData/1000/data/
