@@ -20,69 +20,14 @@ cmake --build build -j
 
 默认监听 `8000` 端口，测试数据默认来自 `testData/`。
 
-## 本地评测工具（py-judge-runner）
+## 本地评测工具
 
-仓库自带一个独立的本地评测工具，用户**不必启动 `judge_server`** 就能自己验一份代码：
+独立的本地评测工具已拆成单独仓库 **`roj-local-judge-lite`**（原 `py-judge-runner/`）。
+它让用户**不必启动 `judge_server`** 就能自己验一份代码：编译提交、逐个跑
+`testData/<pid>/data` 的测试点、比对答案并汇总 AC/WA/TLE/MLE/RE。
 
-```bash
-cd py-judge-runner && make              # 首次构建 C 辅助进程
-python3 local_judge.py --list           # 列出 testData 下可用题目
-python3 local_judge.py --pid 1000 solution.cpp
-```
-
-也可以一行命令装到用户目录（克隆、构建、冒烟测试、放启动器都由脚本完成）：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/rainboyOJ/judge_server_cpp/master/py-judge-runner/install.sh | bash
-cd 你的项目 && py-judge-runner --pid 1000 solution.cpp
-```
-
-它把三件事串起来：编译提交、逐个跑 `testData/<pid>/data/*.in|*.out`、比对答案并汇总。
-输出形如：
-
-```text
-题目 1000  A+B问题
-提交 solution.cpp（cpp）
-限制 CPU 1000ms / 内存 128MiB / wall 1500ms
-执行 cgroup 隔离，root=/sys/fs/cgroup/...
-比较 内置按行比较（未找到 /judge/checker/fcmp2）
-
-编译通过
-  #1   problem1     AC         2ms    0.8MiB
-  #2   problem2     WA         1ms    0.5MiB   第 1 行：期望 594503，实际 63715
-
-结果：WA  通过 1/10  用时 0.05s
-```
-
-常用参数：
-
-| 参数 | 说明 |
-|---|---|
-| `--pid <编号>` | 题目编号，对应 `testData/<pid>/data` |
-| `--list` | 列出可用题目及其限制 |
-| `--time <ms>` / `--memory <MiB>` | 覆盖题目 `config.json` 的限制 |
-| `--lang cpp\|python` | 提交语言，默认按后缀判断 |
-| `--testdata <dir>` | 测试数据根目录，默认仓库下的 `testData/` |
-| `--checker auto\|none\|<path>` | 输出比较器，默认 `auto` |
-| `--no-cgroup` | 跳过 cgroup 隔离 |
-| `--keep-work-dir` | 保留临时工作目录，便于查看输出 |
-
-判定与隔离口径：
-
-- **编译**：C++ 用与 `judge_server` 相同的 `g++ -std=c++17 -O2 -DONLINE_JUDGE`；
-  Python 用 `py_compile` 做语法检查。
-- **限制**：默认读题目 `config.json` 的 `time` / `memory`（更贴近题目声明）。
-- **比对**：优先 `/judge/checker/fcmp2`，否则按行比较，忽略行尾空白和末尾空行 ——
-  与 `judge_server` 的 fallback 同一套规则。
-- **执行隔离**：优先 cgroup v2 做内存/CPU 隔离；不可用时自动用 `systemd-run`
-  起一个委派 scope；仍不可用则降级为 wall 超时加 `RLIMIT_CPU`，此时**明确提示
-  MLE 无法判定**（不用 RSS 猜内存）。
-
-退出码：`0` 全部 AC，`1` 有非 AC 结果，`2` 编译失败或工具/环境错误。
-
-`py-judge-runner/` 里的底层资源执行器 `runner.py` 也可单独作为库使用，支持
-cgroup v2 内存峰值、OOM 事件、`wait4` CPU 统计与 wall 看门狗，详见
-`py-judge-runner/README.md`。
+构建、用法与一行 curl 安装见该仓库的 `README.md`。它会自动检测 cgroup v2
+是否可用，不可用时降级运行并明确提示。
 
 > **与 judge_server 的差异**：本地工具按题目声明的限制评测；`judge_server`
 > 目前固定 1000ms / 1GiB，且仍以 `/usr/bin/sjudge` 与 checker 的部署为准。

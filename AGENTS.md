@@ -20,7 +20,10 @@ Use 4-space indentation and stay within C++17. Match the local style of the file
 ## Testing Guidelines
 Tests are executable-style C++ files under `test/`, and CTest registers them by file stem, for example `test/test_cpp_runner.cpp` becomes `test_cpp_runner`. Add focused regression tests for behavior changes when practical. For protocol or async pipeline changes, run `test_protocol_codec`, `test_submission_service`, `test_judge_worker_pool`, and `test_integration_tcp_cpp_python`.
 
-The standalone local judging tool in `py-judge-runner/` needs no judge server: run `make` in that directory to build the C helper, then `python3 local_judge.py --pid 1000 solution.cpp` to judge a submission against `testData/`. Its tests use Python's standard-library `unittest`: `make check` runs the pure logic tests and skips cgroup integration tests, while `systemd-run --user --scope -p Delegate=yes -- python3 examples/delegated.py make check` enables the real cgroup v2 tests (including intentional OOM and cleanup checks) from that directory.
+The standalone local judging tool has been extracted into its own repository
+(`roj-local-judge-lite`); it is no longer part of this repository. See that
+repository's README for building the C helper, `make check`, and the
+cgroup-delegation test command.
 
 ## Commit & Pull Request Guidelines
 Recent history follows Conventional Commit-style prefixes such as `feat:`, `refactor:`, `chore:`, and `docs:`. Keep commits focused on one logical change. Pull requests should explain the behavior change, list the commands/tests you ran, call out config or protocol impacts, and include sample requests/responses when JSON or TCP behavior changes.
